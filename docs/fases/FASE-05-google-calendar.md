@@ -152,9 +152,7 @@ await calendar.events.insert({
     ].filter(Boolean).join('\n'),
     start: { dateTime: inicio.toISOString(), timeZone: TZ_CLINICA },
     end:   { dateTime: fim.toISOString(),    timeZone: TZ_CLINICA },
-    location: tipo.modalidade === 'in_person'
-      ? 'Consultório — Guarulhos, SP'
-      : 'Teleconsulta',
+    location: localConsulta(tipo.modalidade),   // lib/config.ts — FASE-03 §3.1
     reminders: { useDefault: false, overrides: [
       { method: 'popup', minutes: 24 * 60 },
       { method: 'popup', minutes: 120 },

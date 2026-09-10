@@ -291,8 +291,12 @@ Elaborado a partir de:
 Pontos que exigem confirmação antes de codificar:
 
 - [x] ~~**CRM-SP 267.777**~~ — confirmado pelo cliente em 10/09/2026
-- [ ] **Endereço do consultório** — o protótipo diz "informado na confirmação";
-      confirmar se aparece no site (afeta SEO local e o `.ics`)
+- [ ] **Endereço do consultório** — ainda não definido (10/09/2026). O plano trata
+      isso como estado de primeira classe: `PROFISSIONAL.endereco = null` faz site,
+      `.ics` e JSON-LD degradarem para "endereço enviado na confirmação".
+      **Custo enquanto durar:** o pacote local do Google ("nutrólogo perto de mim")
+      fica praticamente fora de alcance — ver
+      [FASE-11](fases/FASE-11-seo-performance.md)
 - [ ] **Horários reais de atendimento** — alimentam `availability_rule`
 - [ ] **Duração das consultas** — o protótipo assume 40 min
 - [ ] **Domínio** — `draandressacorreia.com.br` é hipótese

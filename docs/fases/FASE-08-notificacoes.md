@@ -52,7 +52,7 @@ Assunto: Consulta confirmada — segunda, 15 de setembro às 14:00
   ┌──────────────────────────────────────┐
   │  Consulta em Nutrologia              │
   │  Segunda, 15 de setembro · 14:00     │
-  │  Consultório — Guarulhos, SP         │
+  │  Consultório em Guarulhos – SP       │
   │  Duração: 40 minutos                 │
   └──────────────────────────────────────┘
 
@@ -63,6 +63,11 @@ Assunto: Consulta confirmada — segunda, 15 de setembro às 14:00
 
   Chegue com 10 minutos de antecedência.
   Traga exames recentes, se tiver.
+
+  ⓘ Enquanto o endereço do consultório não estiver
+    definido, este e-mail traz o local por extenso
+    e o lembrete D-1 repete a informação. Ver
+    FASE-03 §3.1.
 
   ─────────────────────────────────────
   Dra. Andressa Chaves Correia · CRM-SP 267.777

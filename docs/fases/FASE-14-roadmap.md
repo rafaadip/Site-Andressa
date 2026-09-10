@@ -35,7 +35,17 @@ evento pelo iCloud, e aí com o risco de a senha de app expirar em silêncio.
 da fila, com janela de 2 h para confirmar.
 **Valor:** transforma cancelamento em receita, e é o item de melhor retorno da lista.
 
-### 2.4 Reagendamento em um toque
+### 2.4 Ativar SEO local (quando o endereço existir)
+**Gatilho:** endereço do consultório definido.
+**Escopo:** preencher `PROFISSIONAL.endereco`, criar e verificar o Perfil da Empresa
+no Google, acrescentar `streetAddress`/`postalCode` ao JSON-LD, conferir o NAP.
+**Valor:** destrava o pacote local — a superfície de busca com maior intenção de
+conversão ("nutrólogo perto de mim"). Ver
+[FASE-11](FASE-11-seo-performance.md).
+**Custo:** ~meio dia de código; a verificação do perfil pode levar dias (o Google
+envia código por carta ou vídeo).
+
+### 2.5 Reagendamento em um toque
 **Gatilho:** volume de remarcações por WhatsApp.
 **Escopo:** no link de gestão, sugerir três horários próximos.
 
@@ -85,6 +95,7 @@ Registrada no momento em que foi assumida, com o custo de resolver:
 
 | Item | Origem | Custo |
 |---|---|---|
+| Endereço do consultório indefinido | Não definido pelo cliente até 10/09/2026 | Site opera em "modo sem endereço" ([FASE-03 §3.1](FASE-03-site-institucional.md)). Preencher um objeto destrava site, `.ics` e JSON-LD; o SEO local segue bloqueado até a verificação do perfil |
 | `VTIMEZONE` fixo em UTC−3 | [FASE-06 §2.3](FASE-06-ics-calendario-paciente.md) — o Brasil não tem horário de verão hoje | Se voltar: acrescentar componente `DAYLIGHT` com `RRULE`. `// TODO(dst)` no código |
 | **Google como ponto único de falha** | [ADR-003](../adr/ADR-003-ics-para-o-paciente.md) — Apple fora do escopo | Sem segunda via para ler disponibilidade se a API cair. Mitigado pela degradação graciosa da [FASE-05 §6](FASE-05-google-calendar.md), não eliminado |
 | Modelo de um profissional | `practitioner_id` existe, mas não há UI | ~3 dias para expor |

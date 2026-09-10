@@ -162,7 +162,19 @@ FAQ (FASE-11).
 
 ### 2.7 Contato + urgência
 
-Dois blocos. O aviso de urgência é **conteúdo de segurança**, não rodapé decorativo:
+Três itens: WhatsApp, e-mail e local. O local usa `localConsulta()` (§3.1) — hoje
+sem endereço:
+
+```
+CONSULTÓRIO
+Guarulhos – SP
+Endereço enviado na confirmação da consulta.
+```
+
+Quando o endereço existir, este bloco ganha o endereço completo e um link
+"Ver no mapa". Nada mais muda.
+
+O aviso de urgência é **conteúdo de segurança**, não rodapé decorativo:
 
 > **Este site não atende urgências.** Em caso de dor no peito, falta de ar intensa,
 > perda de consciência ou sinais de AVC, procure o pronto-socorro mais próximo ou
@@ -192,8 +204,43 @@ export const PROFISSIONAL = {
   telefone: '+5511998053826',
   email: 'andressa15correia@gmail.com',
   timezone: 'America/Sao_Paulo',
+
+  /**
+   * ⚠️ Endereço do consultório ainda NÃO definido (10/09/2026).
+   * Enquanto for `null`, o site opera em "modo sem endereço" (§4.1):
+   * o local é informado ao paciente na confirmação. Preencher aqui
+   * ativa endereço no site, no `.ics` e no JSON-LD, sem tocar em mais nada.
+   */
+  endereco: null as {
+    logradouro: string; numero: string; complemento?: string;
+    bairro: string; cep: string; mapsUrl: string;
+  } | null,
 } as const;
+
+/** Texto do local, usado no site, no `.ics` e nos e-mails. */
+export function localConsulta(modalidade: 'in_person' | 'telehealth') {
+  if (modalidade === 'telehealth') return 'Teleconsulta (link enviado antes da consulta)';
+  return PROFISSIONAL.endereco
+    ? `${PROFISSIONAL.endereco.logradouro}, ${PROFISSIONAL.endereco.numero}`
+      + ` — ${PROFISSIONAL.endereco.bairro}, ${PROFISSIONAL.cidade}/${PROFISSIONAL.uf}`
+    : `Consultório em ${PROFISSIONAL.cidade}/${PROFISSIONAL.uf}`
+      + ' — endereço enviado na confirmação';
+}
 ```
+
+### 3.1 Modo sem endereço
+
+Enquanto `endereco` for `null`, três coisas mudam **automaticamente**:
+
+| Onde | Com endereço | Sem endereço (estado atual) |
+|---|---|---|
+| Seção Contato | Endereço completo + link do mapa | "Consultório em Guarulhos–SP · endereço enviado na confirmação" |
+| `.ics` `LOCATION` | Endereço completo | Mesmo texto acima |
+| JSON-LD | `streetAddress` + `postalCode` | Só `addressLocality: Guarulhos` (verdadeiro, e ainda útil para busca local) |
+
+Nenhum `if` espalhado pelo código: tudo passa por `localConsulta()`. Definir o
+endereço é editar **um objeto** — e um teste garante que o site não vaza
+`"undefined"` em nenhum dos três lugares quando o campo é nulo.
 
 ---
 
@@ -218,6 +265,8 @@ export const PROFISSIONAL = {
 - [ ] Navegação completa por teclado, com foco sempre visível
 - [ ] Todas as imagens com `alt` significativo e dimensões declaradas
 - [ ] Nome e CRM visíveis em **todas** as páginas (exigência CFM)
+- [ ] Com `endereco: null`, nenhuma tela exibe "undefined", vírgula solta ou bloco
+      vazio — teste cobrindo site, `.ics` e JSON-LD
 - [ ] Aviso de urgência presente na home e em `/agendar`
 - [ ] Nenhum preço, promoção, antes/depois ou depoimento de paciente
 - [ ] LCP ≤ 2,0 s no Lighthouse mobile (4G simulado)

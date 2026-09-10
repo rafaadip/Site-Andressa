@@ -147,7 +147,10 @@ sincronização. Consumido por um monitor externo (UptimeRobot) a cada 5 min.
 - [ ] Seed com dados reais (modalidades, horários reais da médica)
 - [ ] Google Calendar conectado à conta real
 - [ ] SPF, DKIM e DMARC verdes; teste de envio real
-- [ ] CRM-SP **confirmado dígito a dígito** com a médica
+- [x] ~~CRM-SP confirmado dígito a dígito~~ — CRM-SP 267.777, confirmado em 10/09/2026
+- [ ] Endereço do consultório: definido **ou** confirmado que o site sobe em
+      "modo sem endereço" ([FASE-03 §3.1](FASE-03-site-institucional.md)), com a
+      médica ciente do impacto em SEO local ([FASE-11](FASE-11-seo-performance.md))
 - [ ] Revisão de conformidade (FASE-10) assinada
 - [ ] Política de privacidade publicada
 - [ ] Lighthouse ≥ 95/100/100

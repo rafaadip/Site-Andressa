@@ -14,10 +14,34 @@ intenção imediata**: "nutrólogo perto de mim", "médica nutrologia Guarulhos"
 Google** costuma pesar mais que o site — mas o site é o que sustenta a autoridade e
 converte.
 
+### ⚠️ Impacto de o endereço ainda não estar definido
+
+O endereço do consultório **ainda não foi definido** (10/09/2026). Isso não impede o
+lançamento, mas custa a maior alavanca de SEO local, e é melhor dizer isso agora do
+que descobrir depois:
+
+| Superfície | Sem endereço | Com endereço |
+|---|---|---|
+| Perfil da Empresa no Google | Só como *área de atuação*, sem verificação por endereço | Perfil verificado, com pino no mapa |
+| **Pacote local ("mapinha")** | ❌ visibilidade muito reduzida | ✅ a maior fonte de busca com intenção |
+| "nutrólogo **perto de mim**" | Praticamente fora | Principal consulta de conversão |
+| JSON-LD | Só `addressLocality` | `streetAddress` + `postalCode` |
+| Google Maps / rota | Indisponível | Um toque a partir do celular |
+
+**O que ainda funciona sem endereço:** busca orgânica por "médica nutrologia
+Guarulhos", tráfego de Instagram e WhatsApp, e **teleconsulta**, que não depende de
+endereço nenhum. Uma estratégia razoável é lançar com foco em teleconsulta e no
+tráfego de redes, e ativar o SEO local quando o consultório estiver definido.
+
+**Quando o endereço existir:** preencher `PROFISSIONAL.endereco`
+([FASE-03 §3.1](FASE-03-site-institucional.md)), criar e verificar o Perfil da
+Empresa, e conferir o NAP nos três lugares. Nada mais no código.
+
 ### Prioridades
 
 1. **Perfil da Empresa no Google** (fora do código, mas o item de maior impacto):
    categoria correta, endereço, horários, link para `/agendar`, fotos reais.
+   *Bloqueado até o endereço ser definido — ver acima.*
 2. **NAP consistente** — nome, endereço e telefone idênticos em site, perfil e
    redes. Divergência confunde o algoritmo.
 3. **Dados estruturados** no site (§2).
@@ -38,6 +62,10 @@ converte.
   "image": "https://draandressacorreia.com.br/retrato.jpg",
   "telephone": "+55-11-99805-3826",
   "email": "andressa15correia@gmail.com",
+  // Sem endereço definido: apenas cidade/UF — verdadeiro e ainda útil.
+  // Com endereço: acrescentar "streetAddress" e "postalCode".
+  // NUNCA publicar endereço aproximado ou inventado: além de enganar o paciente,
+  // um NAP inconsistente prejudica o ranqueamento local.
   "address": {
     "@type": "PostalAddress",
     "addressLocality": "Guarulhos",
@@ -156,3 +184,4 @@ da dobra. `motion` importado só onde é usado.
 - [ ] `/admin` e `/consulta/*` fora do sitemap e com `noindex`
 - [ ] Nenhuma requisição a domínio de terceiro no carregamento inicial
 - [ ] Prévia de link correta ao compartilhar no WhatsApp
+- [ ] JSON-LD válido tanto com `endereco: null` quanto preenchido

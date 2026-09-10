@@ -105,7 +105,7 @@ export function gerarIcs(ag: Agendamento, metodo: 'REQUEST' | 'CANCEL'): string 
     `DTEND;TZID=America/Sao_Paulo:${emLocalCompacto(ag.fim)}`,
     dobrar(`SUMMARY:${escapar(`${ag.tipoLabel} — ${PROFISSIONAL.nomeCurto}`)}`),
     dobrar(`DESCRIPTION:${escapar(descricao(ag))}`),
-    dobrar(`LOCATION:${escapar(ag.local)}`),
+    dobrar(`LOCATION:${escapar(ag.local)}`),   // localConsulta() — FASE-03 §3.1
     `STATUS:${metodo === 'CANCEL' ? 'CANCELLED' : 'CONFIRMED'}`,
     'TRANSP:OPAQUE',
     dobrar(`ORGANIZER;CN=${escapar(PROFISSIONAL.nomeCurto)}:mailto:${env.EMAIL_FROM_ADDR}`),
