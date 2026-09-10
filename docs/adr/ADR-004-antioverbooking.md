@@ -60,26 +60,69 @@ para sempre.
 O `practitioner_id WITH =` (que exige a extensão `btree_gist` para indexar um `uuid`
 num índice GiST) deixa o modelo pronto para mais de um profissional sem migração.
 
-## Implementação
+## Achado de implementação — deadlock e latência
+
+> **Atualização de 10/09/2026, medida em Postgres 16 real.** A constraint
+> resolve a correção, mas revelou um problema de **latência** que não aparece
+> em teste sequencial.
+
+Numa rajada de 20 inserções simultâneas no mesmo slot, as transações formam um
+**ciclo de espera** no índice GiST. O Postgres detecta e mata uma delas com
+`40P01 deadlock_detected` — mas só depois de esperar o `deadlock_timeout`, que é
+de **1 segundo** por padrão.
+
+Medição com `tests/integration/overbooking.test.ts`:
+
+| Implementação | Resultado | Latência do teste |
+|---|---|---|
+| Só `INSERT` + captura de `23P01` | correto, mas **~15% viram 500** por `40P01` | 7.103 ms |
+| `INSERT` + advisory lock por slot | correto, `1 ok / 19 conflito` | **116 ms** |
+
+**61× mais rápido**, e sem nenhum 500.
+
+### A implementação correta
+
+Três camadas, cada uma com um papel:
 
 ```ts
-import { DatabaseError } from 'pg';
+// 1. Enfileira os concorrentes do MESMO slot num lock barato,
+//    em vez de deixá-los formar ciclo no índice GiST.
+await sql.begin(async (tx) => {
+  await travarSlot(tx, practitionerId, inicio);   // pg_advisory_xact_lock
+  return tx`INSERT INTO appointment ...`;
+});
+```
 
-const PG_EXCLUSION_VIOLATION = '23P01';
-
-try {
-  await db.insert(appointment).values({ ...dados, status: 'held' });
-} catch (e) {
-  if (e instanceof DatabaseError && e.code === PG_EXCLUSION_VIOLATION) {
-    return Response.json(
-      { erro: 'SLOT_INDISPONIVEL',
-        mensagem: 'Este horário acabou de ser reservado. Escolha outro.' },
-      { status: 409 },
-    );
+```ts
+// 2. Traduz os DOIS erros de concorrência em resposta de domínio.
+//    23P01 → conflito definitivo.  40P01 → vítima de deadlock, retenta.
+export async function reservarSlot<T>(inserir: () => Promise<T>, maxTentativas = 3) {
+  for (let tentativa = 0; ; tentativa++) {
+    try { return await inserir(); }
+    catch (e) {
+      const code = codigoPg(e);
+      if (code === PG_EXCLUSION_VIOLATION) throw new SlotIndisponivelError();
+      if (code === PG_DEADLOCK_DETECTED && tentativa < maxTentativas - 1) {
+        await esperar(tentativa); continue;
+      }
+      if (code === PG_DEADLOCK_DETECTED) throw new SlotIndisponivelError();
+      throw e;
+    }
   }
-  throw e;
 }
 ```
+
+```ts
+// 3. A constraint continua sendo a garantia FINAL. O advisory lock é
+//    otimização de latência; se alguém esquecer de chamá-lo, o banco
+//    ainda impede o overbooking — só que mais devagar.
+```
+
+O lock é `xact`: liberado automaticamente no commit ou rollback, sem risco de
+vazar. A chave é um FNV-1a de 64 bits de `(practitioner_id, starts_at)`, então
+slots diferentes nunca se bloqueiam.
+
+Código em `lib/db/reservas.ts`.
 
 No cliente, o 409 **não** é um erro genérico: recarrega os slots do dia, destaca o
 horário perdido e desliza o foco para a nova seleção. Um 409 bem tratado é

@@ -1,0 +1,203 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — docs/fases/FASE-01-design-system.md
+ * Paleta derivada do carrossel de Nutrologia, com contraste VERIFICADO.
+ * `npm run check:contrast` quebra o build se algum par semântico reprovar.
+ */
+@theme {
+  /* ── Marfim — fundos ───────────────────────────────── */
+  --color-ivory-50:  #FBF8F3;
+  --color-ivory-100: #F5EFE5;
+  --color-sand-200:  #E9DDCA;
+  --color-sand-300:  #D8C7AC;
+  --color-sand-400:  #A08A68;  /* borda de INPUT — 3,13:1 */
+
+  /* ── Ouro — acento ─────────────────────────────────── */
+  --color-gold-200:  #EBD9BC;
+  --color-gold-400:  #C9A06A;
+  --color-gold-500:  #B8874E;  /* 3,00:1 — fios/ícones, NUNCA texto pequeno */
+  --color-gold-700:  #8A6230;  /* 5,12:1 — TEXTO em ouro sobre marfim */
+
+  /* ── Espresso — tinta e blocos escuros ─────────────── */
+  --color-espresso-700: #463322;
+  --color-espresso-800: #33251A;
+  --color-espresso-900: #241A13;
+
+  /* ── Neutros de texto ──────────────────────────────── */
+  --color-ink:        #241A13;
+  --color-ink-muted:  #6B5A4B;
+  --color-ink-subtle: #8A7666;  /* decorativo — nunca texto essencial */
+  --color-cream-muted: #C4B5A3; /* secundário sobre espresso */
+
+  /* ── Semânticos ────────────────────────────────────── */
+  --color-danger:       #A3271F;
+  --color-danger-dark:  #F2B8B5;
+  --color-success:      #2F6B4F;
+  --color-success-dark: #A7D7BE;
+
+  /* ── Tipografia ────────────────────────────────────── */
+  --font-display: var(--fonte-display), Georgia, "Times New Roman", serif;
+  --font-sans:    var(--fonte-sans), ui-sans-serif, system-ui, sans-serif;
+
+  --text-display: clamp(2.5rem, 1.6rem + 3.6vw, 4.25rem);
+  --text-h2:      clamp(1.875rem, 1.35rem + 2.1vw, 2.75rem);
+  --text-h3:      clamp(1.375rem, 1.2rem + .7vw, 1.6875rem);
+  --text-lead:    clamp(1.125rem, 1.05rem + .3vw, 1.25rem);
+  --text-body:    1.03125rem;   /* 16,5px */
+  --text-sm:      0.90625rem;   /* 14,5px */
+  --text-eyebrow: 0.78125rem;   /* 12,5px */
+
+  /* ── Espaço e forma ────────────────────────────────── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --shadow-sm: 0 1px 2px rgb(36 26 19 / .04);
+  --shadow-md: 0 8px 24px -12px rgb(36 26 19 / .12);
+  --shadow-lg: 0 24px 60px -30px rgb(36 26 19 / .22);
+}
+
+:root {
+  /* Sem alternador de tema: a identidade é marfim quente, e a inversão
+     automática do iOS/Android destruiria o contraponto espresso. */
+  color-scheme: light;
+
+  /* Tokens semânticos — componentes referenciam SÓ esta camada. */
+  --bg-page:        var(--color-ivory-50);
+  --bg-surface:     var(--color-ivory-100);
+  --bg-raised:      #FFFFFF;
+  --text-primary:   var(--color-ink);
+  --text-secondary: var(--color-ink-muted);
+  --text-accent:    var(--color-gold-700);
+  --border-subtle:  var(--color-sand-200);
+  --border-field:   var(--color-sand-400);
+  --focus-ring:     var(--color-gold-700);
+
+  /* Ritmo vertical e contêiner — mobile-first (docs/01-MOBILE-FIRST.md) */
+  --section-y: 4.5rem;
+  --container: 100%;
+  --gutter: 1.25rem;      /* nunca abaixo de 20px */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Tablet: contêiner próprio. Sem isso, uma coluna de 900px produz
+   medida de linha ilegível — o erro mais comum de site "responsivo". */
+@media (min-width: 768px) {
+  :root { --section-y: 6rem; --container: 680px; --gutter: 2rem; }
+}
+@media (min-width: 1024px) {
+  :root { --section-y: 8rem; --container: 1140px; --gutter: 2.5rem; }
+}
+
+/* Superfície escura — o contraponto do carrossel. */
+.superficie-escura {
+  --bg-page:        var(--color-espresso-900);
+  --bg-surface:     var(--color-espresso-800);
+  --bg-raised:      var(--color-espresso-700);
+  --text-primary:   var(--color-ivory-100);
+  --text-secondary: var(--color-cream-muted);
+  --text-accent:    var(--color-gold-200);
+  --border-subtle:  rgb(235 217 188 / .14);
+  --border-field:   rgb(235 217 188 / .34);
+  --focus-ring:     var(--color-gold-200);
+  background: var(--bg-page);
+  color: var(--text-primary);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.65;
+  color: var(--text-primary);
+  background: var(--bg-page);   /* explícito: nunca transparente */
+  -webkit-font-smoothing: antialiased;
+}
+
+img, picture, svg, video { display: block; max-width: 100%; }
+
+/* Corpo da página nunca rola na horizontal. Tabelas e blocos de código
+   ganham o próprio contêiner com overflow-x. */
+html, body { overflow-x: clip; }
+
+/* Alvo de toque mínimo — 44px é o piso (Apple HIG); WCAG 2.2 pede 24. */
+:where(button, a[href], input, select, textarea, [role="radio"], [role="button"]) {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+:where(input, textarea, select) {
+  font-size: 1rem;   /* ≥16px: abaixo disso o iOS dá ZOOM ao focar */
+}
+
+/* Foco visível — nunca `outline: none` sem substituto equivalente. */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* Header sticky cobre o campo focado ao navegar por Tab (WCAG 2.2 §2.4.11). */
+:where(h1, h2, h3, section, [id]) { scroll-margin-top: 5.5rem; }
+
+/* Realce de ponteiro só onde há ponteiro fino. */
+@media (hover: hover) and (pointer: fine) {
+  .realce-hover:hover { transform: translateY(-2px); }
+}
+
+.display { font-family: var(--font-display); font-weight: 600; line-height: 1.12; }
+
+.eyebrow {
+  font-size: var(--text-eyebrow);
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--text-accent);
+}
+
+/* Horários, datas e telefones: sem isso a grade "dança" ao trocar de dia. */
+.tabular { font-variant-numeric: tabular-nums; }
+
+.wrap {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* Pular para o conteúdo — WCAG 2.4.1. Visível só ao receber foco. */
+.pular-para-conteudo {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: .75rem 1.25rem;
+  background: var(--color-espresso-900);
+  color: var(--color-ivory-50);
+  border-radius: 0 0 var(--radius-sm) 0;
+}
+.pular-para-conteudo:focus {
+  left: 0;
+}
+
+.rodape-legal {
+  background: var(--color-espresso-900);
+  color: var(--color-cream-muted);
+  padding-block: 2.5rem;
+  padding-bottom: calc(2.5rem + var(--safe-bottom));
+  font-size: var(--text-sm);
+}
+.rodape-legal strong { color: var(--color-ivory-100); font-weight: 500; }
+.rodape-legal p + p { margin-top: .75rem; }
