@@ -32,7 +32,7 @@ Anunciar especialidade sem RQE é infração ética passível de processo no CRM
 // lib/config.ts — FONTE ÚNICA. Nenhum título é escrito à mão em outro arquivo.
 export const PROFISSIONAL = {
   nome: 'Dra. Andressa Chaves Correia',
-  crm: 'CRM-SP 207.737',
+  crm: 'CRM-SP 267.777',
   rqe: null as string | null,   // ← preencher SÓ quando o CRM emitir
   titulo: 'Médica · com atuação em Nutrologia',
 } as const;

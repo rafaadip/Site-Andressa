@@ -99,6 +99,10 @@ export const metadata: Metadata = {
 
 ## 4. Performance
 
+> Todas as métricas abaixo são medidas em **Lighthouse mobile com 4G simulado** —
+> nunca em desktop. O uso primário é celular ([01-MOBILE-FIRST](../01-MOBILE-FIRST.md)),
+> e um número bom no desktop não diz nada sobre a experiência real.
+
 ### Alvos (Lighthouse mobile, 4G simulado)
 
 | Métrica | Alvo | Limite |

@@ -14,13 +14,14 @@ publicidade médica.
 | Documento | Conteúdo |
 |---|---|
 | [00-ARQUITETURA](00-ARQUITETURA.md) | Requisitos, decisão central de calendário, stack, modelo de dados, fluxos, segurança |
+| [01-MOBILE-FIRST](01-MOBILE-FIRST.md) | **Padrão obrigatório.** O uso primário é celular e tablet — breakpoints, toque, tablet, áreas seguras, checklist |
 
 ### Decisões (ADR)
 | ADR | Assunto | Em uma frase |
 |---|---|---|
 | [001](adr/ADR-001-stack.md) | Next.js vs. front estático + FastAPI | Um runtime só, por razão operacional |
 | [002](adr/ADR-002-google-fonte-da-verdade.md) | Google como fonte da verdade | É a agenda que ela realmente usa |
-| [003](adr/ADR-003-apple-sem-api.md) | Apple sem API | `.ics` (RFC 5545) resolve — a Apple não tem API de calendário |
+| [003](adr/ADR-003-ics-para-o-paciente.md) | `.ics` para o paciente | Agenda da médica só no Google; `.ics` fica porque é formato universal, não Apple |
 | [004](adr/ADR-004-antioverbooking.md) | `EXCLUDE USING gist` | O banco impede overbooking, não a aplicação |
 | [005](adr/ADR-005-analytics-sem-cookies.md) | Analytics sem cookies | Sem cookie não essencial → sem banner |
 
@@ -32,7 +33,7 @@ publicidade médica.
 | [03](fases/FASE-03-site-institucional.md) | Site institucional | 4–5 | 01, 02 |
 | [04](fases/FASE-04-motor-disponibilidade.md) | **Motor de disponibilidade** | 4 | 02 |
 | [05](fases/FASE-05-google-calendar.md) | Google Calendar | 4 | 02, 04 |
-| [06](fases/FASE-06-apple-ics-caldav.md) | Apple / `.ics` / CalDAV | 3 (+1) | 02 |
+| [06](fases/FASE-06-ics-calendario-paciente.md) | `.ics` (calendário do paciente) | 2 | 02 |
 | [07](fases/FASE-07-fluxo-agendamento.md) | **Fluxo de agendamento** | 5 | 01, 04, 05, 06 |
 | [08](fases/FASE-08-notificacoes.md) | Notificações | 3 | 06, 07 |
 | [09](fases/FASE-09-painel-admin.md) | Painel administrativo | 4 | 04, 05, 07 |
@@ -42,34 +43,40 @@ publicidade médica.
 | [13](fases/FASE-13-deploy-observabilidade.md) | Deploy e observabilidade | 2 | todas |
 | [14](fases/FASE-14-roadmap.md) | Roadmap pós-lançamento | — | — |
 
-**Total: 43–46 dias úteis** para um desenvolvedor — ~9 semanas com folga para
-revisões. Caminho crítico: **02 → 04 → 05 → 07 → 12 → 13**.
+**Total: 41–44 dias úteis** para um desenvolvedor — ~9 semanas com folga para
+revisões. (A FASE-06 encolheu de 3–4 para 2 dias com a remoção da sincronia Apple.) Caminho crítico: **02 → 04 → 05 → 07 → 12 → 13**.
 
 As fases 01, 03, 10 e 11 correm em paralelo com as de backend.
 
 ---
 
-## 2. As três coisas que definem este projeto
+## 2. As quatro coisas que definem este projeto
 
-### 2.1 "Sincronizar com Apple Calendar" não significa o que parece
+### 2.1 Agenda da médica só no Google; `.ics` para o paciente
 
-A Apple **não publica API de calendário**. Quem procura não encontra porque não
-existe — EventKit é local, e "Sign in with Apple" só autentica identidade.
-
-Mas o problema tem duas metades, com soluções diferentes:
+São **dois problemas diferentes**, e confundi-los é o erro clássico:
 
 | | Agenda da **médica** | Calendário do **paciente** |
 |---|---|---|
-| Precisa | Ler e escrever, continuamente | Receber o evento, uma vez |
-| Google | Calendar API + OAuth + webhook | Link `TEMPLATE` |
-| Apple | Feed `webcal://` (ou CalDAV) | **Arquivo `.ics`** |
-| Login do paciente | — | **Nenhum** |
+| Precisa | Ler e escrever, continuamente | Receber o evento, **uma vez** |
+| Quem autentica | Ela, uma vez, no `/admin` | **Ninguém** |
+| Solução | Google Calendar API v3 | `.ics` + link do Google |
+| Apple | ❌ **fora de escopo** | ✅ o `.ics` cobre |
 
-O `.ics` é padrão aberto (RFC 5545) e funciona em Apple Calendar, Google, Outlook,
-Samsung e Thunderbird. **É a solução correta, não um paliativo.** Enviado como anexo
-com `method=REQUEST`, o iOS Mail mostra um botão "Adicionar" direto no e-mail.
+A sincronização da agenda **dela** com a Apple (feed `webcal://`, CalDAV no iCloud)
+foi removida do escopo a pedido do cliente: o Google é a única integração de agenda.
 
-→ [ADR-003](adr/ADR-003-apple-sem-api.md) · [FASE-06](fases/FASE-06-apple-ics-caldav.md)
+O **`.ics` permanece** — e não é "integração com a Apple". É um formato aberto
+(RFC 5545) lido nativamente por Apple Calendar, Google Agenda, Outlook, Samsung e
+Thunderbird. Como o uso primário será por celular, sem ele o paciente de iPhone
+sairia da confirmação sem forma de salvar o compromisso. Custa um gerador de ~120
+linhas, sem credencial e sem dependência externa.
+
+**Consequência a assumir:** o Google vira **ponto único de falha**. A degradação
+graciosa (servir cache, manter o agendamento com `sync_state='pending'`) deixa de ser
+precaução e vira requisito.
+
+→ [ADR-003](adr/ADR-003-ics-para-o-paciente.md) · [FASE-06](fases/FASE-06-ics-calendario-paciente.md)
 
 ### 2.2 O overbooking é impedido pelo banco
 
@@ -90,7 +97,31 @@ invariante — nem um bug futuro, nem um script manual.
 
 → [ADR-004](adr/ADR-004-antioverbooking.md)
 
-### 2.3 O título profissional é uma restrição de conformidade
+### 2.3 Celular e tablet são o caso primário, não o secundário
+
+O uso primário do site será por **celular e tablet**. Isso não é requisito de
+compatibilidade — é a premissa de projeto, e inverte a ordem de trabalho:
+
+| | Desktop-first (❌) | Mobile-first (✅) |
+|---|---|---|
+| Ordem | Desenha em 1440, comprime | Desenha em **375**, expande |
+| Conteúdo | Tudo cabe; esconde no mobile | Só o essencial; **acrescenta** no desktop |
+| Interação | Hover revela informação | Hover **não existe** |
+| Alvo | 24–32 px | **≥ 44 px**, 8 px de folga |
+| Aprovação | "Ficou bom no monitor" | **Testado no aparelho, na mão** |
+
+Três decisões que decorrem disso e aparecem no código:
+
+- O botão de avançar do agendamento é **sticky no rodapé** no celular, com
+  `safe-area-inset-bottom` — senão fica sob a barra de gestos do iPhone.
+- Campos com `font-size` ≥ 16 px, senão o iOS dá **zoom automático** ao focar e o
+  layout salta.
+- O tablet ganha contêiner próprio (680 px). Sem isso, uma coluna de 900 px produz
+  medida de linha ilegível — o erro mais comum de site dito "responsivo".
+
+→ [01-MOBILE-FIRST](01-MOBILE-FIRST.md)
+
+### 2.4 O título profissional é uma restrição de conformidade
 
 O currículo mostra pós-graduação em Nutrologia **em curso** (Afya, até jul/2027). O
 material de redes sociais fornecido diz "Médica Especialista em Nutrologia".
@@ -122,7 +153,7 @@ que barra essas palavras em qualquer outro arquivo. Em julho de 2027, preencher
 | Fontes | Playfair Display + Jost, self-hosted via `next/font` |
 | Banco | PostgreSQL (Supabase, `sa-east-1`) + Drizzle |
 | Auth (admin) | Auth.js v5 + Google, allowlist de uma conta |
-| Calendário | Google Calendar API v3 · `.ics` RFC 5545 · feed `webcal://` |
+| Calendário | Google Calendar API v3 (médica) · `.ics` RFC 5545 (paciente) |
 | E-mail | Resend + React Email |
 | Datas | Luxon — **só** em `lib/datetime.ts` |
 | Analytics | Plausible/Umami (sem cookies) |
@@ -197,8 +228,10 @@ Se você só ler uma seção, leia esta.
    apagado em 90 dias, nunca em `localStorage`, nunca em log.
 7. **Sem preço, sem depoimento, sem antes/depois.** Restrição de publicidade médica.
 8. **Nenhum hex cru fora de `globals.css`.**
-9. **Preview nunca aponta para a agenda real.**
-10. **Isto não é prontuário.** Nada de evolução clínica, exame ou prescrição — é o
+9. **Nenhuma tela é aprovada sem passar em 375 px, em aparelho real.** Mockup de
+   desktop não aprova nada sozinho.
+10. **Preview nunca aponta para a agenda real.**
+11. **Isto não é prontuário.** Nada de evolução clínica, exame ou prescrição — é o
     que mantém o projeto fora das normas de prontuário eletrônico.
 
 ---
@@ -239,8 +272,6 @@ npm run dev
 | **Canal push** | Webhook do Google; expira em ~30 dias e precisa de renovação |
 | **`.ics` / iCalendar** | RFC 5545 — formato universal de evento |
 | **`SEQUENCE`** | Versão do evento no `.ics`; sem incrementar, updates são ignorados |
-| **`webcal://`** | Esquema de calendário assinado (somente leitura) |
-| **CalDAV** | RFC 4791 — protocolo de calendário; via de escrita no iCloud |
 | **RQE** | Registro de Qualificação de Especialista, emitido pelo CRM |
 | **RIPD** | Relatório de Impacto à Proteção de Dados (LGPD) |
 | **Dado sensível** | LGPD Art. 5º, II — inclui informação de saúde |
@@ -259,7 +290,7 @@ Elaborado a partir de:
 
 Pontos que exigem confirmação antes de codificar:
 
-- [ ] **CRM-SP 207.737** — conferir dígito a dígito (lido do material gráfico)
+- [x] ~~**CRM-SP 267.777**~~ — confirmado pelo cliente em 10/09/2026
 - [ ] **Endereço do consultório** — o protótipo diz "informado na confirmação";
       confirmar se aparece no site (afeta SEO local e o `.ics`)
 - [ ] **Horários reais de atendimento** — alimentam `availability_rule`

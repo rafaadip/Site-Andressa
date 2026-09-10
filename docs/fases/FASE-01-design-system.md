@@ -2,7 +2,10 @@
 
 > **Objetivo:** transformar a identidade visual já existente (carrossel de
 > Nutrologia + retratos) num sistema de tokens verificado, implementável e
-> auditável.
+> auditável — **projetado a partir do celular**.
+>
+> ⚠️ Leia [01-MOBILE-FIRST](../01-MOBILE-FIRST.md) antes desta fase. O uso primário
+> do site é celular e tablet; todo token abaixo é definido primeiro para 375 px.
 > **Depende de:** nada · **Habilita:** FASE-03, FASE-07, FASE-09
 > **Estimativa:** 3–4 dias
 
@@ -221,7 +224,39 @@ display.
 --z-base:0; --z-sticky:10; --z-dropdown:20; --z-overlay:40; --z-modal:50; --z-toast:60;
 ```
 
-Breakpoints: **375 · 768 · 1024 · 1440**. Mobile-first, sem exceção.
+### 4.1 Breakpoints — só `min-width`
+
+```css
+/* base = celular (projetar em 375). Media queries apenas ACRESCENTAM. */
+@media (min-width: 768px)  { /* tablet retrato  */ }
+@media (min-width: 1024px) { /* tablet paisagem */ }
+@media (min-width: 1440px) { /* desktop         */ }
+```
+
+**Nunca** `max-width` como estratégia principal — é desktop-first disfarçado.
+
+### 4.2 Contêiner por faixa
+
+| | Celular | Tablet (768–1023) | Desktop |
+|---|---|---|---|
+| Largura máx. | 100 % − 40 px | **680 px** | 1140 px |
+| Gutter | 20 px | 32 px | 40 px |
+| `--section-y` | 4,5 rem | **6 rem** | 8 rem |
+
+O tablet tem contêiner próprio de propósito: sem ele, uma coluna de 900 px produz
+medida de linha ilegível — o erro mais comum de site "responsivo".
+
+### 4.3 Áreas seguras
+
+```css
+:root {
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+.barra-sticky { padding-bottom: calc(var(--space-4) + var(--safe-bottom)); }
+```
+
+`<meta viewport>` com `viewport-fit=cover`; altura com `100dvh` (com `100vh` de
+fallback) — `100vh` no iOS Safari corta o conteúdo quando a barra de endereço some.
 
 ---
 
@@ -229,10 +264,10 @@ Breakpoints: **375 · 768 · 1024 · 1440**. Mobile-first, sem exceção.
 
 | Componente | Estados | Nota de acessibilidade |
 |---|---|---|
-| `Button` (gold / espresso / ghost / link) | default, hover, active, focus, disabled, loading | Alvo ≥ 44×44; `aria-busy` no loading; **nunca** troca de tamanho ao pressionar |
+| `Button` (gold / espresso / ghost / link) | default, **active**, focus, disabled, loading | Alvo ≥ 44×44; largura total no mobile; `aria-busy` no loading; **nunca** troca de tamanho ao pressionar |
 | `Eyebrow` | — | `gold-700`; é decorativo → não substitui heading |
 | `SectionHeading` | — | `<h2>` real; nível nunca pulado |
-| `Card` | default, hover | Hover só translada 2 px + muda borda (`transform`, não `box-shadow` animado) |
+| `Card` | default, active, hover | Nenhuma informação só no hover; realce dentro de `@media (hover: hover)` |
 | `DayPicker` | idle, selected, disabled, focus | `role="radiogroup"` + `role="radio"` — **não** `listbox` |
 | `TimeSlotGrid` | idle, selected, disabled, loading, empty | Idem; skeleton no loading; estado vazio com ação |
 | `Stepper` | current, complete, upcoming | `<ol>` + `aria-current="step"` — **não** `aria-hidden` |
@@ -243,7 +278,25 @@ Breakpoints: **375 · 768 · 1024 · 1440**. Mobile-first, sem exceção.
 | `Skeleton` | — | `prefers-reduced-motion` desliga o shimmer |
 | `MobileNav` | closed, open | Foco preso no aberto; `Esc` fecha; devolve foco ao gatilho |
 
-### 5.1 Foco visível — não negociável
+### 5.1 Toque antes de hover
+
+```css
+/* Alvo mínimo, sem exceção */
+:where(button, a, input, select, [role="radio"]) {
+  min-height: 44px; min-inline-size: 44px;
+}
+:where(button, a) { touch-action: manipulation; }   /* remove atraso de 300 ms */
+
+/* Realce de ponteiro só onde há ponteiro fino */
+@media (hover: hover) and (pointer: fine) {
+  .card:hover { transform: translateY(-2px); }
+}
+```
+
+Toda informação essencial visível **sem interação**. Feedback de toque em ≤ 100 ms
+(`:active` com opacidade ou escala 0,97) — sem ele, a pessoa toca duas vezes.
+
+### 5.2 Foco visível — não negociável
 
 ```css
 :where(a, button, input, textarea, select, [tabindex]):focus-visible {
@@ -330,6 +383,10 @@ procedimento. (FASE-10)
 - [ ] Todos os pares de texto ≥ 4,5:1; todas as bordas de campo ≥ 3:1 (script verde)
 - [ ] Todo componente interativo tem `:focus-visible` visível a ≥ 3:1
 - [ ] Alvos de toque ≥ 44×44 px, espaçamento ≥ 8 px
-- [ ] Layout íntegro em 375 px de largura e com fonte do sistema em 200 %
+- [ ] Layout íntegro em 375 px e com fonte do sistema em 200 %
+- [ ] Verificado em 375 / 768 / 1024, retrato **e** paisagem
+- [ ] Nenhum componente depende de hover para exibir informação
+- [ ] Campos com `font-size` ≥ 16 px (sem zoom automático no iOS)
+- [ ] `safe-area-inset` aplicado em elementos fixos
 - [ ] `prefers-reduced-motion` remove todas as animações
 - [ ] Zero emoji como ícone

@@ -102,19 +102,17 @@ estende.
     Última sincronização: há 2 minutos
     [ Reconectar ]  [ Desconectar ]
 
-  Apple Calendar / iPhone
-  ○ Não assinado
-    Assine este link no seu iPhone para ver os
-    agendamentos no app Calendário:
-
-    webcal://draandressacorreia.com.br/api/calendario/xK9…
-    [ Copiar ]  [ Gerar novo link ]
-
-    ▸ Como assinar no iPhone (passo a passo)
+  E-mail (Resend)
+  ● Ativo — SPF, DKIM e DMARC verificados
+    Últimos 7 dias: 23 enviados, 0 rejeitados
 ```
 
-O passo a passo do iPhone precisa ser literal, com os nomes exatos dos menus — ela
-vai fazer isso uma vez, sozinha, sem suporte.
+> A sincronização com Apple Calendar foi removida do escopo
+> ([ADR-003](../adr/ADR-003-ics-para-o-paciente.md)). A agenda dela é exclusivamente
+> Google. Como consequência, **o status "Conectado" aqui é crítico**: se o token do
+> Google for revogado, não há segunda via para ler disponibilidade. O aviso de
+> desconexão precisa ser impossível de ignorar — faixa no topo de todas as telas do
+> `/admin`, não um ponto cinza nesta página.
 
 ### 3.4 `/admin/configuracoes`
 
@@ -130,7 +128,6 @@ horizonte, prazo de cancelamento) e textos do e-mail de confirmação.
 | Cancelar agendamento | ✅ modal, com campo de motivo opcional | `.ics` `METHOD:CANCEL` + e-mail + remove do Google |
 | Bloquear período com agendamento dentro | ✅ lista quem será afetado | Só bloqueia após decidir o que fazer com cada um |
 | Desconectar Google | ✅ | Revoga token; agendamentos existentes permanecem |
-| Gerar novo link do feed | ✅ | Invalida o anterior — ela precisa reassinar no iPhone |
 | Exportar dados (LGPD) | — | CSV + JSON |
 
 **Regra:** bloquear um período que contém agendamentos **nunca** cancela em silêncio.
@@ -143,7 +140,8 @@ com aviso).
 
 - [ ] Auth.js com allowlist de uma conta + `middleware.ts`
 - [ ] `/admin` (agenda), `/admin/disponibilidade`, `/admin/integracoes`,
-      `/admin/configuracoes`
+      `/admin/configuracoes` — todas usáveis com uma mão em 375 px
+      ([01-MOBILE-FIRST](../01-MOBILE-FIRST.md))
 - [ ] Server Actions para bloqueio, cancelamento e remarcação
 - [ ] Exportação LGPD (CSV + JSON)
 - [ ] `noindex` em todo o `/admin`

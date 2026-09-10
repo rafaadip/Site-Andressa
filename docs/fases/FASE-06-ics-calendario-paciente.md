@@ -1,26 +1,42 @@
-# FASE 06 — Apple Calendar, `.ics` e CalDAV
+# FASE 06 — `.ics`: o compromisso no calendário do paciente
 
-> **Objetivo:** o compromisso entra no calendário de **qualquer** pessoa — iPhone
+> **Objetivo:** o compromisso entra no calendário de **qualquer** paciente — iPhone
 > incluído — sem API proprietária e sem login.
 > **Depende de:** FASE-02 · **Habilita:** FASE-07, FASE-08
-> **Estimativa:** 3 dias (+1 opcional para CalDAV)
-> **Base:** [ADR-003](../adr/ADR-003-apple-sem-api.md)
+> **Estimativa:** 2 dias
+> **Base:** [ADR-003](../adr/ADR-003-ics-para-o-paciente.md)
+>
+> ⚠️ **Escopo revisado.** A sincronização da agenda da **médica** com a Apple (feed
+> `webcal://` e CalDAV no iCloud) foi **removida** a pedido do cliente. A agenda dela
+> é exclusivamente Google ([FASE-05](FASE-05-google-calendar.md)). Esta fase trata
+> apenas do lado do **paciente**.
 
 ---
 
-## 1. O ponto de partida
+## 1. Por que o `.ics` continua, mesmo "só com Google"
 
-A Apple **não tem API REST de calendário**. Quem procura um "Apple Calendar API"
-não encontra porque não existe: EventKit é local (apps nativos), e "Sign in with
-Apple" só autentica identidade.
+O `.ics` **não é integração com a Apple** — é um formato aberto (RFC 5545) lido
+nativamente por Apple Calendar, Google Agenda, Outlook, Samsung Calendar e
+Thunderbird.
 
-O que existe é melhor do que parece: **iCalendar (RFC 5545)** é um padrão aberto que
-Apple Calendar, Google, Outlook, Samsung e Thunderbird leem nativamente. Um arquivo
-`.ics` correto resolve o problema do paciente em **todas** as plataformas de uma vez.
+O uso primário do site será por celular e tablet
+([01-MOBILE-FIRST](../01-MOBILE-FIRST.md)). Boa parte desse público usa iPhone com o
+app Calendário. Sem `.ics`, esse paciente termina a confirmação sem forma de salvar o
+compromisso — digitaria à mão, ou não salvaria. Isso aumenta falta, que é exatamente
+o que o agendamento online existe para reduzir.
 
-O trabalho desta fase é gerar um `.ics` *rigorosamente* correto — porque o Apple
-Calendar é o cliente mais exigente do mercado e falha em silêncio quando algo está
-fora do RFC.
+Custo de manter: um gerador de ~120 linhas, sem credencial, sem dependência externa,
+sem ponto de falha em produção.
+
+**Cobertura com um único artefato:**
+
+| Cliente | Como recebe |
+|---|---|
+| Apple Calendar (iOS/macOS) | `.ics` anexo ou baixado |
+| Google Agenda | link `TEMPLATE` (ou `.ics`) |
+| Outlook (web/desktop) | `.ics` |
+| Samsung Calendar | `.ics` |
+| Thunderbird | `.ics` |
 
 ---
 
@@ -28,15 +44,18 @@ fora do RFC.
 
 ### 2.1 Requisitos do RFC que não podem ser ignorados
 
+Apple Calendar é o cliente mais rigoroso do mercado e **falha em silêncio** quando
+algo está fora do RFC — não há mensagem de erro, o evento simplesmente não aparece.
+
 | Requisito | Por quê | O que acontece se errar |
 |---|---|---|
 | Quebra de linha **CRLF** (`\r\n`) | RFC 5545 §3.1 | Apple Calendar recusa o arquivo |
 | *Folding* em 75 octetos | RFC 5545 §3.1 | Linha longa corrompe o campo |
-| `UID` **estável** por agendamento | RFC 5545 §3.8.4.7 | Cancelar cria um evento novo em vez de remover |
+| `UID` **estável** por agendamento | RFC 5545 §3.8.4.7 | Cancelar cria evento novo em vez de remover |
 | `SEQUENCE` incrementado a cada alteração | RFC 5545 §3.8.7.4 | Clientes **descartam** a atualização |
 | `DTSTAMP` obrigatório | RFC 5545 §3.8.7.2 | Arquivo inválido |
-| `VTIMEZONE` quando usa `TZID` | RFC 5545 §3.6.5 | Apple assume UTC → evento na hora errada |
-| Escape de `,` `;` `\` `\n` | RFC 5545 §3.3.11 | Descrição truncada no primeiro `,` |
+| `VTIMEZONE` quando usa `TZID` | RFC 5545 §3.6.5 | Cliente assume UTC → evento na hora errada |
+| Escape de `,` `;` `\` `\n` | RFC 5545 §3.3.11 | Descrição truncada na primeira vírgula |
 | `METHOD` coerente com o `Content-Type` | RFC 6047 | iOS Mail não mostra o botão "Adicionar" |
 
 ### 2.2 Implementação
@@ -65,7 +84,7 @@ function dobrar(linha: string): string {
 /** RFC 5545 §3.3.11 — a ordem importa: barra invertida primeiro. */
 function escapar(v: string): string {
   return v.replace(/\\/g, '\\\\')
-          .replace(/;/g, '\\;')
+          .replace(/;/g, '\;')
           .replace(/,/g, '\\,')
           .replace(/\r?\n/g, '\\n');
 }
@@ -122,20 +141,9 @@ END:VTIMEZONE
 
 > **Nota de manutenção:** se o horário de verão voltar, este bloco precisa ganhar um
 > componente `DAYLIGHT` com `RRULE`. Marcado com `// TODO(dst)` no código e listado
-> em FASE-14. Como usamos `TZID` (e não UTC convertido), clientes com base tz
-> atualizada corrigem sozinhos — o `VTIMEZONE` embutido é o fallback.
-
-### 2.4 Erros do protótipo, corrigidos aqui
-
-```js
-// index.html — o que muda
-const utc = dt => new Date(dt.getTime() + 3*3600000);  // ❌ offset fixo
-`UID:${Date.now()}@draandressacorreia`                 // ❌ UID volátil
-// ❌ sem SEQUENCE, sem VTIMEZONE, sem folding, sem METHOD:CANCEL
-```
-
-O `UID` volátil é o mais grave: sem ele, **cancelar não cancela** — o cliente recebe
-um evento desconhecido e o adiciona.
+> em [FASE-14](FASE-14-roadmap.md). Como usamos `TZID` (e não UTC convertido),
+> clientes com base tz atualizada corrigem sozinhos — o `VTIMEZONE` embutido é o
+> fallback.
 
 ---
 
@@ -159,7 +167,8 @@ await resend.emails.send({
 
 O `contentType` com `method=REQUEST` é o que faz o **iOS Mail** renderizar o cartão
 de evento com botão "Adicionar", em vez de um anexo genérico. Sem isso, o iPhone
-mostra um arquivo que a maioria das pessoas ignora.
+mostra um arquivo que a maioria das pessoas ignora — e este é o principal caminho
+num público mobile.
 
 ### 3.2 Download direto (`/api/ics/[id]`)
 
@@ -175,7 +184,7 @@ return new Response(gerarIcs(ag, 'REQUEST'), {
 
 ### 3.3 Link do Google Calendar
 
-Para quem usa Google no navegador, um `.ics` é fricção. Link direto:
+Para quem usa Google, um `.ics` é fricção desnecessária. Link direto:
 
 ```ts
 const url = new URL('https://calendar.google.com/calendar/render');
@@ -187,7 +196,9 @@ url.searchParams.set('location', local);
 url.searchParams.set('ctz', 'America/Sao_Paulo');
 ```
 
-### 3.4 Como isso aparece na tela de sucesso
+### 3.4 Como aparece na tela de sucesso
+
+Layout mobile-first — os dois botões empilhados, largura total, 48 px de altura:
 
 ```
         ✓  Consulta confirmada
@@ -195,75 +206,37 @@ url.searchParams.set('ctz', 'America/Sao_Paulo');
      Segunda, 15 de setembro às 14:00
      Consulta em Nutrologia · Presencial
 
-  ┌──────────────────────────────────────┐
-  │  Adicionar ao calendário             │
-  │  [ Apple / Outlook (.ics) ]          │  ← download
-  │  [ Google Agenda ]                   │  ← link
-  └──────────────────────────────────────┘
+  ┌────────────────────────────────────┐
+  │  Adicionar ao calendário           │
+  │  ┌──────────────────────────────┐  │
+  │  │  Google Agenda               │  │  ← link
+  │  ├──────────────────────────────┤  │
+  │  │  Apple, Outlook e outros     │  │  ← download .ics
+  │  └──────────────────────────────┘  │
+  └────────────────────────────────────┘
 
   Enviamos também para seu e-mail.
   [ Confirmar pelo WhatsApp ]
 ```
 
-Rotular como "Apple / Outlook" em vez de ".ics" — o paciente não precisa saber o
-nome do formato.
+Rotular por **destino**, não por formato — o paciente não precisa saber o que é um
+`.ics`. Em tablet e desktop os dois botões ficam lado a lado.
 
 ---
 
-## 4. Calendário da médica no iPhone
-
-### 4.1 Rota padrão — feed `webcal://` (recomendada)
-
-```
-GET /api/calendario/<token>.ics
-→ VCALENDAR com todos os agendamentos confirmados dos próximos 180 dias
-```
-
-Ela assina uma vez: **Ajustes → Aplicativos → Calendário → Contas → Adicionar
-Conta → Outra → Adicionar Calendário Assinado**, colando
-`webcal://draandressacorreia.com.br/api/calendario/<token>.ics`.
-
-- ✅ Nenhuma credencial da Apple no nosso servidor
-- ✅ Nunca quebra por troca de senha
-- ✅ Funciona também em Google Agenda ("Adicionar por URL") e Outlook
-- ⚠️ Somente leitura; iOS atualiza a cada ~15 min–1 h
-
-Segurança: token de 32 bytes (`randomBytes(32).toString('base64url')`), revogável no
-`/admin`, resposta com `X-Robots-Tag: noindex` e `Cache-Control: private, max-age=300`.
-
-### 4.2 Rota opcional — CalDAV (atrás de flag)
-
-Só se ela pedir evento nativo e editável no iCloud.
-
-```
-Servidor : https://caldav.icloud.com
-Auth     : Basic — Apple ID + SENHA DE APP (appleid.apple.com)
-Descoberta: PROPFIND current-user-principal → calendar-home-set
-Escrita  : PUT /<home>/<calendario>/<uid>.ics  (corpo = VEVENT)
-Remoção  : DELETE no mesmo href
-```
-
-Riscos assumidos, e por isso é opcional: a senha de app é credencial de longa
-duração no nosso banco; ela é invalidada quando a médica troca a senha do Apple ID,
-**sem aviso**; não há push (exigiria polling); o iCloud tem particularidades mal
-documentadas de `PROPFIND`.
-
-Se implementado: senha cifrada como o refresh token do Google, verificação de saúde
-diária, e alerta no `/admin` na primeira falha de autenticação.
-
----
-
-## 5. Entregáveis
+## 4. Entregáveis
 
 - [ ] `lib/calendar/ics.ts` — gerador com folding, escape, `VTIMEZONE`, `SEQUENCE`
 - [ ] `app/api/ics/[id]/route.ts`
-- [ ] `app/api/calendario/[token]/route.ts` — feed assinado
 - [ ] `lib/calendar/google-link.ts`
-- [ ] `/admin/integracoes` — gerar/copiar/revogar link do feed, com instruções
-      passo a passo para iPhone
-- [ ] `lib/calendar/caldav.ts` — **opcional**, atrás de `ENABLE_CALDAV`
+- [ ] Testes contra `ical.js` (biblioteca independente)
 
-## 6. Critérios de aceite
+**Fora de escopo** (removidos por [ADR-003](../adr/ADR-003-ics-para-o-paciente.md)):
+- ~~`app/api/calendario/[token]/route.ts` — feed `webcal://`~~
+- ~~`lib/calendar/caldav.ts` — escrita no iCloud~~
+- ~~UI de gestão do feed em `/admin/integracoes`~~
+
+## 5. Critérios de aceite
 
 - [ ] `.ics` validado por biblioteca independente (`ical.js`) sem erro
 - [ ] Abre corretamente em **Apple Calendar (iOS e macOS)**, Google Agenda, Outlook
@@ -274,5 +247,4 @@ diária, e alerta no `/admin` na primeira falha de autenticação.
 - [ ] Remarcar atualiza o evento existente, sem duplicar
 - [ ] Descrição com vírgula, ponto-e-vírgula e quebra de linha sobrevive íntegra
 - [ ] Nome com acento (ex.: "José Antônio Gonçalves") não corrompe o folding
-- [ ] Feed `webcal://` assinado no iPhone mostra os agendamentos corretos
-- [ ] Token de feed revogado retorna 404
+- [ ] Botões de calendário utilizáveis com uma mão em tela de 375 px

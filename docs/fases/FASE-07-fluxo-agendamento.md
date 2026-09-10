@@ -5,6 +5,10 @@
 > **Depende de:** FASE-01, FASE-04, FASE-05, FASE-06 · **Habilita:** FASE-08
 > **Estimativa:** 5 dias
 > **Regras aplicadas:** `ui-ux-pro-max` §2 (toque), §8 (formulários), §1 (a11y)
+>
+> ⚠️ **Esta é a superfície mobile crítica do produto.** A maioria dos pacientes vai
+> percorrer este fluxo inteiro no celular, com uma mão. Leia
+> [01-MOBILE-FIRST](../01-MOBILE-FIRST.md) antes de implementar.
 
 ---
 
@@ -51,6 +55,8 @@ rascunho ao voltar por engano é a diferença entre remarcar e desistir.
                                           [ Continuar → ]
 ```
 
+- **Mobile:** cartões empilhados, largura total, altura mínima 88 px. **Tablet e
+  desktop:** lado a lado.
 - `role="radiogroup"` com `role="radio"` + `aria-checked`.
 - Navegação por setas (roving `tabindex`) — comportamento esperado de radiogroup.
 - Cartão inteiro é o alvo (bem acima de 44 px).
@@ -87,6 +93,9 @@ rascunho ao voltar por engano é a diferença entre remarcar e desistir.
 | Fuso sempre visível | Teleconsulta pode ser de outro estado; ambiguidade aqui gera falta |
 | Dia sem atendimento aparece **desabilitado**, não some | "Ela não atende quarta" é informação; um buraco no calendário é confusão |
 | Slots em grade, não `<select>` | Comparação visual instantânea; alvos de 48 px |
+| Grade de 3 col. (celular) → 4 (tablet) → 4–5 (desktop) | Mantém o alvo em 48 px sem apertar |
+| Seletor de dia rola na horizontal no celular | 7 dias não cabem em 375 px com alvo de 44 px |
+| Botão "Continuar" **sticky no rodapé** no celular | Fica na faixa do polegar e não some ao rolar a grade |
 | Skeleton ao carregar | `progressive-loading`: nunca uma grade vazia que parece "sem vagas" |
 | Estado vazio com ação | "Sem horários nesta semana. [Ver próxima semana]" |
 
@@ -99,6 +108,22 @@ rascunho ao voltar por engano é a diferença entre remarcar e desistir.
 
 Só aparece quando `Intl.DateTimeFormat().resolvedOptions().timeZone` difere do fuso
 da clínica. Evita o clássico "achei que era no meu horário".
+
+### Barra de ação fixa (celular)
+
+```css
+.acoes-etapa {
+  position: sticky; bottom: 0;
+  padding-block: var(--space-3);
+  padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(transparent, var(--bg-page) 30%);
+}
+@media (min-width: 768px) { .acoes-etapa { position: static; } }
+```
+
+O `safe-area-inset-bottom` é obrigatório: sem ele o botão fica sob a barra de gestos
+do iPhone. A grade de horários recebe `padding-bottom` equivalente para que o último
+slot não fique escondido atrás da barra.
 
 ### Acessibilidade — o que corrigir em relação ao protótipo
 
@@ -165,6 +190,17 @@ Ao trocar de etapa, foco vai para o `<h2>` da nova etapa (`tabIndex={-1}`), e um
 | Motivo | `textarea` | — | Opcional, ≤ 500 caracteres |
 
 `inputMode` correto (`tel`, `email`) para abrir o teclado certo no celular.
+
+**Regras de campo no celular** (detalhe em [01-MOBILE-FIRST §7](../01-MOBILE-FIRST.md)):
+
+| Regra | Motivo |
+|---|---|
+| `font-size` ≥ 16 px | Abaixo disso o iOS dá **zoom automático** e o layout salta |
+| Altura ≥ 48 px | Alvo de toque |
+| Label **acima** do campo, sempre visível | O teclado cobre metade da tela; label flutuante desaparece |
+| `scrollIntoView({ block: 'center' })` ao focar | Mantém o campo visível com o teclado aberto |
+| Erro **acima** do campo quando ele está na metade inferior | Abaixo ficaria atrás do teclado |
+| Um campo por linha até 768 px | Dois campos lado a lado em 375 px reduzem o alvo |
 
 ### Consentimento — dois checkboxes, não um
 
@@ -284,6 +320,14 @@ explica e oferece o link direto.
 - [ ] 20 POSTs concorrentes no mesmo slot → exatamente **um** 201, dezenove 409
 - [ ] Repetir o POST com a mesma `Idempotency-Key` não duplica
 - [ ] Reserva `held` abandonada libera o horário em 10 min
+
+**Mobile (uso primário)**
+- [ ] Fluxo completo percorrido **com uma mão** em aparelho real de 375 px
+- [ ] Botão de avançar sempre alcançável, com `safe-area-inset-bottom`
+- [ ] Nenhum campo provoca zoom automático no iOS ao receber foco
+- [ ] Campo focado visível com o teclado aberto, nas quatro etapas
+- [ ] Grade de horários usável em 375 px sem rolagem horizontal
+- [ ] Verificado em 375 / 393 / 430 / 768 / 1024, retrato e paisagem
 
 **Acessibilidade**
 - [ ] Fluxo inteiro operável só por teclado

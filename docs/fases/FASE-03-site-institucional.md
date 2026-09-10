@@ -4,6 +4,9 @@
 > CFM e prontas para busca local.
 > **Depende de:** FASE-01, FASE-02 · **Habilita:** FASE-11
 > **Estimativa:** 4–5 dias
+>
+> ⚠️ Uso primário é celular e tablet — [01-MOBILE-FIRST](../01-MOBILE-FIRST.md).
+> Cada seção abaixo é desenhada primeiro em 375 px.
 
 ---
 
@@ -62,15 +65,27 @@ Navegação: **4 itens no máximo** — `Sobre · Atendimento · Contato` + bot�
 - Retrato com máscara radial (herdado do protótipo — funciona bem).
 - H1 ≤ 8 palavras. Uma palavra em itálico `gold-200`.
 - **LCP = o retrato.** `priority`, AVIF+WebP, `sizes` correto, dimensões explícitas.
-- Mobile: empilha; retrato limitado a 60 vh para o CTA caber acima da dobra.
+**Comportamento por faixa:**
+
+| | Celular (<768) | Tablet (768–1023) | Desktop (≥1024) |
+|---|---|---|---|
+| Layout | Empilhado: texto → foto | Empilhado, foto maior | 2 colunas |
+| Altura do retrato | máx. **50 dvh** | 60 dvh | 600 px |
+| CTAs | **Largura total, empilhados** | Lado a lado | Lado a lado |
+| H1 | 40 px | 52 px | 68 px |
+
+No celular, os dois CTAs ocupam a largura toda e ficam **acima da dobra** junto com o
+H1 — o retrato entra depois. Quem chega pelo Instagram no celular precisa ver
+"Agendar consulta" sem rolar.
 
 ### 2.2 Credenciais
 
-Faixa de 4 itens sobre `ivory-100`, marcador em `gold-500`:
+Grade de 4 itens sobre `ivory-100`, marcador em `gold-500`.
+**1 coluna no celular · 2 no tablet · 4 no desktop.**
 
 | Item | Texto |
 |---|---|
-| Registro | **CRM-SP 207.737** · Registro ativo |
+| Registro | **CRM-SP 267.777** · Registro ativo |
 | Formação | **Medicina — UNINOVE** · 2019–2024 |
 | Pós-graduação | **Nutrologia — Afya** · em curso |
 | Certificação | **ACLS** · Suporte avançado de vida |
@@ -80,7 +95,11 @@ Faixa de 4 itens sobre `ivory-100`, marcador em `gold-500`:
 
 ### 2.3 Sobre
 
-Duas colunas (foto 4:5 + texto). Conteúdo derivado do currículo:
+Foto 4:5 + texto. **Empilhado até 1023 px** (foto primeiro), duas colunas a partir
+de 1024. No tablet a foto fica com largura máxima de 420 px e centrada — esticá-la
+para 680 px domina a tela e some com o texto.
+
+Conteúdo derivado do currículo:
 
 > Médica formada pela Universidade Nove de Julho (UNINOVE), com atuação em urgência
 > e emergência na rede hospitalar de Guarulhos e São Paulo — UPA Taboão, Complexo
@@ -101,7 +120,9 @@ SP e no Hospital Geral de Guarulhos.
 
 ### 2.4 Como é a consulta
 
-Três cartões sobre **espresso-900** (contraponto do carrossel):
+Três cartões sobre **espresso-900** (contraponto do carrossel).
+**1 coluna no celular · 2 no tablet (o terceiro ocupa a linha inteira) · 3 no
+desktop.**
 
 | Cartão | Conteúdo | Etiqueta |
 |---|---|---|
@@ -163,7 +184,7 @@ layout — além de ser onde a troca de "pós-graduanda" → "especialista" acon
 export const PROFISSIONAL = {
   nome: 'Dra. Andressa Chaves Correia',
   nomeCurto: 'Dra. Andressa Correia',
-  crm: 'CRM-SP 207.737',
+  crm: 'CRM-SP 267.777',
   /** ⚠️ Só vira 'Especialista em Nutrologia' com RQE emitido. Ver FASE-10. */
   titulo: 'Médica · com atuação em Nutrologia',
   rqe: null as string | null,
@@ -188,6 +209,10 @@ export const PROFISSIONAL = {
 ## 5. Critérios de aceite
 
 - [ ] Sem rolagem horizontal em 375 px
+- [ ] Verificado em 375 / 393 / 768 / 1024, retrato e paisagem
+- [ ] CTA principal do hero visível sem rolar, em 375 px
+- [ ] Nenhuma informação essencial dependente de hover
+- [ ] `<meta viewport>` com `viewport-fit=cover` e **sem** `user-scalable=no`
 - [ ] Um `<h1>` por página; hierarquia sem pulo de nível
 - [ ] `axe-core` sem violação crítica ou séria
 - [ ] Navegação completa por teclado, com foco sempre visível
