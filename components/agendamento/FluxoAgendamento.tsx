@@ -410,8 +410,8 @@ export function FluxoAgendamento({ tipos, hoje, fuso, horizonteDias }: Props) {
         <p className="mt-8 text-center text-sm text-texto-2 md:text-left">
           Prefere conversar?{' '}
           <a href={linkWhatsApp(MENSAGEM_AGENDAMENTO)} target="_blank" rel="noopener noreferrer"
-            className="font-medium text-acento underline underline-offset-4">
-            <MessageCircle aria-hidden size={14} className="mr-1 inline" />Agende pelo WhatsApp
+            className="inline-flex min-h-11 items-center gap-1.5 font-medium text-acento underline underline-offset-4">
+            <MessageCircle aria-hidden size={14} />Agende pelo WhatsApp
           </a>
         </p>
       )}
