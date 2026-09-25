@@ -109,6 +109,12 @@ test.describe('celular (375px)', () => {
     await expect(page.getByRole('button', { name: 'Fechar menu' })).toHaveAttribute('aria-expanded', 'true');
     await expect(page.getByRole('navigation', { name: 'Principal (celular)' }).getByRole('link').first()).toBeFocused();
 
+    // O painel APARECE de fato, cobrindo a tela abaixo do cabeçalho — um
+    // `fixed` dentro de elemento com backdrop-filter chegou a ter altura 0.
+    const painel = await page.getByRole('navigation', { name: 'Principal (celular)' }).boundingBox();
+    expect(painel!.height).toBeGreaterThan(500);
+    await expect(page.getByRole('navigation', { name: 'Principal (celular)' }).getByRole('link', { name: 'Agendar consulta' })).toBeInViewport();
+
     // Tab não escapa do painel: dá a volta.
     for (let i = 0; i < 8; i++) await page.keyboard.press('Tab');
     const dentro = await page.evaluate(() => {
