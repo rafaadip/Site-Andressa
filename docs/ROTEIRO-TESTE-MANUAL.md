@@ -5,9 +5,13 @@
 > real e o comportamento dos apps de calendário. Preencha a coluna "Resultado"
 > com data, aparelho e ✅/❌; anexe prints ou vídeo no PR de go-live.
 >
-> Automatizado (verde localmente; o CI roda o mesmo conjunto): 211 testes unitários + integração, 80 E2E
-> (inclui axe WCAG 2.2 AA em todas as páginas públicas e do painel, matriz de
-> viewports 375–1440, teclado, fuso de Manaus), Lighthouse.
+> Automatizado (verde localmente; o CI roda o mesmo conjunto): 648 testes no
+> Vitest (unitários, componentes, integração, API) e 123 E2E (axe WCAG 2.2 AA
+> em todas as páginas públicas e do painel, matriz de viewports 375–1440,
+> teclado, fuso de Manaus e 9 aparelhos emulados — iPhone SE/15/15 Pro Max,
+> Galaxy S24/S9+/Tab S4, iPad retrato e paisagem, desktop), Lighthouse. A
+> emulação roda no Chromium: WebKit, teclado virtual e notch só aqui. Ver
+> [QA](QA.md).
 
 ## 1. Paciente — celular, com uma mão
 

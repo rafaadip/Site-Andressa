@@ -50,13 +50,26 @@ export function dobrar(linha: string): string {
   return partes.join(CRLF);
 }
 
-/** RFC 5545 §3.3.11 — a ordem importa: barra invertida PRIMEIRO. */
+/**
+ * RFC 5545 §3.3.11 — a ordem importa: barra invertida PRIMEIRO. Controle
+ * sai, e CR solto também vira `\n`: há leitores que tratam CR como fim de
+ * linha e veriam um `END:VEVENT` injetado (SEC-09).
+ */
 export function escapar(v: string): string {
   return v
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
     .replace(/\\/g, '\\\\')
     .replace(/;/g, '\\;')
     .replace(/,/g, '\\,')
-    .replace(/\r?\n/g, '\\n');
+    .replace(/\r\n|\r|\n/g, '\\n');
+}
+
+/**
+ * Valor de PARÂMETRO (§3.2), ex.: `CN=`. O escape de TEXT não vale aqui:
+ * um `:` sem aspas encerra os parâmetros e desloca o valor.
+ */
+export function parametro(v: string): string {
+  return `"${v.replace(/["\p{Cc}]/gu, '')}"`;
 }
 
 /**
@@ -112,8 +125,8 @@ export function gerarIcs(d: DadosIcs, metodo: 'REQUEST' | 'CANCEL'): string {
     dobrar(`LOCATION:${escapar(local)}`),
     `STATUS:${metodo === 'CANCEL' ? 'CANCELLED' : 'CONFIRMED'}`,
     'TRANSP:OPAQUE',
-    dobrar(`ORGANIZER;CN=${escapar(PROFISSIONAL.nomeCurto)}:mailto:${d.organizadorEmail}`),
-    dobrar(`ATTENDEE;CN=${escapar(d.pacienteNome)};RSVP=FALSE:mailto:${d.pacienteEmail}`),
+    dobrar(`ORGANIZER;CN=${parametro(PROFISSIONAL.nomeCurto)}:mailto:${d.organizadorEmail}`),
+    dobrar(`ATTENDEE;CN=${parametro(d.pacienteNome)};RSVP=FALSE:mailto:${d.pacienteEmail}`),
   ];
 
   if (metodo === 'REQUEST') {

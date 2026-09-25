@@ -36,12 +36,19 @@ jobs:
       AGENDAMENTO_SEM_GOOGLE: aceito
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # Actions fixadas por SHA (tag ao lado); o Dependabot mantém em dia.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # SCA: bloqueia alto/crítico que chegue à produção; o resto só aparece no log.
+      - name: npm audit — produção (bloqueante em alto/crítico)
+        run: npm audit --omit=dev --audit-level=high
+      - name: npm audit — completo (informativo)
+        continue-on-error: true
+        run: npm audit --audit-level=moderate
       # Pelo journal, como em produção — e falha se a constraint sumir.
       - run: npm run db:migrate
       - run: npm run db:seed
@@ -58,9 +65,9 @@ jobs:
       - name: E2E (build de produção)
         run: npm run test:e2e
       - name: Lighthouse mobile (4G simulado) com orçamento
-        run: npx -y @lhci/cli@0.15.x autorun
+        run: npx -y @lhci/cli@0.15.1 autorun
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: relatorios
           path: |

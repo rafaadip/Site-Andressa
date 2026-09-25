@@ -7,7 +7,7 @@ export default defineConfig([
   ...nextTs,
   globalIgnores([
     '.next/**', 'out/**', 'build/**', 'next-env.d.ts',
-    'lib/db/migrations/**', 'skills/**', 'docs/**', 'coverage/**', '.lighthouseci/**',
+    'lib/db/migrations/**', 'skills/**', 'docs/**', 'coverage/**', '.lighthouseci/**', '.claude/**',
   ]),
   {
     rules: {

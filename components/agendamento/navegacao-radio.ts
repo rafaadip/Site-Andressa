@@ -17,6 +17,9 @@ export function navegarRadio(e: KeyboardEvent<HTMLElement>) {
   let alvo: HTMLElement | undefined;
   if (e.key === 'Home') alvo = radios[0];
   else if (e.key === 'End') alvo = radios[radios.length - 1];
+  // Foco no próprio grupo (focarGrupo() depois de um erro): nenhuma opção
+  // é a "atual" — seta para a frente vai à primeira, para trás à última.
+  else if (atual === -1) alvo = avancar ? radios[0] : radios[radios.length - 1];
   else if (avancar) alvo = radios[(atual + 1) % radios.length];
   else alvo = radios[(atual - 1 + radios.length) % radios.length];
 

@@ -115,15 +115,32 @@ export async function salvarConexao(p: {
   return linha!;
 }
 
-/** Desconectar: revoga no Google e apaga a credencial. Agendamentos ficam. */
+/** Marca de "a médica desconectou pelo painel" em `last_error`. */
+export const DESCONECTADA_PELO_PAINEL = 'desconectada';
+
+/**
+ * Desconectar: revoga no Google e APAGA a credencial (e o canal e o
+ * syncToken) — mas a linha FICA, marcada como revogada. Apagar a linha faria
+ * o sistema esquecer que a agenda existiu: `estadoAgenda` viraria
+ * 'sem-google' e, com AGENDAMENTO_SEM_GOOGLE=aceito, o site ofertaria tudo
+ * por cima dos plantões. Revogada, degrada para D+2 e o painel alerta até
+ * reconectar (regra 11, ADR-002). Sem e-mail de alerta: foi ela que pediu.
+ * Agendamentos ficam.
+ */
 export async function removerConexao(practitionerId: string): Promise<void> {
   const c = await ultimaConexao(practitionerId);
   if (!c) return;
-  try {
-    const cli = clienteDa(c);
-    if (c.channelId && c.channelResourceId) await cli.pararCanal(c.channelId, c.channelResourceId).catch(() => undefined);
-    await revogarToken(decifrar(c.refreshTokenEnc));
-  } catch { /* revogar é melhor esforço: a credencial some do banco de qualquer jeito */ }
+  if (c.refreshTokenEnc) {
+    try {
+      const cli = clienteDa(c);
+      if (c.channelId && c.channelResourceId) await cli.pararCanal(c.channelId, c.channelResourceId).catch(() => undefined);
+      await revogarToken(decifrar(c.refreshTokenEnc));
+    } catch { /* revogar é melhor esforço: a credencial some do banco de qualquer jeito */ }
+  }
   tokens.delete(c.id);
-  await db().delete(calendarConnection).where(eq(calendarConnection.id, c.id));
+  await db().update(calendarConnection).set({
+    refreshTokenEnc: '', syncToken: null,
+    channelId: null, channelResourceId: null, channelExpiresAt: null,
+    revokedAt: c.revokedAt ?? new Date(), lastError: DESCONECTADA_PELO_PAINEL,
+  }).where(eq(calendarConnection.id, c.id));
 }

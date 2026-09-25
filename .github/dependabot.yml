@@ -1,0 +1,60 @@
+version: 2
+
+updates:
+  # Dependências npm (produção + dev)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Sao_Paulo"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    groups:
+      # Runtime: patch/minor agrupados em 1 PR só (next, react, drizzle-orm,
+      # postgres, zod, luxon, lucide-react, sharp, server-only...).
+      producao-patch-minor:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      # Ferramental de dev/teste/build: patch/minor agrupados em outro PR
+      # (drizzle-kit, eslint, vitest, playwright, typescript, tailwind...).
+      dev-patch-minor:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+    # Majors NÃO entram nos grupos acima: como não há update-type "major" em
+    # nenhum grupo, o Dependabot abre um PR individual por major (ex.: next 17,
+    # react 20, typescript 6/7, eslint 10) em vez de ignorá-los — a intenção é
+    # dar visibilidade e forçar revisão manual, nunca agrupar/mesclar um major
+    # junto com patches.
+
+  # GitHub Actions usadas em .github/workflows/*.yml
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Sao_Paulo"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore(ci)"
+      include: "scope"
+    groups:
+      actions-patch-minor:
+        update-types:
+          - "minor"
+          - "patch"
+    # Majors de Actions (ex.: checkout v5) também ficam de fora do grupo e
+    # chegam individualmente, para revisão manual do SHA antes do pin.

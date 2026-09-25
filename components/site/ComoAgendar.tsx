@@ -40,7 +40,7 @@ export function ComoAgendar() {
             href={linkWhatsApp(MENSAGEM_AGENDAMENTO)}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-acento underline underline-offset-4"
+            className="inline-flex min-h-11 items-center font-medium text-acento underline underline-offset-4"
           >
             Fale pelo WhatsApp
           </a>

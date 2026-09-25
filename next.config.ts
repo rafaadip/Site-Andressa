@@ -14,6 +14,15 @@ const SEGURANCA = [
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
 ];
 
+/**
+ * `NEXT_PUBLIC_SITE_URL` é embutida no BUILD. Sem ela, a produção sairia com
+ * `http://localhost:3000`: cookie sem `Secure`/`__Host-`, CSP sem
+ * `upgrade-insecure-requests`, links de e-mail e `.ics` quebrados (SEC-20).
+ */
+if (process.env.VERCEL_ENV === 'production' && !/^https:\/\//.test(process.env.NEXT_PUBLIC_SITE_URL ?? '')) {
+  throw new Error('NEXT_PUBLIC_SITE_URL precisa ser https:// no build de produção (docs/OPERACAO.md).');
+}
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: {

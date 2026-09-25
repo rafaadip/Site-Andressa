@@ -17,6 +17,8 @@ e tablet.
 | [Decisões (ADR)](docs/adr/) | 6 registros de decisão arquitetural |
 | [Fases](docs/fases/) | 14 fases de desenvolvimento |
 | [RIPD](docs/RIPD.md) | Relatório de impacto à proteção de dados (LGPD) |
+| [Segurança](docs/SEGURANCA.md) | Auditoria, pentest, SCA, riscos aceitos, checklist de produção |
+| [QA](docs/QA.md) | Testes: unitários, componentes, integração, API, E2E por aparelho, carga e resiliência |
 | [Perfil da Empresa no Google](docs/GUIA-PERFIL-EMPRESA-GOOGLE.md) | Guia para a médica (SEO local) |
 
 ## Estado
@@ -32,9 +34,12 @@ e tablet.
 | Cancelar pelo link até o prazo; apagar o motivo (LGPD) | Integrações, políticas, direitos do titular (LGPD) |
 
 Garantias verificadas por teste: **sem overbooking** (constraint no banco,
-20 requisições simultâneas → 1 vence), fuso por IANA (nunca offset fixo),
-falha do Google/e-mail nunca perde consulta, nada de dado de saúde em log,
-CSP estrita, WCAG 2.2 AA (axe) em 375 px.
+40 requisições simultâneas → 1 vence), limites anti-abuso que resistem a
+concorrência, fuso por IANA (nunca offset fixo), falha do Google/e-mail nunca
+perde consulta, banco fora do ar cai no WhatsApp em segundos, nada de dado de
+saúde em log ou no Sentry, eliminação LGPD que alcança a agenda do Google,
+CSP estrita, WCAG 2.2 AA (axe) em 375 px, 9 aparelhos emulados (iPhone, Galaxy,
+iPad, desktop). `npm audit`: 0 vulnerabilidades.
 
 **Falta para o go-live** (não é código): endereço do consultório, horários
 reais, domínio e DNS do e-mail, revisão jurídica e teste em aparelho real —
@@ -46,6 +51,7 @@ checklist em [`docs/OPERACAO.md` §5](docs/OPERACAO.md).
 npm run dev          # desenvolvimento
 npm run verify       # typecheck + lint + contraste + conformidade CFM/LGPD + testes
 npm run build && npm run test:e2e   # E2E contra o build de produção
+npm run test:carga && npm run test:resiliencia   # não funcionais (contra o build)
 ```
 
 Detalhes (Postgres local, variáveis de ambiente) em [`CLAUDE.md`](CLAUDE.md).

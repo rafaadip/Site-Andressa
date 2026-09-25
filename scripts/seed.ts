@@ -10,6 +10,7 @@
  */
 import postgres from 'postgres';
 import { PROFISSIONAL } from '../lib/config';
+import { bancoLocal } from '../lib/db/tls';
 
 export const PRACTITIONER_ID = '00000000-0000-4000-8000-000000000001';
 
@@ -69,11 +70,20 @@ export async function semear(url: string, opcoes: { horariosFicticios?: boolean 
   }
 }
 
+/**
+ * Horários fictícios só num banco LOCAL (ou com confirmação explícita).
+ * Decidir por NODE_ENV não bastava: um `DATABASE_URL=<produção> npm run
+ * db:seed` esquecido apagava a semana real da médica (SEC-13).
+ */
+export function semearHorariosFicticios(url: string, env: Partial<Record<string, string>> = process.env): boolean {
+  if (env.SEED_CONFIRMO_FICTICIO === 'sim') return true;
+  return env.NODE_ENV !== 'production' && bancoLocal(url);
+}
+
 async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('Defina DATABASE_URL.');
-  const producao = process.env.NODE_ENV === 'production';
-  const ficticios = !producao || process.env.SEED_CONFIRMO_FICTICIO === 'sim';
+  const ficticios = semearHorariosFicticios(url);
   await semear(url, { horariosFicticios: ficticios });
   console.log(ficticios
     ? '\n  ✓ Seed aplicado (horários FICTÍCIOS de desenvolvimento).\n'

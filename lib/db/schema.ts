@@ -30,9 +30,15 @@ export const practitioner = pgTable('practitioner', {
   /**
    * O motivo (dado de saúde) vai na descrição do evento do Google?
    * FASE-05 §4: ela é a controladora e precisa dele para se preparar; com
-   * `false`, o evento leva só o link do painel.
+   * `false`, o evento leva só o link do painel. Padrão DESLIGADO: o dado de
+   * saúde só sai do banco se ela escolher (SEC-06, LGPD art. 11).
    */
-  includeNoteInEvent: boolean('include_note_in_event').notNull().default(true),
+  includeNoteInEvent: boolean('include_note_in_event').notNull().default(false),
+  /**
+   * Sessões do painel emitidas ANTES disto não valem mais ("Sair" derruba o
+   * cookie em todos os aparelhos, inclusive um copiado — SEC-10).
+   */
+  sessionsValidAfter: timestamp('sessions_valid_after', { withTimezone: true }),
 }, (t) => [
   check('lead_time_range', sql`${t.leadTimeHours} between 0 and 168`),
   check('horizon_range', sql`${t.horizonDays} between 7 and 180`),

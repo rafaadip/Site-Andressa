@@ -11,10 +11,14 @@ npm run dev              # desenvolvimento
 npm run verify           # typecheck + lint + contraste + conformidade + testes
 npm run test             # vitest (unitários + integração)
 npm run test:e2e         # Playwright contra o build de produção (rode `npm run build` antes)
+npm run test:carga       # não funcional: p95 e corrida no mesmo horário (contra o build)
+npm run test:resiliencia # não funcional: banco recusando/pendurado (contra o build)
 npm run check:contrast   # contraste WCAG dos tokens
 npm run db:generate      # gera migration a partir de lib/db/schema.ts
 ```
 
+Componentes: `tests/componentes/*.test.tsx`, com `// @vitest-environment jsdom`
+na 1ª linha e Testing Library (papel e nome acessível, nunca classe CSS).
 Testes de integração e E2E de agendamento precisam de `DATABASE_URL_TEST`;
 sem ela, pulam sozinhos. O setup migra e semeia o banco de teste sozinho.
 Google e Resend são simulados em memória (`tests/setup/servicos-falsos.ts`);
@@ -28,7 +32,7 @@ createdb -h 127.0.0.1 -p 55432 -U postgres andressa
 
 export DATABASE_URL="postgresql://postgres@127.0.0.1:55432/andressa"
 npm run db:migrate       # SEMPRE pelo journal — nunca `psql -f` numa migration
-npm run db:seed          # horários FICTÍCIOS de desenvolvimento
+npm run db:seed          # horários FICTÍCIOS — só em banco local
 export DATABASE_URL_TEST="$DATABASE_URL"
 ```
 
@@ -85,11 +89,20 @@ Rodar o site local: copie `.env.example` para `.env.local` e preencha
     altura zero.
 16. **PII nunca em log.** Use `log` de `lib/log.ts` (filtra por chave e por
     padrão); nunca `console.log` de objeto de paciente.
+17. **Limite anti-abuso só vale contado sob lock.** Criação pelo site e
+    `bloquear()` tomam `chaveDosLimites()` antes do lock do slot (ordem fixa).
+    Contagem fora da transação é só caminho rápido. Ver `docs/SEGURANCA.md`.
+18. **O evento do Google espelha a consulta.** Quem apaga dado (revogação,
+    retenção, eliminação) marca `sync_state='pending'` em toda linha com
+    `google_event_id` — senão o dado sobrevive na agenda da médica.
 
 ## Estado
 
-Todas as fases de código (01–13) implementadas; 14 é roadmap. Testes:
-211 unitários + integração, 80 E2E, Lighthouse CI no pipeline.
+Todas as fases de código (01–13) implementadas; 14 é roadmap. Testes: 648
+no Vitest (234 unitários, 220 de componentes em jsdom, 126 de integração, 68
+funcionais de API), 123 E2E (inclui 9 aparelhos), carga, resiliência e
+Lighthouse CI. Cobertura: 96 % de `lib/`, 92 % de `components/`. Segurança
+em `docs/SEGURANCA.md`; QA em `docs/QA.md`.
 
 | Fase | Onde |
 |---|---|

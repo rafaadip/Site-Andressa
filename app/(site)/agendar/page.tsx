@@ -7,6 +7,7 @@ import type { TipoConsultaPublico } from '@/lib/agendamento/tipos';
 import { Secao } from '@/components/ui/Secao';
 import { FluxoAgendamento } from '@/components/agendamento/FluxoAgendamento';
 import { AgendarPorContato } from '@/components/agendamento/AgendarPorContato';
+import { comLimiteDeTempo, ESGOTOU } from '@/lib/limite-tempo';
 
 export const metadata: Metadata = {
   title: 'Agendar consulta',
@@ -18,19 +19,30 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 type Oferta = { tipos: TipoConsultaPublico[]; horizonteDias: number };
+const SEM_OFERTA: Oferta = { tipos: [], horizonteDias: 0 };
+
+/** Banco lento não pode deixar a página em branco: em 2,5 s, cai no WhatsApp. */
+const LIMITE_MS = 2500;
 
 async function carregarOferta(): Promise<Oferta> {
+  const { log } = await import('@/lib/log');
   try {
     const { listarTipos, profissional } = await import('@/lib/agendamento/servico');
     const { agendamentoOnlineHabilitado } = await import('@/lib/calendar/freebusy');
-    const prof = await profissional();
-    if (!(await agendamentoOnlineHabilitado(prof.id))) return { tipos: [], horizonteDias: 0 };
-    return { tipos: await listarTipos(), horizonteDias: prof.horizonDays };
+    const oferta = await comLimiteDeTempo((async (): Promise<Oferta> => {
+      const prof = await profissional();
+      if (!(await agendamentoOnlineHabilitado(prof.id))) return SEM_OFERTA;
+      return { tipos: await listarTipos(), horizonteDias: prof.horizonDays };
+    })(), LIMITE_MS);
+    if (oferta === ESGOTOU) {
+      log.aviso('agendar.banco-lento', { limiteMs: LIMITE_MS });
+      return SEM_OFERTA;
+    }
+    return oferta;
   } catch (e) {
     // Banco fora do ar não pode derrubar a página: cai no WhatsApp.
-    const { log } = await import('@/lib/log');
     log.excecao('agendar.sem-banco', e);
-    return { tipos: [], horizonteDias: 0 };
+    return SEM_OFERTA;
   }
 }
 

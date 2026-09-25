@@ -13,16 +13,19 @@ import { Interval } from 'luxon';
 import { db, schema } from '../db';
 import { calcularDisponibilidade, type Excecao, type Politicas, type RegraSemanal } from '../availability/engine';
 import {
-  TZ_CLINICA, dataLocal, formatarParaPaciente, horaLocalParaUtc, somarMinutos, DataInvalidaError,
+  TZ_CLINICA, dataLocal, diasNoIntervalo, fimDoDiaLocal, formatarParaPaciente, horaLocalParaUtc, somarMinutos,
+  DataInvalidaError,
 } from '../datetime';
-import { chaveDoSlot, codigoPg, reservarSlot, SlotIndisponivelError } from '../db/reservas';
+import { chaveDoSlot, chaveDosLimites, codigoPg, reservarSlot, SlotIndisponivelError } from '../db/reservas';
 import { buscarOcupadosExternos } from '../calendar/freebusy';
 import { gerarIcs, linkGoogleCalendar, novoUid } from '../calendar/ics';
 import { hashIp, hashToken, tokenGestaoPara, tokenValido } from '../seguranca';
 import { localConsulta, type Modalidade } from '../config';
 import { urlSite } from '../seo';
+import { comLimiteDeTempo, ESGOTOU } from '../limite-tempo';
 import { VERSAO_CONSENTIMENTO, type CriarAgendamento } from '../validation/agendamento';
-import { enfileirar } from '../notificacoes/fila';
+import { enfileirar, type Executor } from '../notificacoes/fila';
+import { log } from '../log';
 import { dadosIcs, podeCancelarPeloLink, type Linha, type LinhaProfissional } from './apresentacao';
 import type {
   AgendamentoConfirmado, RespostaDisponibilidade, TipoConsultaPublico,
@@ -68,8 +71,19 @@ export const LIMITES = {
   porIpPorHora: 5,
   /** Consultas futuras confirmadas por e-mail. */
   futurasPorEmail: 3,
+  /**
+   * Criações pelo site por hora, somando todas as origens. Uma agenda de
+   * uma médica não enche assim; acima disto é robô (SEC-02) — e o log avisa.
+   */
+  porHoraNoTotal: 30,
   /** Janela máxima de uma consulta de disponibilidade. */
   janelaMaximaDias: 31,
+  /**
+   * Nenhuma consulta de datas além disto (em dias a partir de hoje). O
+   * horizonte do painel vai até 180; datas absurdas (ano 9999) estouravam
+   * o intervalo de timestamp do Postgres e viravam 500 (pentest PT-03).
+   */
+  alcanceMaximoDias: 366,
 } as const;
 
 /** Grade de alinhamento dos slots (min). */
@@ -89,11 +103,8 @@ export async function prazoCancelamentoPublico(): Promise<number> {
   if (prazoCache && prazoCache.ate > Date.now()) return prazoCache.valor;
   const reserva = prazoCache?.valor ?? PRAZO_CANCELAMENTO_PADRAO_H;
   try {
-    const valor = await Promise.race([
-      profissional().then((p) => p.cancelDeadlineHours),
-      new Promise<number>((r) => setTimeout(() => r(-1), 800)),
-    ]);
-    if (valor < 0) return reserva;
+    const valor = await comLimiteDeTempo(profissional().then((p) => p.cancelDeadlineHours), 800);
+    if (valor === ESGOTOU) return reserva;
     prazoCache = { valor, ate: Date.now() + 60_000 };
     return valor;
   } catch {
@@ -148,16 +159,48 @@ async function tipoPorSlug(pid: string, slug: string, soAtivo = true) {
   return t;
 }
 
-/** Validação de data 'YYYY-MM-DD' e da janela pedida. */
-function janelaValida(de: string, ate: string): { inicio: Date; fim: Date } {
+/** Validação de data 'YYYY-MM-DD', do tamanho da janela e do alcance. */
+function janelaValida(de: string, ate: string, agora: Date): { inicio: Date; fim: Date } {
   const inicio = horaLocalParaUtc(de, '00:00');
-  const fim = somarMinutos(horaLocalParaUtc(ate, '00:00'), 24 * 60);
-  const dias = (fim.getTime() - inicio.getTime()) / 86_400_000;
+  // Fim do dia LOCAL (dia de 23/25 h se o horário de verão voltar).
+  const fim = fimDoDiaLocal(ate);
+  // Alcance ANTES de contar os dias: contar até o ano 9999 é um laço de
+  // milhões de iterações.
+  if (!dentroDoAlcance(inicio, agora) || !dentroDoAlcance(fim, agora)) {
+    throw new DataInvalidaError(`fora do alcance de ${LIMITES.alcanceMaximoDias} dias`);
+  }
+  // Dias do calendário, não horas/24: um dia de 23 h não é "0,958 dia".
+  const dias = diasNoIntervalo(de, ate).length;
   if (dias < 1 || dias > LIMITES.janelaMaximaDias) {
     throw new DataInvalidaError(`janela de ${dias} dias (máx. ${LIMITES.janelaMaximaDias})`);
   }
   return { inicio, fim };
 }
+
+/** De ontem até `alcanceMaximoDias` à frente. */
+function dentroDoAlcance(instante: Date, agora: Date): boolean {
+  return instante >= somarMinutos(agora, -2 * 24 * 60)
+    && instante <= somarMinutos(agora, (LIMITES.alcanceMaximoDias + 1) * 24 * 60);
+}
+
+/**
+ * E-mail canônico, SÓ para contar consultas por pessoa (o e-mail gravado
+ * não muda): minúsculas, sem `+sufixo` e, no Gmail, sem pontos — senão
+ * `ana+1@`, `a.na@` e `ana@gmail.com` burlavam o limite (pentest PT-02).
+ */
+export function emailCanonico(email: string): string {
+  const [local = '', dominio = ''] = email.trim().toLowerCase().split('@');
+  const semSufixo = local.split('+')[0]!;
+  const gmail = dominio === 'gmail.com' || dominio === 'googlemail.com';
+  return `${gmail ? semSufixo.replace(/\./g, '') : semSufixo}@${gmail ? 'gmail.com' : dominio}`;
+}
+
+/** A mesma canonicalização em SQL, sobre a coluna. */
+const emailCanonicoSql = sql`(
+  CASE WHEN split_part(lower(${appointment.patientEmail}), '@', 2) IN ('gmail.com', 'googlemail.com')
+       THEN replace(split_part(split_part(lower(${appointment.patientEmail}), '@', 1), '+', 1), '.', '') || '@gmail.com'
+       ELSE split_part(split_part(lower(${appointment.patientEmail}), '@', 1), '+', 1) || '@' || split_part(lower(${appointment.patientEmail}), '@', 2)
+  END)`;
 
 export async function disponibilidade(p: {
   tipo: string; de: string; ate: string; agora?: Date;
@@ -167,12 +210,18 @@ export async function disponibilidade(p: {
   ignorarAgendamento?: string;
   /** Painel: a médica pode encaixar dentro da antecedência mínima. */
   semAntecedencia?: boolean;
+  /**
+   * Só regras, exceções e consultas — sem perguntar ao Google. Dá um
+   * SUPERCONJUNTO dos horários reais: serve para recusar de graça o que
+   * nunca seria ofertado.
+   */
+  semAgendaExterna?: boolean;
 }): Promise<RespostaDisponibilidade> {
   const agora = p.agora ?? new Date();
   const prof = await profissional();
   const pid = prof.id;
   const t = await tipoPorSlug(pid, p.tipo, !p.ignorarAgendamento);
-  const { inicio, fim } = janelaValida(p.de, p.ate);
+  const { inicio, fim } = janelaValida(p.de, p.ate, agora);
 
   const [regras, excecoes, ocupados, externos] = await Promise.all([
     db().select().from(availabilityRule).where(eq(availabilityRule.practitionerId, pid)),
@@ -184,7 +233,9 @@ export async function disponibilidade(p: {
       inArray(appointment.status, ['held', 'confirmed']),
       lt(appointment.startsAt, fim), gt(appointment.endsAt, inicio),
       ...(p.ignorarAgendamento ? [ne(appointment.id, p.ignorarAgendamento)] : []))),
-    buscarOcupadosExternos(pid, inicio, fim, { aoVivo: p.aoVivo }),
+    p.semAgendaExterna
+      ? { intervalos: [], degradado: false, antecedenciaMinimaHoras: undefined }
+      : buscarOcupadosExternos(pid, inicio, fim, { aoVivo: p.aoVivo }),
   ]);
 
   const pol = politicasDe(prof);
@@ -256,10 +307,12 @@ export type ResultadoCriacao = { agendamento: AgendamentoConfirmado; repetido: b
 /**
  * Cria um agendamento confirmado.
  *
- * Ordem (docs/00-ARQUITETURA.md §8.2):
- *   idempotência → limites → o horário é REALMENTE ofertado (FreeBusy ao
- *   vivo)? → transação { advisory lock → recheck → INSERT (exclusion
- *   constraint) → auditoria → fila de e-mails }
+ * Ordem (docs/00-ARQUITETURA.md §8.2, ADR-004):
+ *   idempotência → limites (caminho rápido) → o horário é REALMENTE
+ *   ofertado (filtro de graça, depois FreeBusy ao vivo)? → transação {
+ *   lock dos limites → limites e bloqueio recontados → lock do slot →
+ *   recheck da idempotência → INSERT (exclusion constraint) → auditoria →
+ *   fila de e-mails }
  *
  * A sincronização com o Google fica `pending`: se a integração falhar ou
  * ainda não existir, a consulta continua marcada (ADR-002).
@@ -294,31 +347,14 @@ export async function criarAgendamento(
   const repetido = await buscarPorIdempotencia(ctx.idempotencyKey);
   if (repetido) return devolverExistente(repetido);
 
-  // 2. Limites contra abuso.
+  // 2. Limites contra abuso — caminho rápido, sem lock. A contagem que
+  //    VALE é a de dentro da transação (SEC-01).
   const ipHash = hashIp(ctx.ip);
-  const [porIp] = await db().select({ n: count() }).from(appointment).where(and(
-    eq(appointment.consentIpHash, ipHash),
-    gte(appointment.createdAt, somarMinutos(agora, -60))));
-  if ((porIp?.n ?? 0) >= LIMITES.porIpPorHora) {
-    throw new LimiteExcedidoError('Muitos agendamentos em pouco tempo. Aguarde alguns minutos ou fale pelo WhatsApp.');
-  }
-  const [futuras] = await db().select({ n: count() }).from(appointment).where(and(
-    eq(appointment.patientEmail, paciente.email),
-    eq(appointment.status, 'confirmed'),
-    gt(appointment.visitStartsAt, agora)));
-  if ((futuras?.n ?? 0) >= LIMITES.futurasPorEmail) {
-    throw new LimiteExcedidoError(
-      `Você já tem ${LIMITES.futurasPorEmail} consultas marcadas. Para marcar outra, fale pelo WhatsApp.`);
-  }
+  await conferirLimites(db(), { pid, ipHash, email: paciente.email, agora });
 
-  // 3. O horário pedido é um dos OFERTADOS agora — contra a agenda real,
-  //    ao vivo? (impede reservar fora do expediente com um POST à mão, e
-  //    pega o plantão que ela acabou de marcar no celular)
+  // 3. O horário pedido é um dos OFERTADOS agora, contra a agenda real.
   const inicioClinico = new Date(entrada.inicio);
-  const data = dataLocal(inicioClinico);
-  const disp = await disponibilidade({ tipo: t.slug, de: data, ate: data, agora, aoVivo: true });
-  const ofertado = disp.dias.some((d) => d.slots.some((s) => s.inicio === inicioClinico.toISOString()));
-  if (!ofertado) throw new SlotIndisponivelError();
+  await conferirOfertado(t.slug, inicioClinico, agora);
 
   // 4. Intervalo bloqueado = buffer antes + consulta + buffer depois.
   const fimClinico = somarMinutos(inicioClinico, t.durationMin);
@@ -334,6 +370,12 @@ export async function criarAgendamento(
   let existente = null as Linha | null;
   try {
     criado = await reservarSlot(() => db().transaction(async (tx) => {
+      // Limites recontados sob lock: sem isso, N requisições simultâneas
+      // para slots DIFERENTES contavam 0 juntas e todas passavam (SEC-01).
+      // Ordem fixa dos locks (limites → slot): nunca forma ciclo.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${chaveDosLimites(pid).toString()}::bigint)`);
+      await conferirLimites(tx, { pid, ipHash, email: paciente.email, agora });
+      await conferirSemBloqueio(tx, pid, inicioClinico, fimClinico);
       // Enfileira concorrentes do MESMO horário (ADR-004): 7s → 116ms.
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${chaveDoSlot(pid, inicioBloqueio).toString()}::bigint)`);
 
@@ -348,27 +390,12 @@ export async function criarAgendamento(
       if (ja) { existente = ja; return ja; }
 
       const [linha] = await tx.insert(appointment).values({
-        id,
-        practitionerId: pid,
-        typeId: t.id,
-        startsAt: inicioBloqueio,
-        endsAt: fimBloqueio,
-        visitStartsAt: inicioClinico,
-        visitEndsAt: fimClinico,
-        status: 'confirmed',
-        patientName: paciente.nome,
-        patientEmail: paciente.email,
-        patientPhone: paciente.telefone,
-        patientNote: paciente.motivo || null,
-        consentLgpdAt: agora,
-        consentHealthAt: paciente.motivo ? agora : null,
-        consentIpHash: ipHash,
-        consentVersion: VERSAO_CONSENTIMENTO,
+        id, practitionerId: pid, typeId: t.id,
+        startsAt: inicioBloqueio, endsAt: fimBloqueio, visitStartsAt: inicioClinico, visitEndsAt: fimClinico,
+        ...camposDoPaciente(paciente, agora, ipHash),
         manageTokenHash: hashToken(token),   // só o hash vai para o banco
-        icsUid: novoUid(),
-        icsSequence: 0,
-        idempotencyKey: ctx.idempotencyKey,
-        syncState: 'pending',
+        icsUid: novoUid(), icsSequence: 0, idempotencyKey: ctx.idempotencyKey,
+        status: 'confirmed', syncState: 'pending',
       }).returning();
       if (!linha) throw new Error('INSERT não retornou linha');
 
@@ -390,6 +417,83 @@ export async function criarAgendamento(
 
   if (existente) return devolverExistente(existente);
   return { agendamento: paraConfirmado(criado, t.label, modalidade, token, prof.cancelDeadlineHours), repetido: false };
+}
+
+/**
+ * O horário pedido é um dos OFERTADOS agora? Impede reservar fora do
+ * expediente com um POST à mão e pega o plantão que ela acabou de marcar no
+ * celular. Primeiro o filtro de graça (sem Google): um POST para as 03:00
+ * não pode custar uma chamada ao FreeBusy com o token da médica (SEC-04).
+ * Fora do alcance nem chega ao banco (PT-03).
+ */
+async function conferirOfertado(tipo: string, inicio: Date, agora: Date): Promise<void> {
+  if (!dentroDoAlcance(inicio, agora)) throw new SlotIndisponivelError();
+  const data = dataLocal(inicio);
+  const ofertadoEm = (r: RespostaDisponibilidade) =>
+    r.dias.some((d) => d.slots.some((s) => s.inicio === inicio.toISOString()));
+  for (const fonte of [{ semAgendaExterna: true }, { aoVivo: true }]) {
+    if (!ofertadoEm(await disponibilidade({ tipo, de: data, ate: data, agora, ...fonte }))) {
+      throw new SlotIndisponivelError();
+    }
+  }
+}
+
+/**
+ * Bloqueio que a médica acabou de criar (a oferta foi calculada antes dele).
+ * Roda sob o lock dos limites, o mesmo de `bloquear()`: um dos dois sempre
+ * vê o outro (SEC-20).
+ */
+async function conferirSemBloqueio(ex: Executor, pid: string, inicio: Date, fim: Date): Promise<void> {
+  const [bloqueio] = await ex.select({ id: availabilityException.id }).from(availabilityException).where(and(
+    eq(availabilityException.practitionerId, pid), eq(availabilityException.kind, 'block'),
+    lt(availabilityException.startsAt, fim), gt(availabilityException.endsAt, inicio))).limit(1);
+  if (bloqueio) throw new SlotIndisponivelError();
+}
+
+/** Dados do paciente e registro do consentimento (LGPD) para o INSERT. */
+function camposDoPaciente(paciente: CriarAgendamento['paciente'], agora: Date, ipHash: string) {
+  return {
+    patientName: paciente.nome,
+    patientEmail: paciente.email,
+    patientPhone: paciente.telefone,
+    patientNote: paciente.motivo || null,
+    consentLgpdAt: agora,
+    consentHealthAt: paciente.motivo ? agora : null,
+    consentIpHash: ipHash,
+    consentVersion: VERSAO_CONSENTIMENTO,
+  };
+}
+
+/**
+ * Limites contra abuso. Roda duas vezes: fora da transação (caminho rápido,
+ * sem custo de lock) e DENTRO, depois do lock dos limites — só a segunda
+ * é garantia.
+ */
+async function conferirLimites(ex: Executor, p: { pid: string; ipHash: string; email: string; agora: Date }) {
+  const umaHoraAtras = somarMinutos(p.agora, -60);
+  const [porIp] = await ex.select({ n: count() }).from(appointment).where(and(
+    eq(appointment.consentIpHash, p.ipHash), gte(appointment.createdAt, umaHoraAtras)));
+  if ((porIp?.n ?? 0) >= LIMITES.porIpPorHora) {
+    throw new LimiteExcedidoError('Muitos agendamentos em pouco tempo. Aguarde alguns minutos ou fale pelo WhatsApp.');
+  }
+  const [futuras] = await ex.select({ n: count() }).from(appointment).where(and(
+    eq(appointment.practitionerId, p.pid),
+    // `starts_at` ≤ `visit_starts_at` (buffer antes < 1 dia): o recorte usa
+    // o índice da agenda e a canonicalização só roda sobre as futuras.
+    gt(appointment.startsAt, somarMinutos(p.agora, -24 * 60)),
+    gt(appointment.visitStartsAt, p.agora),
+    eq(appointment.status, 'confirmed'),
+    sql`${emailCanonicoSql} = ${emailCanonico(p.email)}`));
+  if ((futuras?.n ?? 0) >= LIMITES.futurasPorEmail) {
+    throw new LimiteExcedidoError(
+      `Você já tem ${LIMITES.futurasPorEmail} consultas marcadas. Para marcar outra, fale pelo WhatsApp.`);
+  }
+  const [naHora] = await ex.select({ n: count() }).from(appointment).where(and(
+    eq(appointment.practitionerId, p.pid), gte(appointment.createdAt, umaHoraAtras)));
+  if ((naHora?.n ?? 0) >= LIMITES.porHoraNoTotal) {
+    log.aviso('agendamento.limite-global', { limite: LIMITES.porHoraNoTotal });
+    throw new LimiteExcedidoError('Muitos agendamentos agora. Tente de novo em alguns minutos ou fale pelo WhatsApp.');
+  }
 }
 
 async function buscarPorIdempotencia(chave: string) {
@@ -479,7 +583,9 @@ export async function revogarMotivoPorToken(token: string): Promise<AgendamentoG
     await tx.update(appointment).set({
       patientNote: null,
       consentHealthAt: null,
-      syncState: atual.linha.status === 'confirmed' ? 'pending' : atual.linha.syncState,
+      // Qualquer evento que exista (inclusive o registro de uma consulta
+      // passada ou com falta) perde o motivo também (SEC-06).
+      syncState: atual.linha.status === 'confirmed' || atual.linha.googleEventId ? 'pending' : atual.linha.syncState,
       syncAttempts: 0,
       syncNextAt: null,
       updatedAt: new Date(),

@@ -143,6 +143,14 @@ indistinguível de UX normal.
 - **Atualização (FASE-07):** a idempotência é rechecada **depois** do advisory
   lock. Sem isso, dois envios simultâneos com a mesma chave (o reenvio do 4G
   ruim) faziam o segundo receber "horário ocupado" pela própria consulta.
+- **Atualização (auditoria de segurança, SEC-01/SEC-20):** antes do lock do
+  slot, a transação toma o lock dos **limites** do profissional
+  (`chaveDosLimites`) e reconta ali os limites anti-abuso (por IP, por e-mail
+  canônico, global por hora) e confere se nasceu um bloqueio no horário.
+  Contados fora do lock, 12 POSTs simultâneos para slots diferentes passavam
+  todos. Ordem fixa: limites → slot (sem ciclo). `bloquear()` no painel usa
+  o mesmo lock. O lock é curto (recontagem + INSERT); a carga mede p95 de
+  613 ms com 40 reservas simultâneas no mesmo horário.
 - Reservas `held` expiram por `held_until`. Um cron a cada 2 min faz
   `UPDATE ... SET status='expired' WHERE status='held' AND held_until < now()`,
   liberando o horário.

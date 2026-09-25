@@ -7,8 +7,10 @@ minimalista, em conformidade com LGPD e com as normas de publicidade médica.
 **Este é o documento de entrada.** Comece por aqui. Para colocar no ar e
 operar: **[OPERACAO](OPERACAO.md)**.
 
-> **Estado (25/09/2026):** fases 01–13 implementadas e testadas (211 testes
-> unitários + integração, 80 E2E, Lighthouse CI). O que falta para o go-live
+> **Estado (25/09/2026):** fases 01–13 implementadas e testadas (648 testes
+> no Vitest — unitários, componentes, integração e API —, 123 E2E em 9
+> aparelhos, carga, resiliência, Lighthouse CI) e auditadas
+> ([SEGURANCA](SEGURANCA.md), [QA](QA.md)). O que falta para o go-live
 > não é código — ver §9 e [OPERACAO §5](OPERACAO.md).
 
 ---
@@ -22,6 +24,8 @@ operar: **[OPERACAO](OPERACAO.md)**.
 | [01-MOBILE-FIRST](01-MOBILE-FIRST.md) | **Padrão obrigatório.** O uso primário é celular e tablet — breakpoints, toque, tablet, áreas seguras, checklist |
 | [OPERACAO](OPERACAO.md) | Implantação, variáveis, crons, monitoramento, go-live e runbook |
 | [RIPD](RIPD.md) | Relatório de impacto à proteção de dados (LGPD) — para assinatura |
+| [SEGURANCA](SEGURANCA.md) | Auditoria, pentest, SCA, misconfiguration, riscos aceitos e checklist de produção |
+| [QA](QA.md) | Pirâmide de testes, matriz de aparelhos, não funcionais, revisão de código e de UX |
 | [Guia do Perfil da Empresa](GUIA-PERFIL-EMPRESA-GOOGLE.md) | Para a médica: SEO local sem ferir o CFM |
 | [Roteiro de teste manual](ROTEIRO-TESTE-MANUAL.md) | O que só dá para testar em aparelho real, antes do go-live |
 
@@ -247,6 +251,10 @@ Se você só ler uma seção, leia esta.
 10. **Preview nunca aponta para a agenda real.**
 11. **Isto não é prontuário.** Nada de evolução clínica, exame ou prescrição — é o
     que mantém o projeto fora das normas de prontuário eletrônico.
+12. **Limite anti-abuso só vale contado sob lock.** Criação pelo site e bloqueio
+    no painel passam pelo lock dos limites (`chaveDosLimites`) — ADR-004.
+13. **O evento do Google espelha a consulta.** Revogar, vencer (90 dias) ou
+    eliminar o titular redige o evento também, passado ou futuro (RIPD).
 
 ---
 
@@ -258,7 +266,7 @@ cp .env.example .env.local     # DATABASE_URL, TOKEN_SALT, NEXT_PUBLIC_SITE_URL
 npm ci
 docker compose up -d postgres
 npm run db:migrate
-npm run db:seed                # horários FICTÍCIOS (em produção não toca nos horários)
+npm run db:seed                # horários FICTÍCIOS só em banco local
 npm run dev
 ```
 
@@ -267,7 +275,10 @@ npm run dev
 | `npm run dev` | Desenvolvimento |
 | `npm run verify` | typecheck + lint + contraste + conformidade CFM/LGPD + unitários + integração |
 | `npm run build` | Build de produção |
-| `npm run test:e2e` | E2E (Playwright) contra o build |
+| `npm run test:e2e` | E2E (Playwright) contra o build — inclui 9 aparelhos (iPhone, Galaxy, iPad, desktop) |
+| `npm run test:coverage` | Unitários + integração com cobertura (limites no `vitest.config.mts`) |
+| `npm run test:carga` | Não funcional: latência p95 e 40 reservas simultâneas no mesmo horário |
+| `npm run test:resiliencia` | Não funcional: banco recusando e banco pendurado |
 | `npm run db:migrate` | Aplica migrations pelo journal e confere a trava anti-overbooking |
 | `npm run db:studio` | Drizzle Studio |
 | `npm run check:contrast` | Contraste dos tokens + sincronia de `lib/marca.ts` |

@@ -8,6 +8,7 @@
  * DSN: https://<chave>@<host>/<projeto>
  */
 import { mascararTexto } from './pii';
+import { codigoPg } from './db/reservas';
 
 type Dsn = { chave: string; host: string; projeto: string; protocolo: string };
 
@@ -24,6 +25,43 @@ function lerDsn(): Dsn | null {
   }
 }
 
+/**
+ * O que sai do erro. Erro de banco vira SÓ o SQLSTATE: o Drizzle monta
+ * `Failed query: <sql>\nparams: <valores>`, e os valores são nome, motivo,
+ * recado — o `mascararTexto` só pega e-mail, telefone e token (SEC-07).
+ */
+export function resumoDoErro(erro: Error): string {
+  const pg = codigoPg(erro);
+  if (pg) return `postgres ${pg}`;
+  return mascararTexto(erro.message.split('\n')[0] ?? '').slice(0, 200);
+}
+
+/** Só as linhas `at …` do stack: as outras repetem a mensagem (e os params). */
+export function quadrosDoStack(erro: Error) {
+  return (erro.stack ?? '').split('\n').filter((l) => /^\s+at /.test(l)).slice(0, 30).reverse()
+    .map((l) => ({ function: mascararTexto(l.trim()).slice(0, 200) }));
+}
+
+/**
+ * Teto por instância: qualquer um provoca erro de propósito, e sem teto a
+ * cota do Sentry acaba e os erros reais somem (SEC-11). Por minuto: 5 do
+ * mesmo evento+tipo e 30 no total.
+ */
+const TETO = { porChave: 5, total: 30, janelaMs: 60_000 };
+let janela = { inicio: 0, total: 0, porChave: new Map<string, number>() };
+
+function dentroDoTeto(chave: string, agora = Date.now()): boolean {
+  if (agora - janela.inicio >= TETO.janelaMs) janela = { inicio: agora, total: 0, porChave: new Map() };
+  const n = janela.porChave.get(chave) ?? 0;
+  if (n >= TETO.porChave || janela.total >= TETO.total) return false;
+  janela.porChave.set(chave, n + 1);
+  janela.total++;
+  return true;
+}
+
+/** Testes: zera o teto. */
+export function _limparTetoSentry() { janela = { inicio: 0, total: 0, porChave: new Map() }; }
+
 export async function reportarAoSentry(
   evento: string, e: unknown, extra: Record<string, unknown> = {},
 ): Promise<void> {
@@ -31,6 +69,7 @@ export async function reportarAoSentry(
   if (!dsn) return;
 
   const erro = e instanceof Error ? e : new Error(String(e));
+  if (!dentroDoTeto(`${evento}|${erro.name}`)) return;
   const id = crypto.randomUUID().replace(/-/g, '');
   const corpo = {
     event_id: id,
@@ -45,12 +84,9 @@ export async function reportarAoSentry(
     exception: {
       values: [{
         type: erro.name,
-        // A mensagem pode conter dado do paciente: mascarada.
-        value: mascararTexto(erro.message).slice(0, 500),
-        stacktrace: erro.stack ? {
-          frames: erro.stack.split('\n').slice(1, 30).reverse()
-            .map((l) => ({ function: mascararTexto(l.trim()).slice(0, 200) })),
-        } : undefined,
+        // A mensagem pode conter dado do paciente: só o resumo, mascarado.
+        value: resumoDoErro(erro),
+        stacktrace: erro.stack ? { frames: quadrosDoStack(erro) } : undefined,
       }],
     },
   };

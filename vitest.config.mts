@@ -11,7 +11,8 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
+    // .tsx = componentes (cada arquivo declara `@vitest-environment jsdom`).
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     globalSetup: ['tests/setup/banco.ts'],
     // Integração compartilha UM banco: arquivos em série evitam que um
     // DELETE de um teste apague as linhas de outro.
@@ -22,7 +23,7 @@ export default defineConfig({
       ...(process.env.DATABASE_URL_TEST ? { DATABASE_URL: process.env.DATABASE_URL_TEST } : {}),
     },
     coverage: {
-      include: ['lib/**/*.ts'],
+      include: ['lib/**/*.ts', 'components/**/*.tsx'],
       thresholds: {
         lines: 85, functions: 80,
         // FASE-12 §8: o núcleo (motor e calendário) com ≥ 90 %.

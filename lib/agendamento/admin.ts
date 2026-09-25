@@ -11,8 +11,8 @@
 import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, lt, sql } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
 import { db, schema } from '../db';
-import { dataLocal, horaLocalParaUtc, somarDiasLocal, somarMinutos, formatarParaPaciente } from '../datetime';
-import { codigoPg, PG_EXCLUSION_VIOLATION, SlotIndisponivelError } from '../db/reservas';
+import { dataLocal, fimDoDiaLocal, horaLocalParaUtc, somarDiasLocal, somarMinutos, formatarParaPaciente } from '../datetime';
+import { chaveDosLimites, codigoPg, PG_EXCLUSION_VIOLATION, SlotIndisponivelError } from '../db/reservas';
 import { hashToken } from '../seguranca';
 import { enfileirar } from '../notificacoes/fila';
 import { conexaoAtiva, ultimaConexao } from '../calendar/conexao';
@@ -59,14 +59,15 @@ const colunasItem = { ag: appointment, label: appointmentType.label, kind: appoi
 /** Consultas ativas de hoje (inclusive as que já passaram) até `dias` à frente. */
 export async function agenda(dias = 30, agora = new Date()): Promise<ItemAgenda[]> {
   const pid = await practitionerId();
-  const inicio = horaLocalParaUtc(dataLocal(agora), '00:00');
+  const hoje = dataLocal(agora);
+  const inicio = horaLocalParaUtc(hoje, '00:00');
   const linhas = await db().select(colunasItem).from(appointment)
     .innerJoin(appointmentType, eq(appointment.typeId, appointmentType.id))
     .where(and(
       eq(appointment.practitionerId, pid),
       inArray(appointment.status, ['confirmed', 'no_show']),
       gte(appointment.visitStartsAt, inicio),
-      lt(appointment.visitStartsAt, somarMinutos(inicio, (dias + 1) * 24 * 60)),
+      lt(appointment.visitStartsAt, fimDoDiaLocal(somarDiasLocal(hoje, dias))),
     ))
     .orderBy(asc(appointment.visitStartsAt));
   return linhas.map(paraItem);
@@ -198,16 +199,24 @@ export async function bloquear(p: {
   inicio: Date; fim: Date; nota?: string | null; decisoes?: Record<string, Decisao>; motivoAoPaciente?: string | null;
 }, agora = new Date()): Promise<{ cancelados: string[] }> {
   if (!(p.fim > p.inicio)) throw new OperacaoInvalidaError('O fim precisa ser depois do início.');
-  const afetados = await afetadosPor(p.inicio, p.fim);
-  const semDecisao = afetados.filter((a) => !p.decisoes?.[a.id]);
-  if (semDecisao.length > 0) {
-    throw new OperacaoInvalidaError(`Decida o que fazer com ${semDecisao.length === 1 ? 'a consulta' : `as ${semDecisao.length} consultas`} deste período.`);
-  }
   const pid = await practitionerId();
-  await db().insert(availabilityException).values({
-    practitionerId: pid, startsAt: p.inicio, endsAt: p.fim, kind: 'block', note: p.nota?.trim().slice(0, 120) || null,
+  // Sob o MESMO lock das criações pelo site: uma consulta criada entre
+  // "quem é afetado" e o INSERT do bloqueio ficava dentro dele sem decisão.
+  // Agora ou ela entra antes (e aparece aqui, pedindo decisão), ou depois
+  // (e a criação vê o bloqueio e recusa) — SEC-20.
+  const afetados = await db().transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${chaveDosLimites(pid).toString()}::bigint)`);
+    const lista = await afetadosPor(p.inicio, p.fim);
+    const semDecisao = lista.filter((a) => !p.decisoes?.[a.id]);
+    if (semDecisao.length > 0) {
+      throw new OperacaoInvalidaError(`Decida o que fazer com ${semDecisao.length === 1 ? 'a consulta' : `as ${semDecisao.length} consultas`} deste período.`);
+    }
+    await tx.insert(availabilityException).values({
+      practitionerId: pid, startsAt: p.inicio, endsAt: p.fim, kind: 'block', note: p.nota?.trim().slice(0, 120) || null,
+    });
+    await tx.insert(auditLog).values({ actor: 'practitioner', action: 'availability.blocked', meta: { afetados: lista.length } });
+    return lista;
   });
-  await db().insert(auditLog).values({ actor: 'practitioner', action: 'availability.blocked', meta: { afetados: afetados.length } });
 
   const cancelados: string[] = [];
   for (const a of afetados) {
@@ -386,11 +395,22 @@ function normalizarEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+/**
+ * Vazio ou sem "@" não é titular: linha já anonimizada tem e-mail '' — sem
+ * esta guarda, buscar por '' devolveria todas elas.
+ */
+function emailDeTitular(email: string): string | null {
+  const e = normalizarEmail(email);
+  return /^[^\s@]+@[^\s@]+$/.test(e) ? e : null;
+}
+
 export async function consultasDoTitular(email: string) {
+  const alvo = emailDeTitular(email);
+  if (!alvo) return [];
   const pid = await practitionerId();
   return db().select({ ag: appointment, tipo: appointmentType.label }).from(appointment)
     .innerJoin(appointmentType, eq(appointment.typeId, appointmentType.id))
-    .where(and(eq(appointment.practitionerId, pid), eq(appointment.patientEmail, normalizarEmail(email))))
+    .where(and(eq(appointment.practitionerId, pid), eq(appointment.patientEmail, alvo)))
     .orderBy(desc(appointment.visitStartsAt));
 }
 
@@ -436,19 +456,25 @@ export function paraCsv(dados: Awaited<ReturnType<typeof exportarTitular>>): str
  * Consultas futuras são canceladas SEM e-mail (a pessoa pediu para sumir)
  * e saem da agenda do Google; o link de gestão deixa de funcionar.
  */
-export async function anonimizarTitular(email: string, agora = new Date()): Promise<{ consultas: number; canceladas: string[] }> {
-  const linhas = await consultasDoTitular(email);
+export async function anonimizarTitular(email: string, agora = new Date()): Promise<{ consultas: number; canceladas: string[]; redigidas: string[] }> {
+  if (!emailDeTitular(email)) throw new OperacaoInvalidaError('Informe o e-mail do titular.');
+  // Só conta (e registra) o que de fato é anonimizado agora.
+  const linhas = (await consultasDoTitular(email)).filter(({ ag }) => !ag.anonymizedAt);
   const canceladas: string[] = [];
+  // Eventos que ficam na agenda do Google (passados, falta, realizada):
+  // redigidos também — a eliminação não pode parar no banco (SEC-06).
+  const redigidas: string[] = [];
   await db().transaction(async (tx) => {
     for (const { ag } of linhas) {
-      if (ag.anonymizedAt) continue;
       const futuraAtiva = ag.status === 'confirmed' && ag.visitStartsAt > agora;
       if (futuraAtiva) canceladas.push(ag.id);
+      else if (ag.googleEventId) redigidas.push(ag.id);
       await tx.update(appointment).set({
         patientName: 'Titular removido',
         patientEmail: '',
         patientPhone: '',
         patientNote: null,
+        cancelReason: null,
         consentHealthAt: null,
         manageTokenHash: hashToken(randomBytes(32).toString('base64url')),
         anonymizedAt: agora,
@@ -456,7 +482,7 @@ export async function anonimizarTitular(email: string, agora = new Date()): Prom
         ...(futuraAtiva ? {
           status: 'cancelled', cancelledAt: agora, cancelledBy: 'practitioner',
           icsSequence: sql`${appointment.icsSequence} + 1`, syncState: 'pending', syncAttempts: 0, syncNextAt: null,
-        } : {}),
+        } : ag.googleEventId ? { syncState: 'pending', syncAttempts: 0, syncNextAt: null } : {}),
       }).where(eq(appointment.id, ag.id));
       // Nada pendente na fila pode sair para quem pediu a eliminação.
       await tx.update(notification).set({ status: 'skipped', lastError: 'anonimizado' })
@@ -464,5 +490,5 @@ export async function anonimizarTitular(email: string, agora = new Date()): Prom
     }
     await tx.insert(auditLog).values({ actor: 'practitioner', action: 'data.erased', meta: { consultas: linhas.length, canceladas: canceladas.length } });
   });
-  return { consultas: linhas.length, canceladas };
+  return { consultas: linhas.length, canceladas, redigidas };
 }

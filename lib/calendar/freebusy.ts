@@ -17,7 +17,7 @@ import { and, eq, gte, inArray, sql } from 'drizzle-orm';
 import { Interval } from 'luxon';
 import { db, schema } from '../db';
 import { ehProducao, googleConfigurado } from '../env';
-import { TZ_CLINICA, dataLocal, diasNoIntervalo, horaLocalParaUtc, somarMinutos } from '../datetime';
+import { TZ_CLINICA, dataLocal, diasNoIntervalo, fimDoDiaLocal, horaLocalParaUtc, somarMinutos } from '../datetime';
 import { log } from '../log';
 import { clienteDa, conexaoAtiva, registrarErro, ultimaConexao } from './conexao';
 import { GoogleApiError, GoogleRevogadoError } from './google';
@@ -86,7 +86,7 @@ async function gravarCache(pid: string, dias: string[], ocupados: { start: strin
   const agora = new Date();
   const valores = dias.map((dia) => {
     const ini = horaLocalParaUtc(dia, '00:00');
-    const fim = somarMinutos(ini, 24 * 60);
+    const fim = fimDoDiaLocal(dia);
     const doDia = ocupados
       .filter((o) => new Date(o.start) < fim && new Date(o.end) > ini)
       .map((o): [string, string] => [o.start, o.end]);
@@ -131,7 +131,7 @@ export async function buscarOcupadosExternos(
   try {
     // Consulta os dias INTEIROS: o cache por dia precisa estar completo.
     const inicio = horaLocalParaUtc(dias[0]!, '00:00');
-    const fim = somarMinutos(horaLocalParaUtc(dias[dias.length - 1]!, '00:00'), 24 * 60);
+    const fim = fimDoDiaLocal(dias[dias.length - 1]!);
     const ocupados = await clienteDa(conexao).ocupados(inicio, fim, TZ_CLINICA);
     await gravarCache(practitionerId, dias, ocupados);
     if (conexao.lastError) await registrarErro(conexao.id, null);

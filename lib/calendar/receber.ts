@@ -62,6 +62,14 @@ async function aplicarEvento(ev: EventoGoogle, r: ResumoRecebimento): Promise<vo
     return;
   }
 
+  // Só movemos pelo evento que NÓS criamos. Uma cópia de convite na agenda
+  // dela com o mesmo id (quem sabe o id da própria consulta) poderia mover
+  // a consulta (SEC-16). Apagado volta só com o id — por isso só aqui.
+  if (ev.extendedProperties?.private?.appointmentId !== ag.id) {
+    log.aviso('receber.evento-sem-marca', { appointmentId: ag.id });
+    return;
+  }
+
   // Movido? Só eventos com hora (dia inteiro não é consulta).
   const novoInicio = ev.start?.dateTime ? new Date(ev.start.dateTime) : null;
   const novoFim = ev.end?.dateTime ? new Date(ev.end.dateTime) : null;

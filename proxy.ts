@@ -16,7 +16,6 @@ const PUBLICAS_DO_ADMIN = ['/admin/entrar'];
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-
   if (pathname === '/admin' || pathname.startsWith('/admin/')) {
     const publica = PUBLICAS_DO_ADMIN.some((p) => pathname === p || pathname.startsWith(`${p}/`));
     if (!publica && !lerSessao(req.cookies.get(nomeCookieSessao())?.value)) {

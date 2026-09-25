@@ -20,18 +20,37 @@ export const MSG = {
   telefone: 'Informe o telefone com DDD, ex.: (11)\u00a091234\u20115678.',
   email: 'Informe um e-mail válido, ex.: nome@exemplo.com.',
   motivo: 'Use até 500 caracteres.',
+  nomeCaracteres: 'Use só letras no nome (acento, apóstrofo e hífen valem).',
   consentimentoDados: 'Para agendar, é preciso autorizar o uso dos seus dados.',
   consentimentoSaude: 'Autorize o registro do motivo, ou deixe o campo em branco.',
 } as const;
 
+/**
+ * Nome só com letras (qualquer alfabeto, com acento), espaço, apóstrofo,
+ * ponto e hífen. O nome sai em e-mail do domínio da médica, no `.ics` e no
+ * evento da agenda dela: aceitar URL ou "regularize seu cadastro" fazia do
+ * site um relay de phishing assinado (SEC-05).
+ */
+const NOME_PERMITIDO = /^[\p{L}\p{M}'\u2019. -]+$/u;
+/**
+ * Invisíveis: controle, formatação (zero-width etc.) e separadores de linha
+ * Unicode. No nome viram espaço; no motivo saem (menos quebra de linha e
+ * tab). O byte NUL chegava ao Postgres e virava 500 (SEC-11) — e ninguém
+ * consegue apagar o que não vê, então saneamos em vez de recusar.
+ */
+const INVISIVEIS_NOME = /[\p{Cc}\p{Cf}\u2028\u2029]/gu;
+const INVISIVEIS_MOTIVO = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u2028\u2029]/g;
+
 export const campos = {
-  nome: z.string().trim()
+  nome: z.string().overwrite((v) => v.replace(INVISIVEIS_NOME, ' ').replace(/\s+/g, ' ')).normalize('NFC').trim()
     .min(5, MSG.nome)
     .max(120, MSG.nome)
-    .refine((v) => v.split(/\s+/).filter((p) => p.length >= 2).length >= 2, MSG.nome),
+    .regex(NOME_PERMITIDO, MSG.nomeCaracteres)
+    .refine((v) => v.split(' ').filter((p) => p.length >= 2).length >= 2, MSG.nome),
   telefone: z.string().refine(telefoneValido, MSG.telefone),
   email: z.string().trim().toLowerCase().pipe(z.email(MSG.email)),
-  motivo: z.string().trim().max(500, MSG.motivo),
+  motivo: z.string().overwrite((v) => v.replace(/\r\n?/g, '\n').replace(INVISIVEIS_MOTIVO, ''))
+    .normalize('NFC').trim().max(500, MSG.motivo),
   consentimentoDados: z.literal(true, { error: MSG.consentimentoDados }),
   consentimentoSaude: z.boolean(),
 };
