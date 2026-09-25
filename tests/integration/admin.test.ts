@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { sqlCliente } from '@/lib/db';
 import { dataLocal, horaLocalParaUtc, somarDiasLocal } from '@/lib/datetime';
 import {
-  agenda, afetadosPor, anonimizarTitular, atualizarPoliticas, atualizarTipo, bloquear, cancelarPelaMedica,
+  agenda, afetadosPor, anonimizarTitular, atualizarPoliticas, atualizarTipo, bloquear, cancelarPelaMedica, consultasDoTitular,
   estadoPainel, exportarTitular, listarExcecoes, listarRegras, marcarFalta, OperacaoInvalidaError, paraCsv,
   remarcarPelaMedica, removerExcecao, restoDeHoje, salvarDia, horariosParaRemarcar, periodoDoFormulario,
 } from '@/lib/agendamento/admin';
@@ -240,6 +240,21 @@ d('painel da médica (FASE-09) e LGPD (FASE-10)', () => {
       const fila = await sql()`SELECT status FROM notification WHERE appointment_id = ${c.id}`;
       expect(fila.every((n) => n.status === 'skipped')).toBe(true);
       expect(await exportarTitular(c.email)).toMatchObject({ consultas: [] });
+    });
+
+    it('e-mail vazio ou inválido é recusado: não "elimina" de novo as linhas já anonimizadas', async () => {
+      const c = await criar(0);
+      await anonimizarTitular(c.email);
+      // Linha anonimizada tem e-mail '': buscar por '' devolvia todas elas.
+      await expect(anonimizarTitular('')).rejects.toThrow(OperacaoInvalidaError);
+      await expect(anonimizarTitular('   ')).rejects.toThrow(OperacaoInvalidaError);
+      await expect(anonimizarTitular('sem-arroba')).rejects.toThrow(OperacaoInvalidaError);
+      expect(await consultasDoTitular('')).toEqual([]);
+      expect(await exportarTitular('')).toMatchObject({ consultas: [] });
+      // Repetir a eliminação do mesmo titular não conta nada de novo.
+      expect(await anonimizarTitular(c.email)).toEqual({ consultas: 0, canceladas: [] });
+      const registros = await sql()`SELECT meta FROM audit_log WHERE action = 'data.erased' ORDER BY id`;
+      expect(registros.map((r) => r.meta.consultas)).toEqual([1, 0]);
     });
   });
 });

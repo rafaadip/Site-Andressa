@@ -387,11 +387,22 @@ function normalizarEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+/**
+ * Vazio ou sem "@" não é titular: linha já anonimizada tem e-mail '' — sem
+ * esta guarda, buscar por '' devolveria todas elas.
+ */
+function emailDeTitular(email: string): string | null {
+  const e = normalizarEmail(email);
+  return /^[^\s@]+@[^\s@]+$/.test(e) ? e : null;
+}
+
 export async function consultasDoTitular(email: string) {
+  const alvo = emailDeTitular(email);
+  if (!alvo) return [];
   const pid = await practitionerId();
   return db().select({ ag: appointment, tipo: appointmentType.label }).from(appointment)
     .innerJoin(appointmentType, eq(appointment.typeId, appointmentType.id))
-    .where(and(eq(appointment.practitionerId, pid), eq(appointment.patientEmail, normalizarEmail(email))))
+    .where(and(eq(appointment.practitionerId, pid), eq(appointment.patientEmail, alvo)))
     .orderBy(desc(appointment.visitStartsAt));
 }
 
@@ -438,11 +449,12 @@ export function paraCsv(dados: Awaited<ReturnType<typeof exportarTitular>>): str
  * e saem da agenda do Google; o link de gestão deixa de funcionar.
  */
 export async function anonimizarTitular(email: string, agora = new Date()): Promise<{ consultas: number; canceladas: string[] }> {
-  const linhas = await consultasDoTitular(email);
+  if (!emailDeTitular(email)) throw new OperacaoInvalidaError('Informe o e-mail do titular.');
+  // Só conta (e registra) o que de fato é anonimizado agora.
+  const linhas = (await consultasDoTitular(email)).filter(({ ag }) => !ag.anonymizedAt);
   const canceladas: string[] = [];
   await db().transaction(async (tx) => {
     for (const { ag } of linhas) {
-      if (ag.anonymizedAt) continue;
       const futuraAtiva = ag.status === 'confirmed' && ag.visitStartsAt > agora;
       if (futuraAtiva) canceladas.push(ag.id);
       await tx.update(appointment).set({
