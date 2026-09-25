@@ -59,12 +59,10 @@ export function codigoPg(e: unknown): string | undefined {
 }
 
 /**
- * Chave de 64 bits estável para o par (profissional, início do slot).
- * Colisão entre slots distintos só custa uma serialização desnecessária,
- * nunca correção — a exclusion constraint permanece.
+ * Chave de 64 bits estável para um texto. Colisão entre chaves distintas só
+ * custa uma serialização desnecessária, nunca correção.
  */
-export function chaveDoSlot(practitionerId: string, inicio: Date): bigint {
-  const texto = `${practitionerId}|${inicio.toISOString()}`;
+export function chaveDeLock(texto: string): bigint {
   // FNV-1a de 64 bits — determinístico e sem dependência.
   let h = 0xcbf29ce484222325n;
   for (const byte of Buffer.from(texto, 'utf8')) {
@@ -73,6 +71,23 @@ export function chaveDoSlot(practitionerId: string, inicio: Date): bigint {
   }
   // Postgres usa bigint COM sinal.
   return h > 0x7fffffffffffffffn ? h - 0x10000000000000000n : h;
+}
+
+/**
+ * Chave para o par (profissional, início do slot). A exclusion constraint
+ * continua sendo a garantia final.
+ */
+export function chaveDoSlot(practitionerId: string, inicio: Date): bigint {
+  return chaveDeLock(`${practitionerId}|${inicio.toISOString()}`);
+}
+
+/**
+ * Chave dos limites anti-abuso do profissional. Serializa só o trecho
+ * curto "recontar + INSERT" das criações — sem ela, N requisições para
+ * slots diferentes contavam 0 ao mesmo tempo e todas passavam (SEC-01).
+ */
+export function chaveDosLimites(practitionerId: string): bigint {
+  return chaveDeLock(`limites|${practitionerId}`);
 }
 
 /** Espera curta com jitter, para desfazer o ciclo em vez de recriá-lo. */

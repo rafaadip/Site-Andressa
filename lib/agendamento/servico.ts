@@ -15,7 +15,7 @@ import { calcularDisponibilidade, type Excecao, type Politicas, type RegraSemana
 import {
   TZ_CLINICA, dataLocal, formatarParaPaciente, horaLocalParaUtc, somarMinutos, DataInvalidaError,
 } from '../datetime';
-import { chaveDoSlot, codigoPg, reservarSlot, SlotIndisponivelError } from '../db/reservas';
+import { chaveDoSlot, chaveDosLimites, codigoPg, reservarSlot, SlotIndisponivelError } from '../db/reservas';
 import { buscarOcupadosExternos } from '../calendar/freebusy';
 import { gerarIcs, linkGoogleCalendar, novoUid } from '../calendar/ics';
 import { hashIp, hashToken, tokenGestaoPara, tokenValido } from '../seguranca';
@@ -23,7 +23,8 @@ import { localConsulta, type Modalidade } from '../config';
 import { urlSite } from '../seo';
 import { comLimiteDeTempo, ESGOTOU } from '../limite-tempo';
 import { VERSAO_CONSENTIMENTO, type CriarAgendamento } from '../validation/agendamento';
-import { enfileirar } from '../notificacoes/fila';
+import { enfileirar, type Executor } from '../notificacoes/fila';
+import { log } from '../log';
 import { dadosIcs, podeCancelarPeloLink, type Linha, type LinhaProfissional } from './apresentacao';
 import type {
   AgendamentoConfirmado, RespostaDisponibilidade, TipoConsultaPublico,
@@ -69,6 +70,11 @@ export const LIMITES = {
   porIpPorHora: 5,
   /** Consultas futuras confirmadas por e-mail. */
   futurasPorEmail: 3,
+  /**
+   * Criações pelo site por hora, somando todas as origens. Uma agenda de
+   * uma médica não enche assim; acima disto é robô (SEC-02) — e o log avisa.
+   */
+  porHoraNoTotal: 30,
   /** Janela máxima de uma consulta de disponibilidade. */
   janelaMaximaDias: 31,
   /**
@@ -326,22 +332,10 @@ export async function criarAgendamento(
   const repetido = await buscarPorIdempotencia(ctx.idempotencyKey);
   if (repetido) return devolverExistente(repetido);
 
-  // 2. Limites contra abuso.
+  // 2. Limites contra abuso — caminho rápido, sem lock. A contagem que
+  //    VALE é a de dentro da transação (SEC-01).
   const ipHash = hashIp(ctx.ip);
-  const [porIp] = await db().select({ n: count() }).from(appointment).where(and(
-    eq(appointment.consentIpHash, ipHash),
-    gte(appointment.createdAt, somarMinutos(agora, -60))));
-  if ((porIp?.n ?? 0) >= LIMITES.porIpPorHora) {
-    throw new LimiteExcedidoError('Muitos agendamentos em pouco tempo. Aguarde alguns minutos ou fale pelo WhatsApp.');
-  }
-  const [futuras] = await db().select({ n: count() }).from(appointment).where(and(
-    sql`${emailCanonicoSql} = ${emailCanonico(paciente.email)}`,
-    eq(appointment.status, 'confirmed'),
-    gt(appointment.visitStartsAt, agora)));
-  if ((futuras?.n ?? 0) >= LIMITES.futurasPorEmail) {
-    throw new LimiteExcedidoError(
-      `Você já tem ${LIMITES.futurasPorEmail} consultas marcadas. Para marcar outra, fale pelo WhatsApp.`);
-  }
+  await conferirLimites(db(), { pid, ipHash, email: paciente.email, agora });
 
   // 3. O horário pedido é um dos OFERTADOS agora — contra a agenda real,
   //    ao vivo? (impede reservar fora do expediente com um POST à mão, e
@@ -368,6 +362,11 @@ export async function criarAgendamento(
   let existente = null as Linha | null;
   try {
     criado = await reservarSlot(() => db().transaction(async (tx) => {
+      // Limites recontados sob lock: sem isso, N requisições simultâneas
+      // para slots DIFERENTES contavam 0 juntas e todas passavam (SEC-01).
+      // Ordem fixa dos locks (limites → slot): nunca forma ciclo.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${chaveDosLimites(pid).toString()}::bigint)`);
+      await conferirLimites(tx, { pid, ipHash, email: paciente.email, agora });
       // Enfileira concorrentes do MESMO horário (ADR-004): 7s → 116ms.
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${chaveDoSlot(pid, inicioBloqueio).toString()}::bigint)`);
 
@@ -424,6 +423,38 @@ export async function criarAgendamento(
 
   if (existente) return devolverExistente(existente);
   return { agendamento: paraConfirmado(criado, t.label, modalidade, token, prof.cancelDeadlineHours), repetido: false };
+}
+
+/**
+ * Limites contra abuso. Roda duas vezes: fora da transação (caminho rápido,
+ * sem custo de lock) e DENTRO, depois do lock dos limites — só a segunda
+ * é garantia.
+ */
+async function conferirLimites(ex: Executor, p: { pid: string; ipHash: string; email: string; agora: Date }) {
+  const umaHoraAtras = somarMinutos(p.agora, -60);
+  const [porIp] = await ex.select({ n: count() }).from(appointment).where(and(
+    eq(appointment.consentIpHash, p.ipHash), gte(appointment.createdAt, umaHoraAtras)));
+  if ((porIp?.n ?? 0) >= LIMITES.porIpPorHora) {
+    throw new LimiteExcedidoError('Muitos agendamentos em pouco tempo. Aguarde alguns minutos ou fale pelo WhatsApp.');
+  }
+  const [futuras] = await ex.select({ n: count() }).from(appointment).where(and(
+    eq(appointment.practitionerId, p.pid),
+    // `starts_at` ≤ `visit_starts_at` (buffer antes < 1 dia): o recorte usa
+    // o índice da agenda e a canonicalização só roda sobre as futuras.
+    gt(appointment.startsAt, somarMinutos(p.agora, -24 * 60)),
+    gt(appointment.visitStartsAt, p.agora),
+    eq(appointment.status, 'confirmed'),
+    sql`${emailCanonicoSql} = ${emailCanonico(p.email)}`));
+  if ((futuras?.n ?? 0) >= LIMITES.futurasPorEmail) {
+    throw new LimiteExcedidoError(
+      `Você já tem ${LIMITES.futurasPorEmail} consultas marcadas. Para marcar outra, fale pelo WhatsApp.`);
+  }
+  const [naHora] = await ex.select({ n: count() }).from(appointment).where(and(
+    eq(appointment.practitionerId, p.pid), gte(appointment.createdAt, umaHoraAtras)));
+  if ((naHora?.n ?? 0) >= LIMITES.porHoraNoTotal) {
+    log.aviso('agendamento.limite-global', { limite: LIMITES.porHoraNoTotal });
+    throw new LimiteExcedidoError('Muitos agendamentos agora. Tente de novo em alguns minutos ou fale pelo WhatsApp.');
+  }
 }
 
 async function buscarPorIdempotencia(chave: string) {
