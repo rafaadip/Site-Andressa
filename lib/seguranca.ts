@@ -40,10 +40,28 @@ export function tokenValido(token: string): boolean {
 /**
  * IP do cliente atrás do proxy da Vercel. A Vercel SOBRESCREVE
  * `x-forwarded-for` com o IP real — o cliente não consegue forjá-lo lá.
+ * ⚠️ Fora da Vercel (outro proxy, CDN na frente) o cliente escolhe esse
+ * valor: só a Vercel é suportada (docs/SEGURANCA.md, SEC-08).
  * Usado só para o limite por hora e, com hash, como prova do consentimento.
  */
 export function ipDaRequisicao(headers: Headers): string {
-  return headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+  return origemParaLimite(headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || headers.get('x-real-ip')?.trim()
-    || '0.0.0.0';
+    || '0.0.0.0');
+}
+
+/**
+ * IPv6 agrupado por /64: um único cliente costuma ter o /64 inteiro
+ * (2^64 endereços) e trocaria de "origem" a cada requisição (SEC-08).
+ * IPv4 (inclusive mapeado em IPv6) fica como está.
+ */
+export function origemParaLimite(ip: string): string {
+  const v4 = /^(?:::ffff:)?(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(ip);
+  if (v4) return v4[1]!;
+  if (!ip.includes(':')) return ip;
+  const [esquerda = '', direita] = ip.split('%')[0]!.toLowerCase().split('::');
+  const a = esquerda ? esquerda.split(':') : [];
+  const b = direita ? direita.split(':') : [];
+  const grupos = direita === undefined ? a : [...a, ...Array<string>(Math.max(0, 8 - a.length - b.length)).fill('0'), ...b];
+  return `${grupos.slice(0, 4).map((h) => h.replace(/^0+(?=.)/, '')).join(':')}::/64`;
 }

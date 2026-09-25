@@ -6,6 +6,7 @@ import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { _limparTetoSentry, reportarAoSentry } from '@/lib/observabilidade';
 import { tlsDoBanco, TlsObrigatorioError } from '@/lib/db/tls';
 import { semearHorariosFicticios } from '@/scripts/seed';
+import { ipDaRequisicao, origemParaLimite } from '@/lib/seguranca';
 import { errosPorCampo, MSG, schemaDadosPaciente } from '@/lib/validation/agendamento';
 import { escapar, gerarIcs, parametro } from '@/lib/calendar/ics';
 
@@ -165,5 +166,24 @@ describe('SEC-13: seed não apaga a semana real', () => {
   });
   it('confirmação explícita vale em qualquer banco', () => {
     expect(semearHorariosFicticios(remoto, { SEED_CONFIRMO_FICTICIO: 'sim' })).toBe(true);
+  });
+});
+
+describe('SEC-08: origem do limite por IP', () => {
+  it('IPv6 do mesmo /64 é a MESMA origem', () => {
+    expect(origemParaLimite('2001:db8:1:2:aaaa::1')).toBe('2001:db8:1:2::/64');
+    expect(origemParaLimite('2001:0db8:0001:0002:bbbb:cccc:dddd:9')).toBe('2001:db8:1:2::/64');
+    expect(origemParaLimite('2001:db8::1')).toBe('2001:db8:0:0::/64');
+    expect(origemParaLimite('fe80::1%eth0')).toBe('fe80:0:0:0::/64');
+  });
+  it('/64 diferentes continuam diferentes', () => {
+    expect(origemParaLimite('2001:db8:1:3::1')).not.toBe(origemParaLimite('2001:db8:1:2::1'));
+  });
+  it('IPv4 e IPv4 mapeado ficam como estão', () => {
+    expect(origemParaLimite('203.0.113.9')).toBe('203.0.113.9');
+    expect(origemParaLimite('::ffff:203.0.113.9')).toBe('203.0.113.9');
+  });
+  it('ipDaRequisicao já devolve a origem agrupada', () => {
+    expect(ipDaRequisicao(new Headers({ 'x-forwarded-for': '2001:db8:1:2:aaaa::1, 10.0.0.1' }))).toBe('2001:db8:1:2::/64');
   });
 });
