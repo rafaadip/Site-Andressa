@@ -1,0 +1,63 @@
+# CI — FASE-13. Tudo o que um contribuidor roda local, contra Postgres REAL
+# (a trava anti-overbooking só existe no banco; teste sem ele não prova nada).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: andressa
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/andressa
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/andressa
+      TOKEN_SALT: sal-de-teste-com-16-caracteres-ou-mais
+      NEXT_PUBLIC_SITE_URL: http://localhost:3100
+      AGENDAMENTO_SEM_GOOGLE: aceito
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Pelo journal, como em produção — e falha se a constraint sumir.
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - name: typecheck · lint · contraste · conformidade CFM/LGPD · unitários + integração
+        run: npm run verify
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: E2E (build de produção)
+        run: npm run test:e2e
+      - name: Lighthouse mobile (4G simulado) com orçamento
+        run: npx -y @lhci/cli@0.15.x autorun
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorios
+          path: |
+            test-results/
+            .lighthouseci/
+          retention-days: 7

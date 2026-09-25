@@ -151,7 +151,7 @@ export const metadata: Metadata = {
 AVIF com WebP de fallback; `width`/`height` sempre; abaixo da dobra, `loading="lazy"`.
 
 **Fontes** — `next/font/local`, WOFF2, `display: 'swap'`, `preload` **só** em Jost
-400 e Playfair 600. Subset latin + latin-ext (o português precisa de `ã`, `ç`, `õ`).
+400 e Playfair 600. Subset **só `latin`**: ele já cobre `ã`, `ç`, `õ` e toda a acentuação (U+0000–00FF); `latin-ext` (ą, ő, ł…) com preload custava ~80 KB à toa no LCP — medido.
 Zero request a CDN de terceiro (ADR-005).
 
 **JavaScript** — a home é quase toda Server Component. O widget de agendamento é o

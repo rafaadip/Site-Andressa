@@ -6,6 +6,7 @@ const PAGINAS = ['/', '/sobre', '/agendar', '/politica-de-privacidade', '/termos
 /** Matriz do docs/01-MOBILE-FIRST.md §2 — o celular é o caso primário. */
 const TELAS = [
   { nome: 'iPhone SE', width: 375, height: 667 },
+  { nome: 'iPhone 15', width: 393, height: 852 },
   { nome: 'iPhone Pro Max', width: 430, height: 932 },
   { nome: 'iPad retrato', width: 768, height: 1024 },
   { nome: 'iPad paisagem', width: 1024, height: 768 },
@@ -163,5 +164,54 @@ test.describe('SEO', () => {
     expect(xml).toContain('/agendar');
     expect(xml).not.toContain('/admin');
     expect(xml).not.toContain('/consulta/');
+  });
+});
+
+test.describe('segurança e operação (FASE-13)', () => {
+  test('cabeçalhos de segurança e CSP com nonce NOVO a cada requisição', async ({ request }) => {
+    const a = await request.get('/');
+    const b = await request.get('/');
+    const csp = a.headers()['content-security-policy']!;
+    expect(csp).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/);
+    expect(csp).not.toMatch(/script-src[^;]*unsafe-inline/);
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(b.headers()['content-security-policy']).not.toBe(csp);
+    const h = a.headers();
+    expect(h['x-content-type-options']).toBe('nosniff');
+    expect(h['x-frame-options']).toBe('DENY');
+    expect(h['referrer-policy']).toBe('strict-origin-when-cross-origin');
+    expect(h['strict-transport-security']).toContain('max-age=');
+    expect(h['permissions-policy']).toContain('camera=()');
+    expect(h['x-powered-by']).toBeUndefined();
+  });
+
+  test('a CSP não bloqueia nada do próprio site (console limpo e página interativa)', async ({ page }) => {
+    const violacoes: string[] = [];
+    page.on('console', (m) => { if (/Content Security Policy|Refused to/i.test(m.text())) violacoes.push(m.text()); });
+    for (const caminho of PAGINAS) {
+      await page.goto(caminho);
+      await page.waitForLoadState('networkidle');
+    }
+    expect(violacoes).toEqual([]);
+  });
+
+  test('health check responde sem dado pessoal', async ({ request }) => {
+    const r = await request.get('/api/health');
+    expect(r.status()).toBe(200);
+    const s = await r.json();
+    expect(s).toMatchObject({ banco: true });
+    expect(['ok', 'degradado']).toContain(s.status);
+    expect(JSON.stringify(s)).not.toMatch(/@|\+55/);
+  });
+
+  test('prévia de link: imagem OG 1200×630 leve (WhatsApp) com nome e CRM no alt', async ({ page, request }) => {
+    await page.goto('/');
+    const og = await page.locator('meta[property="og:image"]').getAttribute('content');
+    expect(og).toContain('/opengraph-image');
+    const alt = await page.locator('meta[property="og:image:alt"]').getAttribute('content');
+    expect(alt).toContain('CRM-SP');
+    const img = await request.get(new URL(og!).pathname);
+    expect(img.headers()['content-type']).toBe('image/png');
+    expect((await img.body()).length).toBeLessThan(300 * 1024);
   });
 });

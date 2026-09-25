@@ -37,6 +37,8 @@ export type AgendamentoConfirmado = {
   urlGestao: string;
   urlIcs: string;
   urlGoogle: string;
+  /** Até quantas horas antes dá para cancelar pelo link (política do painel). */
+  prazoCancelamentoHoras: number;
 };
 
 export type ErroApi = {

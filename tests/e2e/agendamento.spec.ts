@@ -197,6 +197,24 @@ test.describe('celular (375px)', () => {
   });
 });
 
+test.describe('teleconsulta de outro fuso (Manaus, UTC−4)', () => {
+  test.use({ viewport: { width: 375, height: 667 }, timezoneId: 'America/Manaus' });
+
+  test('mostra o horário de Brasília e, entre parênteses, o do paciente', async ({ page }) => {
+    await irParaHorarios(page, /Teleconsulta/);
+    await expect(page.getByText(/Horários de Brasília · entre parênteses, no seu fuso \(Manaus\)/)).toBeVisible();
+    const slot = page.locator('[aria-labelledby="rotulo-horarios"] [role="radio"]').first();
+    const [brasilia, local] = (await slot.innerText()).split('\n').map((t) => t.replace(/[()]/g, '').trim());
+    const minutos = (h: string) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
+    expect(minutos(brasilia!) - minutos(local!)).toBe(60);
+  });
+
+  test('presencial não mostra fuso do paciente (a consulta é no consultório)', async ({ page }) => {
+    await irParaHorarios(page);
+    await expect(page.getByText(/no seu fuso/)).toHaveCount(0);
+  });
+});
+
 test.describe('teclado (desktop)', () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 

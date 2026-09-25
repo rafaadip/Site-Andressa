@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { jsonLdProfissional, jsonLdFaq } from '@/lib/seo';
-import { FAQ } from '@/lib/content/site';
+import { perguntasFrequentes } from '@/lib/content/site';
+
+const FAQ = perguntasFrequentes(24);
 
 describe('JSON-LD do profissional', () => {
   const ld = jsonLdProfissional();
@@ -32,7 +34,7 @@ describe('JSON-LD do profissional', () => {
 
 describe('JSON-LD do FAQ', () => {
   it('espelha todas as perguntas do conteúdo', () => {
-    const ld = jsonLdFaq();
+    const ld = jsonLdFaq(24);
     expect(ld.mainEntity).toHaveLength(FAQ.length);
     expect(ld.mainEntity[0]?.acceptedAnswer.text).toBe(FAQ[0].resposta);
   });

@@ -75,6 +75,21 @@ export const LIMITES = {
 /** Grade de alinhamento dos slots (min). */
 const GRADE_MIN = 5;
 
+/** Prazo de cancelamento se o banco estiver fora do ar (é o padrão da coluna). */
+export const PRAZO_CANCELAMENTO_PADRAO_H = 24;
+
+/**
+ * Prazo de cancelamento para os TEXTOS públicos (FAQ, termos). Nunca
+ * derruba a página: sem banco, usa o padrão.
+ */
+export async function prazoCancelamentoPublico(): Promise<number> {
+  try {
+    return (await profissional()).cancelDeadlineHours;
+  } catch {
+    return PRAZO_CANCELAMENTO_PADRAO_H;
+  }
+}
+
 // ── Leitura ──────────────────────────────────────────────────────────────
 
 let practitionerIdCache: string | null = null;
@@ -204,7 +219,7 @@ export async function disponibilidade(p: {
 
 // ── Criação ──────────────────────────────────────────────────────────────
 
-function paraConfirmado(ag: Linha, tipoLabel: string, modalidade: Modalidade, token: string): AgendamentoConfirmado {
+function paraConfirmado(ag: Linha, tipoLabel: string, modalidade: Modalidade, token: string, prazoCancelamentoHoras: number): AgendamentoConfirmado {
   const base = urlSite();
   const dados = dadosIcs(ag, tipoLabel, modalidade, `${base}/consulta/${token}`);
   return {
@@ -218,6 +233,7 @@ function paraConfirmado(ag: Linha, tipoLabel: string, modalidade: Modalidade, to
     urlGestao: `${base}/consulta/${token}`,
     urlIcs: `${base}/api/ics?t=${token}`,
     urlGoogle: linkGoogleCalendar(dados),
+    prazoCancelamentoHoras,
   };
 }
 
@@ -239,7 +255,8 @@ export async function criarAgendamento(
   ctx: { ip: string; idempotencyKey: string; agora?: Date },
 ): Promise<ResultadoCriacao> {
   const agora = ctx.agora ?? new Date();
-  const pid = await practitionerId();
+  const prof = await profissional();
+  const pid = prof.id;
   const t = await tipoPorSlug(pid, entrada.tipo);
   const modalidade = t.locationKind as Modalidade;
   const paciente = entrada.paciente;
@@ -256,7 +273,7 @@ export async function criarAgendamento(
       && linha.visitStartsAt.toISOString() === new Date(entrada.inicio).toISOString();
     if (!mesmoPedido) throw new IdempotenciaConflitanteError();
     const token = tokenGestaoPara(linha.id, ctx.idempotencyKey);
-    return { agendamento: paraConfirmado(linha, t.label, modalidade, token), repetido: true };
+    return { agendamento: paraConfirmado(linha, t.label, modalidade, token, prof.cancelDeadlineHours), repetido: true };
   };
 
   // 1. Idempotência (caminho rápido, sem lock).
@@ -358,7 +375,7 @@ export async function criarAgendamento(
   }
 
   if (existente) return devolverExistente(existente);
-  return { agendamento: paraConfirmado(criado, t.label, modalidade, token), repetido: false };
+  return { agendamento: paraConfirmado(criado, t.label, modalidade, token, prof.cancelDeadlineHours), repetido: false };
 }
 
 async function buscarPorIdempotencia(chave: string) {

@@ -53,7 +53,10 @@ export function Hero() {
           <Image
             src={retrato}
             alt={`${PROFISSIONAL.nome}, de jaleco branco, sorrindo`}
-            priority
+            // Next 16: `priority` foi descontinuado. `preload` gera o <link> e
+            // `fetchPriority` sobe a prioridade da requisição — é o LCP no celular.
+            preload
+            fetchPriority="high"
             placeholder="blur"
             sizes="(min-width: 1024px) 416px, (min-width: 768px) 336px, 76vw"
             className="relative w-full h-auto rounded-full"

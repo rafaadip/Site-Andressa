@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'pt_BR',
     siteName: PROFISSIONAL.nomeCurto,
-    images: [{ url: '/retratos/andressa-circular.png', width: 900, height: 900 }],
+    // Imagem: app/opengraph-image.tsx (1200×630, leve para o WhatsApp).
   },
   formatDetection: { telephone: false },   // o iOS não reformata o telefone por conta própria
 };

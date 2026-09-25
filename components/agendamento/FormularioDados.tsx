@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { mascararTelefone } from '@/lib/telefone';
 import { sugerirEmail } from '@/lib/validation/agendamento';
+import { CONSENTIMENTO } from '@/lib/content/site';
 import { Campo, CampoTexto } from './Campo';
 
 export type Dados = {
@@ -94,10 +95,9 @@ export function FormularioDados({ dados, erros, aoMudar, aoSair }: Props) {
           erro={erros.consentimentoDados}
           aoMudar={(v) => aoMudar('consentimentoDados', v)}
         >
-          Autorizo o uso do meu nome, telefone e e-mail para agendar e confirmar esta
-          consulta, conforme a{' '}
+          {CONSENTIMENTO.dados.texto}{' '}
           <Link href="/politica-de-privacidade" target="_blank" className="font-medium text-acento underline underline-offset-4">
-            política de privacidade
+            {CONSENTIMENTO.dados.link}
           </Link>. <span aria-hidden className="text-danger">*</span>
         </Consentimento>
 
@@ -111,8 +111,8 @@ export function FormularioDados({ dados, erros, aoMudar, aoSair }: Props) {
             aoMudar={(v) => aoMudar('consentimentoSaude', v)}
             destaque
           >
-            O motivo que escrevi é <strong className="font-medium text-texto">informação de saúde</strong>.
-            Autorizo o seu registro para esta consulta. Ele é apagado 90 dias depois.
+            {CONSENTIMENTO.saude.antes} <strong className="font-medium text-texto">{CONSENTIMENTO.saude.destaque}</strong>
+            {CONSENTIMENTO.saude.depois}
           </Consentimento>
         )}
       </fieldset>

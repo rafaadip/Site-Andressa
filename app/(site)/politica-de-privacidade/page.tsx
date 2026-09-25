@@ -15,6 +15,9 @@ export const metadata: Metadata = {
 const ATUALIZADO_EM = '25 de setembro de 2026';
 
 export default function PoliticaPrivacidade() {
+  // Operadores opcionais só são citados quando de fato ativos.
+  const sentry = Boolean(process.env.SENTRY_DSN);
+  const plausible = Boolean(process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN);
   return (
     <Secao>
       <article className="prosa mx-auto">
@@ -71,17 +74,28 @@ export default function PoliticaPrivacidade() {
           <li><strong>Resend</strong> — para enviar os e-mails de confirmação e lembrete.</li>
           <li><strong>Supabase</strong> — banco de dados onde o agendamento fica guardado, com servidores em São Paulo.</li>
           <li><strong>Vercel</strong> — hospedagem do site.</li>
+          {sentry && <li><strong>Sentry</strong> — relatório de erros técnicos, sem nome, contato ou motivo da consulta.</li>}
+          {plausible && <li><strong>Plausible</strong> — estatísticas de visita anônimas, sem cookies.</li>}
         </ul>
         <p>
           Alguns desses serviços podem processar dados fora do Brasil. Nesses casos, a
           transferência segue as salvaguardas contratuais previstas na LGPD.
         </p>
 
+        <h2>E-mails</h2>
+        <p>
+          Com o seu e-mail enviamos apenas mensagens sobre a sua consulta: a confirmação
+          (com o convite para o calendário), um lembrete na véspera, outro cerca de duas
+          horas antes e, se for o caso, avisos de cancelamento ou mudança de horário.
+          Nada de propaganda.
+        </p>
+
         <h2>Cookies</h2>
         <p>
-          Este site <strong>não usa cookies de rastreamento nem de publicidade</strong>.
-          As estatísticas de visita são anônimas e agregadas, sem identificar você — por
-          isso não exibimos aviso de cookies.
+          Este site <strong>não usa cookies de rastreamento nem de publicidade</strong>, e
+          quem agenda uma consulta não recebe cookie nenhum. O único cookie existente é o
+          de sessão do painel restrito à médica — essencial e sem finalidade de
+          rastreamento. Por isso não exibimos aviso de cookies.
         </p>
 
         <h2>Seus direitos</h2>
@@ -90,7 +104,8 @@ export default function PoliticaPrivacidade() {
           <li>confirmar se tratamos seus dados e acessá-los;</li>
           <li>corrigir dados incompletos ou desatualizados;</li>
           <li>pedir a exclusão dos seus dados;</li>
-          <li>revogar o consentimento para o motivo da consulta — ele é apagado na hora;</li>
+          <li>revogar o consentimento para o motivo da consulta — ele é apagado na hora, e
+            você mesmo pode fazer isso pela página da sua consulta (o link recebido ao agendar);</li>
           <li>receber seus dados em formato digital (portabilidade).</li>
         </ul>
         <p>
@@ -103,7 +118,10 @@ export default function PoliticaPrivacidade() {
         <h2>Segurança</h2>
         <p>
           Os dados trafegam por conexão criptografada (HTTPS). O acesso à agenda é
-          restrito à médica. Credenciais de integração são guardadas criptografadas.
+          restrito à médica. Credenciais de integração são guardadas criptografadas, e o
+          link da sua consulta é um código aleatório que só você recebe — no banco fica
+          apenas uma versão cifrada dele. Cada alteração no agendamento fica registrada em uma
+          trilha de auditoria.
         </p>
       </article>
     </Secao>
