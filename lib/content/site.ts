@@ -226,3 +226,15 @@ export const CONSENTIMENTO = {
     depois: '. Autorizo o seu registro para esta consulta. Ele é apagado 90 dias depois.',
   },
 } as const;
+
+/**
+ * Confirmação em 2 etapas para apagar o motivo da consulta (dado de saúde) —
+ * mesmo padrão do cancelamento (achado UX-05: um só toque apagava direto).
+ */
+export const CONFIRMAR_APAGAR_MOTIVO = {
+  botaoInicial: 'Apagar o motivo que escrevi',
+  pergunta: 'Apagar o motivo que você escreveu?',
+  aviso: 'É uma informação de saúde. Depois de apagado, não dá para recuperar.',
+  botaoConfirmar: 'Sim, apagar',
+  botaoManter: 'Manter o motivo',
+} as const;
