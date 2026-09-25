@@ -244,7 +244,7 @@ export async function acaoAnonimizar(_: Estado, fd: FormData): Promise<Estado> {
     await exigirAdminAcao();
     if (fd.get('confirmo') !== 'on') return { erro: 'Marque a confirmação para eliminar os dados.' };
     const r = await anonimizarTitular(texto(fd, 'email'));
-    efeitos(r.canceladas);
+    efeitos([...r.canceladas, ...r.redigidas]);
     revalidatePath('/admin/privacidade');
     return { ok: `Dados eliminados de ${r.consultas} consulta(s).${r.canceladas.length ? ` ${r.canceladas.length} consulta(s) futura(s) cancelada(s).` : ''}` };
   } catch (e) {

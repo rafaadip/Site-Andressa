@@ -448,20 +448,25 @@ export function paraCsv(dados: Awaited<ReturnType<typeof exportarTitular>>): str
  * Consultas futuras são canceladas SEM e-mail (a pessoa pediu para sumir)
  * e saem da agenda do Google; o link de gestão deixa de funcionar.
  */
-export async function anonimizarTitular(email: string, agora = new Date()): Promise<{ consultas: number; canceladas: string[] }> {
+export async function anonimizarTitular(email: string, agora = new Date()): Promise<{ consultas: number; canceladas: string[]; redigidas: string[] }> {
   if (!emailDeTitular(email)) throw new OperacaoInvalidaError('Informe o e-mail do titular.');
   // Só conta (e registra) o que de fato é anonimizado agora.
   const linhas = (await consultasDoTitular(email)).filter(({ ag }) => !ag.anonymizedAt);
   const canceladas: string[] = [];
+  // Eventos que ficam na agenda do Google (passados, falta, realizada):
+  // redigidos também — a eliminação não pode parar no banco (SEC-06).
+  const redigidas: string[] = [];
   await db().transaction(async (tx) => {
     for (const { ag } of linhas) {
       const futuraAtiva = ag.status === 'confirmed' && ag.visitStartsAt > agora;
       if (futuraAtiva) canceladas.push(ag.id);
+      else if (ag.googleEventId) redigidas.push(ag.id);
       await tx.update(appointment).set({
         patientName: 'Titular removido',
         patientEmail: '',
         patientPhone: '',
         patientNote: null,
+        cancelReason: null,
         consentHealthAt: null,
         manageTokenHash: hashToken(randomBytes(32).toString('base64url')),
         anonymizedAt: agora,
@@ -469,7 +474,7 @@ export async function anonimizarTitular(email: string, agora = new Date()): Prom
         ...(futuraAtiva ? {
           status: 'cancelled', cancelledAt: agora, cancelledBy: 'practitioner',
           icsSequence: sql`${appointment.icsSequence} + 1`, syncState: 'pending', syncAttempts: 0, syncNextAt: null,
-        } : {}),
+        } : ag.googleEventId ? { syncState: 'pending', syncAttempts: 0, syncNextAt: null } : {}),
       }).where(eq(appointment.id, ag.id));
       // Nada pendente na fila pode sair para quem pediu a eliminação.
       await tx.update(notification).set({ status: 'skipped', lastError: 'anonimizado' })
@@ -477,5 +482,5 @@ export async function anonimizarTitular(email: string, agora = new Date()): Prom
     }
     await tx.insert(auditLog).values({ actor: 'practitioner', action: 'data.erased', meta: { consultas: linhas.length, canceladas: canceladas.length } });
   });
-  return { consultas: linhas.length, canceladas };
+  return { consultas: linhas.length, canceladas, redigidas };
 }

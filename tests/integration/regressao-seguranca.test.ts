@@ -16,6 +16,11 @@ import { receberDaAgenda } from '@/lib/calendar/receber';
 import { sincronizarAgendamento } from '@/lib/calendar/sincronizar';
 import { idEventoGoogle } from '@/lib/calendar/google';
 import { encerrarSessoes, sessaoValidaNoServidor } from '@/lib/auth/admin';
+import { anonimizarTitular, marcarFalta } from '@/lib/agendamento/admin';
+import { revogarMotivoPorToken } from '@/lib/agendamento/servico';
+import { reconciliar } from '@/lib/calendar/sincronizar';
+import { efeitosDe } from '@/lib/agendamento/efeitos';
+import { aplicarRetencao } from '@/lib/lgpd/retencao';
 import { ENV_INTEGRACOES, instalarServicosFalsos, type GoogleFalso } from '../setup/servicos-falsos';
 import type { CriarAgendamento } from '@/lib/validation/agendamento';
 import { inserirConsulta, limparBanco } from '../setup/fabrica';
@@ -142,5 +147,89 @@ d('SEC-10: "Sair" derruba a sessão no servidor', () => {
     await encerrarSessoes();
     expect(await sessaoValidaNoServidor(sessao(agoraS - 60))).toBe(false);
     expect(await sessaoValidaNoServidor(sessao(agoraS + 5))).toBe(true);
+  });
+});
+
+d('SEC-06: eliminação, retenção e revogação chegam à agenda do Google', () => {
+  const sql = () => sqlCliente();
+  let google: GoogleFalso;
+  let pid: string;
+
+  beforeAll(async () => {
+    for (const [k, v] of Object.entries(ENV_INTEGRACOES)) vi.stubEnv(k, v);
+    _limparCacheEnv();
+    pid = await practitionerId();
+  });
+  afterAll(async () => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); _limparCacheEnv(); await limparBanco(sql()); });
+  beforeEach(async () => {
+    await limparBanco(sql());
+    ({ google } = instalarServicosFalsos());
+    _limparTokens();
+    expect((await concluirConexaoAgenda(pid, { access_token: 'a', expires_in: 3599, refresh_token: 'rt', scope: google.escopoConcedido })).ok).toBe(true);
+    await receberDaAgenda(pid);
+  });
+
+  /** Consulta sincronizada que depois "vira passada" (o evento fica como registro). */
+  async function consultaPassadaNoGoogle(motivo: string) {
+    const dia = somarDiasLocal(dataLocal(new Date()), 3);
+    const c = await inserirConsulta(sql(), {
+      inicio: horaLocalParaUtc(dia, '10:00'), email: 'titular@exemplo.com', nome: 'Joana Titular', motivo,
+    });
+    await sql()`UPDATE appointment SET sync_state = 'pending' WHERE id = ${c.id}`;
+    expect(await sincronizarAgendamento(c.id)).toBe('synced');
+    expect(google.eventos.get(idEventoGoogle(c.id))!.description).toContain('diabetes');
+    const d100 = new Date(Date.now() - 100 * 86_400_000).toISOString();
+    const d100fim = new Date(Date.now() - 100 * 86_400_000 + 40 * 60_000).toISOString();
+    await sql()`UPDATE appointment SET visit_starts_at = ${d100}, visit_ends_at = ${d100fim}, starts_at = ${d100}, ends_at = ${d100fim} WHERE id = ${c.id}`;
+    return c;
+  }
+  const evento = (id: string) => google.eventos.get(idEventoGoogle(id))!;
+  const semPii = (id: string) => {
+    const ev = evento(id);
+    const texto = `${ev.summary} ${ev.description}`;
+    expect(texto).not.toMatch(/Joana|titular@exemplo|912345678|diabetes/);
+  };
+
+  it('eliminar o titular redige o evento passado (nome, telefone, e-mail, motivo)', async () => {
+    const c = await consultaPassadaNoGoogle('diabetes tipo 2');
+    const r = await anonimizarTitular('titular@exemplo.com');
+    expect(r.redigidas).toEqual([c.id]);
+    for (const id of r.redigidas) await efeitosDe(id);
+    semPii(c.id);
+    expect(evento(c.id).description).toContain('removidos');
+  });
+
+  it('a reconciliação também alcança o passado a redigir (se o after() falhar)', async () => {
+    const c = await consultaPassadaNoGoogle('diabetes tipo 2');
+    await anonimizarTitular('titular@exemplo.com');
+    await reconciliar();
+    semPii(c.id);
+  });
+
+  it('retenção de 90 dias tira o motivo também do evento', async () => {
+    const c = await consultaPassadaNoGoogle('diabetes tipo 2');
+    expect((await aplicarRetencao()).motivosApagados).toBe(1);
+    await reconciliar();
+    expect(evento(c.id).description).not.toContain('diabetes');
+  });
+
+  it('revogar o motivo de uma consulta com falta tira o motivo do evento', async () => {
+    const dia = somarDiasLocal(dataLocal(new Date()), 3);
+    const c = await inserirConsulta(sql(), { inicio: horaLocalParaUtc(dia, '10:00'), motivo: 'diabetes tipo 2' });
+    await sql()`UPDATE appointment SET sync_state = 'pending' WHERE id = ${c.id}`;
+    await sincronizarAgendamento(c.id);
+    await marcarFalta(c.id, true, new Date(Date.now() + 4 * 86_400_000));
+    await efeitosDe(c.id);
+    await revogarMotivoPorToken(c.token);
+    await efeitosDe(c.id);
+    expect(evento(c.id).description).not.toContain('diabetes');
+  });
+
+  it('SEC-17: HTML no motivo não vira link na descrição do evento', async () => {
+    const dia = somarDiasLocal(dataLocal(new Date()), 3);
+    const c = await inserirConsulta(sql(), { inicio: horaLocalParaUtc(dia, '10:00'), motivo: '<a href="https://golpe.example">confirme aqui</a>' });
+    await sql()`UPDATE appointment SET sync_state = 'pending' WHERE id = ${c.id}`;
+    await sincronizarAgendamento(c.id);
+    expect(evento(c.id).description).not.toMatch(/[<>]/);
   });
 });

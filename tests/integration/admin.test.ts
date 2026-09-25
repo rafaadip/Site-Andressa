@@ -232,7 +232,7 @@ d('painel da médica (FASE-09) e LGPD (FASE-10)', () => {
     it('eliminação anonimiza, cancela as futuras sem e-mail, invalida o link e esvazia a fila', async () => {
       const c = await criar(0, { motivo: 'Exames', consentimentoSaude: true });
       const r = await anonimizarTitular(c.email);
-      expect(r).toEqual({ consultas: 1, canceladas: [c.id] });
+      expect(r).toEqual({ consultas: 1, canceladas: [c.id], redigidas: [] });
       const l = await linha(c.id);
       expect(l).toMatchObject({ patient_name: 'Titular removido', patient_email: '', patient_phone: '', patient_note: null, status: 'cancelled' });
       expect(l.anonymized_at).not.toBeNull();
@@ -252,7 +252,7 @@ d('painel da médica (FASE-09) e LGPD (FASE-10)', () => {
       expect(await consultasDoTitular('')).toEqual([]);
       expect(await exportarTitular('')).toMatchObject({ consultas: [] });
       // Repetir a eliminação do mesmo titular não conta nada de novo.
-      expect(await anonimizarTitular(c.email)).toEqual({ consultas: 0, canceladas: [] });
+      expect(await anonimizarTitular(c.email)).toEqual({ consultas: 0, canceladas: [], redigidas: [] });
       const registros = await sql()`SELECT meta FROM audit_log WHERE action = 'data.erased' ORDER BY id`;
       expect(registros.map((r) => r.meta.consultas)).toEqual([1, 0]);
     });

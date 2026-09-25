@@ -564,7 +564,9 @@ export async function revogarMotivoPorToken(token: string): Promise<AgendamentoG
     await tx.update(appointment).set({
       patientNote: null,
       consentHealthAt: null,
-      syncState: atual.linha.status === 'confirmed' ? 'pending' : atual.linha.syncState,
+      // Qualquer evento que exista (inclusive o registro de uma consulta
+      // passada ou com falta) perde o motivo também (SEC-06).
+      syncState: atual.linha.status === 'confirmed' || atual.linha.googleEventId ? 'pending' : atual.linha.syncState,
       syncAttempts: 0,
       syncNextAt: null,
       updatedAt: new Date(),
