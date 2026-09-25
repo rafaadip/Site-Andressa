@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { exigirAdminAcao, NaoAutorizadoError } from '@/lib/auth/admin';
+import { encerrarSessoes, exigirAdminAcao, NaoAutorizadoError } from '@/lib/auth/admin';
 import { nomeCookieSessao, opcoesCookie } from '@/lib/auth/sessao';
 import {
   adicionarExtra, afetadosPor, anonimizarTitular, atualizarPoliticas, atualizarTipo, bloquear,
@@ -255,6 +255,11 @@ export async function acaoAnonimizar(_: Estado, fd: FormData): Promise<Estado> {
 // ── Sessão ───────────────────────────────────────────────────────────────
 
 export async function acaoSair(): Promise<void> {
+  // Derruba a sessão no servidor também: um cookie copiado deixa de valer
+  // (SEC-10). Banco fora do ar não impede de sair deste aparelho.
+  if (await exigirAdminAcao().then(() => true, () => false)) {
+    await encerrarSessoes().catch((e) => log.excecao('admin.sair', e));
+  }
   (await cookies()).set(nomeCookieSessao(), '', opcoesCookie(0));
   redirect('/admin/entrar?saiu=1');
 }

@@ -15,6 +15,7 @@ import { concluirConexaoAgenda } from '@/lib/auth/oauth';
 import { receberDaAgenda } from '@/lib/calendar/receber';
 import { sincronizarAgendamento } from '@/lib/calendar/sincronizar';
 import { idEventoGoogle } from '@/lib/calendar/google';
+import { encerrarSessoes, sessaoValidaNoServidor } from '@/lib/auth/admin';
 import { ENV_INTEGRACOES, instalarServicosFalsos, type GoogleFalso } from '../setup/servicos-falsos';
 import type { CriarAgendamento } from '@/lib/validation/agendamento';
 import { inserirConsulta, limparBanco } from '../setup/fabrica';
@@ -126,5 +127,20 @@ d('SEC-04: POST recusado não custa chamada ao Google', () => {
     const antes = freeBusy();
     await criarAgendamento(pedido(r.dias.flatMap((x) => x.slots)[0]!.inicio, 99), { ip: '203.0.113.6', idempotencyKey: randomUUID() });
     expect(freeBusy() - antes).toBe(1);
+  });
+});
+
+d('SEC-10: "Sair" derruba a sessão no servidor', () => {
+  const sql = () => sqlCliente();
+  afterAll(async () => { await sql()`UPDATE practitioner SET sessions_valid_after = NULL`; });
+  const sessao = (iatS: number) => ({ email: 'dra@exemplo.com', iat: iatS, exp: iatS + 3600 });
+
+  it('cookie emitido antes do "Sair" (ex.: copiado) deixa de valer; login novo vale', async () => {
+    const agoraS = Math.floor(Date.now() / 1000);
+    await sql()`UPDATE practitioner SET sessions_valid_after = NULL`;
+    expect(await sessaoValidaNoServidor(sessao(agoraS - 60))).toBe(true);
+    await encerrarSessoes();
+    expect(await sessaoValidaNoServidor(sessao(agoraS - 60))).toBe(false);
+    expect(await sessaoValidaNoServidor(sessao(agoraS + 5))).toBe(true);
   });
 });
