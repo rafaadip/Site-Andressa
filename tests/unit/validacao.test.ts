@@ -12,6 +12,10 @@ describe('telefone', () => {
     ['(11) 89805-3826', false],      // celular sem o 9
     ['(11) 9980-532', false],        // curto
     ['(11) 1456-7890', false],       // fixo começando com 1
+    ['+55 (11) 3456-7890', true],    // fixo com 55 (12 dígitos)
+    ['(11) 99805-38269', false],     // 12 dígitos SEM 55: dígito a mais, não truncar
+    ['+55 (11) 99805-38269', false], // 14 dígitos
+    ['119980538269999', false],
   ])('%s → %s', (v, esperado) => expect(telefoneValido(v)).toBe(esperado));
 
   it('máscara progressiva', () => {
@@ -22,9 +26,11 @@ describe('telefone', () => {
     expect(mascararTelefone('1134567890')).toBe('(11) 3456-7890');
   });
 
-  it('ignora dígitos além do 11º e o prefixo 55', () => {
+  it('tira o prefixo 55; a MÁSCARA (só ela) corta além do 11º dígito', () => {
     expect(digitosNacionais('5511998053826')).toBe('11998053826');
+    expect(digitosNacionais('(11) 99805-38269')).toBe('119980538269');   // não trunca em silêncio
     expect(mascararTelefone('119980538269999')).toBe('(11) 99805-3826');
+    expect(mascararTelefone('+55 11 99805-3826')).toBe('(11) 99805-3826');
   });
 
   it('normaliza para E.164', () => {
@@ -42,6 +48,12 @@ describe('schemaDadosPaciente', () => {
     const r = schemaDadosPaciente.parse(ok);
     expect(r.telefone).toBe('+5511912345678');
     expect(r.email).toBe('ana@exemplo.com');
+  });
+
+  it('telefone com dígito a mais é recusado, não vira outro número', () => {
+    const r = schemaDadosPaciente.safeParse({ ...ok, telefone: '(11) 99805-38269' });
+    expect(r.success).toBe(false);
+    expect(errosPorCampo(r.error!).telefone).toBe(MSG.telefone);
   });
 
   it('exige nome e sobrenome', () => {

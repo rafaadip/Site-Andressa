@@ -10,13 +10,16 @@ const DDDS = new Set([
   91, 92, 93, 94, 95, 96, 97, 98, 99,
 ]);
 
-/** Só os dígitos nacionais (sem o 55), até 11. */
+/**
+ * Só os dígitos nacionais (sem o 55). NÃO trunca: "(11) 99805-38269" tem 12
+ * dígitos e precisa ser recusado, não virar outro número em silêncio.
+ */
 export function digitosNacionais(valor: string): string {
-  let d = valor.replace(/\D/g, '');
-  if ((d.length === 12 || d.length === 13) && d.startsWith('55')) d = d.slice(2);
-  return d.slice(0, 11);
+  const d = valor.replace(/\D/g, '');
+  return (d.length === 12 || d.length === 13) && d.startsWith('55') ? d.slice(2) : d;
 }
 
+/** Aceita 10/11 dígitos nacionais, ou 12/13 com o prefixo 55. */
 export function telefoneValido(valor: string): boolean {
   const d = digitosNacionais(valor);
   if (d.length !== 10 && d.length !== 11) return false;
@@ -31,9 +34,13 @@ export function normalizarTelefone(valor: string): string {
   return `+55${digitosNacionais(valor)}`;
 }
 
-/** Máscara progressiva enquanto digita: (11) 99805-3826 */
+/**
+ * Máscara progressiva enquanto digita: (11) 99805-3826. Aqui sim corta no
+ * 11º dígito — o campo funciona como um maxlength, e o que fica é o que a
+ * pessoa vê.
+ */
 export function mascararTelefone(valor: string): string {
-  const d = digitosNacionais(valor);
+  const d = digitosNacionais(valor).slice(0, 11);
   if (d.length <= 2) return d.length ? `(${d}` : '';
   const ddd = d.slice(0, 2);
   const resto = d.slice(2);
