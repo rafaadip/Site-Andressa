@@ -34,7 +34,8 @@ export const Confirmacao = forwardRef<HTMLHeadingElement, Props>(function Confir
         <span aria-hidden className="mx-auto grid size-14 place-items-center rounded-full bg-success text-ivory-50">
           <Check size={28} strokeWidth={2.25} />
         </span>
-        <h2 ref={tituloRef} tabIndex={-1} className="display text-h3 text-texto mt-5 outline-none">
+        {/* scroll-mt: o foco no título traz junto o ícone de sucesso (56 px + 20 px acima), não só o texto sob o cabeçalho fixo. */}
+        <h2 ref={tituloRef} tabIndex={-1} className="display text-h3 text-texto mt-5 outline-none scroll-mt-44">
           Consulta confirmada{primeiroNome && <>, {primeiroNome}</>}
         </h2>
         <p className="mt-3 text-lead text-texto first-letter:uppercase">{ag.quando}</p>
