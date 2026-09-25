@@ -8,6 +8,7 @@
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { envBanco } from '../env';
+import { tlsDoBanco } from './tls';
 import * as schema from './schema';
 
 type Db = ReturnType<typeof drizzle<typeof schema>>;
@@ -15,7 +16,11 @@ type Db = ReturnType<typeof drizzle<typeof schema>>;
 const global_ = globalThis as unknown as { __db?: Db; __sql?: postgres.Sql };
 
 export function sqlCliente(): postgres.Sql {
-  global_.__sql ??= postgres(envBanco().DATABASE_URL, {
+  const url = envBanco().DATABASE_URL;
+  const ssl = tlsDoBanco(url);
+  global_.__sql ??= postgres(url, {
+    // Só com valor: `ssl: undefined` desligaria o `sslmode` da URL.
+    ...(ssl ? { ssl } : {}),
     max: 5,
     prepare: false,
     idle_timeout: 20,

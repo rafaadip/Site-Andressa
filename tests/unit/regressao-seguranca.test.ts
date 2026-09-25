@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { _limparTetoSentry, reportarAoSentry } from '@/lib/observabilidade';
+import { tlsDoBanco, TlsObrigatorioError } from '@/lib/db/tls';
 import { errosPorCampo, MSG, schemaDadosPaciente } from '@/lib/validation/agendamento';
 import { escapar, gerarIcs, parametro } from '@/lib/calendar/ics';
 
@@ -119,5 +120,35 @@ describe('SEC-07: erro de banco não leva params (nome, motivo) ao Sentry', () =
     expect(f).toHaveBeenCalledTimes(5);
     await reportarAoSentry('outro.evento', new Error('y'));
     expect(f).toHaveBeenCalledTimes(6);
+  });
+});
+
+describe('SEC-03: TLS do banco', () => {
+  const url = 'postgresql://u:s@db.exemplo.supabase.co:6543/postgres';
+  const PEM = '-----BEGIN CERTIFICATE-----\\nMIIB\\n-----END CERTIFICATE-----';
+
+  it('com a CA: verifica o certificado (e aceita o PEM numa linha só, como na Vercel)', () => {
+    expect(tlsDoBanco(url, { DATABASE_CA_CERT: PEM })).toEqual({
+      ca: '-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----', rejectUnauthorized: true,
+    });
+  });
+
+  it('host remoto sem sslmode: no mínimo cifra', () => {
+    expect(tlsDoBanco(url, {})).toBe('require');
+    expect(tlsDoBanco('postgres://u:p%40ss@10.0.0.5/db', {})).toBe('require');
+  });
+
+  it.each(['disable', 'allow', 'prefer'])('host remoto com sslmode=%s (cai para texto puro): recusa', (modo) => {
+    expect(() => tlsDoBanco(`${url}?sslmode=${modo}`, {})).toThrow(TlsObrigatorioError);
+  });
+
+  it('sslmode=verify-full: o driver verifica (não sobrescreve)', () => {
+    expect(tlsDoBanco(`${url}?sslmode=verify-full`, {})).toBeUndefined();
+  });
+
+  it.each([
+    'postgresql://postgres@127.0.0.1:55432/x', 'postgresql://localhost/x', 'postgresql://u@[::1]:5432/x',
+  ])('host local (%s): vale a URL', (u) => {
+    expect(tlsDoBanco(u, {})).toBeUndefined();
   });
 });

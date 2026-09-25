@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { ENV_PAINEL_E2E } from '../../playwright.config';
 
 const PAGINAS = ['/', '/sobre', '/agendar', '/politica-de-privacidade', '/termos-de-uso'];
 
@@ -212,13 +213,16 @@ test.describe('segurança e operação (FASE-13)', () => {
     }
   });
 
-  test('health check responde sem dado pessoal', async ({ request }) => {
+  test('health check: público só vê o status; o detalhe exige o segredo do cron', async ({ request }) => {
     const r = await request.get('/api/health');
     expect(r.status()).toBe(200);
     const s = await r.json();
-    expect(s).toMatchObject({ banco: true });
+    expect(Object.keys(s)).toEqual(['status']);
     expect(['ok', 'degradado']).toContain(s.status);
-    expect(JSON.stringify(s)).not.toMatch(/@|\+55/);
+
+    const d = await (await request.get('/api/health', { headers: { Authorization: `Bearer ${ENV_PAINEL_E2E.CRON_SECRET}` } })).json();
+    expect(d).toMatchObject({ banco: true });
+    expect(JSON.stringify(d)).not.toMatch(/@|\+55/);
   });
 
   test('prévia de link: imagem OG 1200×630 leve (WhatsApp) com nome e CRM no alt', async ({ page, request }) => {

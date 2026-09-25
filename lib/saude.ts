@@ -57,3 +57,19 @@ export async function verificarSaude(agora = new Date()): Promise<Saude> {
     emailsFalhos: falhasEmail?.n ?? 0,
   };
 }
+
+/**
+ * Mesma resposta por 30 s: o `/api/health` é público e cada chamada custava
+ * 4 queries sem limite nenhum (SEC-04/SEC-14).
+ */
+let emCache: { ate: number; saude: Promise<Saude> } | null = null;
+export function verificarSaudeEmCache(agora = Date.now()): Promise<Saude> {
+  if (!emCache || agora >= emCache.ate) {
+    const saude = verificarSaude();
+    emCache = { ate: agora + 30_000, saude };
+    // Falha não fica em cache.
+    saude.catch(() => { emCache = null; });
+  }
+  return emCache.saude;
+}
+export function _limparCacheSaude() { emCache = null; }

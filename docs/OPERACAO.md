@@ -25,7 +25,12 @@ Região da função: `gru1` (São Paulo, em `vercel.json`) — ao lado do banco.
 
 1. Criar projeto em **South America (São Paulo)**.
 2. Copiar as duas URLs: *Transaction pooler* (porta 6543) → `DATABASE_URL`;
-   *Direct connection* (5432) → `DATABASE_URL_UNPOOLED`.
+   *Direct connection* (5432) → `DATABASE_URL_UNPOOLED`, ambas com
+   `?sslmode=require`. Em *Settings → Database → SSL*: ligar **Enforce SSL**
+   e baixar o certificado da CA → `DATABASE_CA_CERT` (PEM numa linha só, com
+   `\n`). Com a CA, o site **verifica** o certificado do banco; sem ela, só
+   cifra. Host remoto com `sslmode=disable`/`allow`/`prefer` é recusado
+   (`lib/db/tls.ts`).
 3. Aplicar as migrations **pelo journal** (nunca `psql -f`):
    ```bash
    DATABASE_URL_UNPOOLED="…" npm run db:migrate
@@ -101,9 +106,11 @@ Não há cron de "reservas expiradas": o fluxo grava a consulta já
 
 ## 4. Monitoramento
 
-- **`GET /api/health`** → `{ status, banco, agenda, email, filaSyncMin, … }`,
-  sem dado pessoal. 503 sem banco. Apontar um monitor externo (UptimeRobot) a
-  cada 5 min; alertar em 503 e em `status: "degradado"` por mais de 30 min.
+- **`GET /api/health`** → em público só `{ status }` (`ok`, `degradado` ou
+  `fora`); 503 sem banco. O detalhe (`banco`, `agenda`, `email`,
+  `filaSyncMin`, …) sai com `Authorization: Bearer $CRON_SECRET`. Resposta em
+  cache de 30 s. Apontar um monitor externo (UptimeRobot, monitor de palavra-
+  chave) a cada 5 min; alertar em 503 e em `"degradado"` por mais de 30 min.
 - **Painel**: faixa vermelha em todas as telas se a agenda cair; Integrações
   mostra fila, falhas e e-mails devolvidos.
 - **E-mails automáticos à médica**: agenda desconectada (1×/dia), consulta que

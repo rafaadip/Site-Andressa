@@ -34,8 +34,8 @@ async function cenario(nome: string, porta: number, dbUrl: string, limites: { pa
     o.push({ nome: `[${nome}] /agendar cai no WhatsApp em ≤ ${limites.agendar} ms`, ok: r.status === 200 && html.includes('Agendar pelo WhatsApp') && ms <= limites.agendar, detalhe: `${r.status} em ${Math.round(ms)} ms` });
 
     const h = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(30_000) });
-    const corpoH = await h.json() as { banco?: boolean };
-    o.push({ nome: `[${nome}] /api/health = 503 e banco:false`, ok: h.status === 503 && corpoH.banco === false, detalhe: `${h.status} ${JSON.stringify(corpoH)}` });
+    const corpoH = await h.json() as { status?: string };
+    o.push({ nome: `[${nome}] /api/health = 503 e status:fora`, ok: h.status === 503 && corpoH.status === 'fora', detalhe: `${h.status} ${JSON.stringify(corpoH)}` });
 
     const hoje = new Date().toISOString().slice(0, 10);
     for (const [rota, init] of [
