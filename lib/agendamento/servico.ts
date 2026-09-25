@@ -205,6 +205,12 @@ export async function disponibilidade(p: {
   ignorarAgendamento?: string;
   /** Painel: a médica pode encaixar dentro da antecedência mínima. */
   semAntecedencia?: boolean;
+  /**
+   * Só regras, exceções e consultas — sem perguntar ao Google. Dá um
+   * SUPERCONJUNTO dos horários reais: serve para recusar de graça o que
+   * nunca seria ofertado.
+   */
+  semAgendaExterna?: boolean;
 }): Promise<RespostaDisponibilidade> {
   const agora = p.agora ?? new Date();
   const prof = await profissional();
@@ -222,7 +228,9 @@ export async function disponibilidade(p: {
       inArray(appointment.status, ['held', 'confirmed']),
       lt(appointment.startsAt, fim), gt(appointment.endsAt, inicio),
       ...(p.ignorarAgendamento ? [ne(appointment.id, p.ignorarAgendamento)] : []))),
-    buscarOcupadosExternos(pid, inicio, fim, { aoVivo: p.aoVivo }),
+    p.semAgendaExterna
+      ? { intervalos: [], degradado: false, antecedenciaMinimaHoras: undefined }
+      : buscarOcupadosExternos(pid, inicio, fim, { aoVivo: p.aoVivo }),
   ]);
 
   const pol = politicasDe(prof);
@@ -344,9 +352,16 @@ export async function criarAgendamento(
   // Fora do alcance não é "ofertado" — e nem chega ao banco (PT-03).
   if (!dentroDoAlcance(inicioClinico, agora)) throw new SlotIndisponivelError();
   const data = dataLocal(inicioClinico);
-  const disp = await disponibilidade({ tipo: t.slug, de: data, ate: data, agora, aoVivo: true });
-  const ofertado = disp.dias.some((d) => d.slots.some((s) => s.inicio === inicioClinico.toISOString()));
-  if (!ofertado) throw new SlotIndisponivelError();
+  const ofertadoEm = (r: RespostaDisponibilidade) =>
+    r.dias.some((d) => d.slots.some((s) => s.inicio === inicioClinico.toISOString()));
+  // Antes do FreeBusy ao vivo, o filtro de graça: um POST para as 03:00 não
+  // pode custar uma chamada ao Google com o token da médica (SEC-04).
+  if (!ofertadoEm(await disponibilidade({ tipo: t.slug, de: data, ate: data, agora, semAgendaExterna: true }))) {
+    throw new SlotIndisponivelError();
+  }
+  if (!ofertadoEm(await disponibilidade({ tipo: t.slug, de: data, ate: data, agora, aoVivo: true }))) {
+    throw new SlotIndisponivelError();
+  }
 
   // 4. Intervalo bloqueado = buffer antes + consulta + buffer depois.
   const fimClinico = somarMinutos(inicioClinico, t.durationMin);

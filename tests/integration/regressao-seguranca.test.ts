@@ -2,13 +2,18 @@
  * Regressões da auditoria de segurança (docs/SEGURANCA.md). Cada teste
  * reproduz o ataque confirmado e prova a defesa.
  */
-import { describe, it, expect, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { sqlCliente } from '@/lib/db';
 import { dataLocal, horaLocalParaUtc, somarDiasLocal } from '@/lib/datetime';
 import {
-  criarAgendamento, disponibilidade, LimiteExcedidoError, LIMITES,
+  criarAgendamento, disponibilidade, LimiteExcedidoError, LIMITES, practitionerId, SlotIndisponivelError,
 } from '@/lib/agendamento/servico';
+import { _limparCacheEnv } from '@/lib/env';
+import { _limparTokens } from '@/lib/calendar/conexao';
+import { concluirConexaoAgenda } from '@/lib/auth/oauth';
+import { receberDaAgenda } from '@/lib/calendar/receber';
+import { ENV_INTEGRACOES, instalarServicosFalsos, type GoogleFalso } from '../setup/servicos-falsos';
 import type { CriarAgendamento } from '@/lib/validation/agendamento';
 import { inserirConsulta, limparBanco } from '../setup/fabrica';
 
@@ -59,5 +64,48 @@ d('SEC-01: limites anti-abuso sob concorrência', () => {
     const [slot] = await slotsLivres(1);
     await expect(criarAgendamento(pedido(slot!, 'nova@exemplo.com'), { ip: '192.0.2.200', idempotencyKey: randomUUID() }))
       .rejects.toBeInstanceOf(LimiteExcedidoError);
+  });
+});
+
+d('SEC-04: POST recusado não custa chamada ao Google', () => {
+  const sql = () => sqlCliente();
+  let google: GoogleFalso;
+  let pid: string;
+
+  beforeAll(async () => {
+    for (const [k, v] of Object.entries(ENV_INTEGRACOES)) vi.stubEnv(k, v);
+    _limparCacheEnv();
+    pid = await practitionerId();
+  });
+  afterAll(async () => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); _limparCacheEnv(); await limparBanco(sql()); });
+  beforeEach(async () => {
+    await limparBanco(sql());
+    ({ google } = instalarServicosFalsos());
+    _limparTokens();
+    expect((await concluirConexaoAgenda(pid, { access_token: 'a', expires_in: 3599, refresh_token: 'rt', scope: google.escopoConcedido })).ok).toBe(true);
+    await receberDaAgenda(pid);
+  });
+  const freeBusy = () => google.chamadas.filter((c) => c.caminho.endsWith('/freeBusy')).length;
+  const pedido = (inicio: string, i: number): CriarAgendamento => ({
+    tipo: 'consulta-presencial', inicio,
+    paciente: { nome: 'Robo Teste', telefone: '+5511912345678', email: `r${i}@exemplo.com`, motivo: '', consentimentoDados: true, consentimentoSaude: false },
+  });
+
+  it('30 POSTs para as 03:00 (nunca ofertado): 30 recusas e 0 FreeBusy', async () => {
+    const inicio = horaLocalParaUtc(somarDiasLocal(dataLocal(new Date()), 10), '03:00').toISOString();
+    const antes = freeBusy();
+    for (let i = 0; i < 30; i++) {
+      await expect(criarAgendamento(pedido(inicio, i), { ip: '203.0.113.5', idempotencyKey: randomUUID() }))
+        .rejects.toBeInstanceOf(SlotIndisponivelError);
+    }
+    expect(freeBusy() - antes).toBe(0);
+  });
+
+  it('horário ofertado continua conferido AO VIVO na agenda real', async () => {
+    const de = somarDiasLocal(dataLocal(new Date()), 3);
+    const r = await disponibilidade({ tipo: 'consulta-presencial', de, ate: somarDiasLocal(de, 6) });
+    const antes = freeBusy();
+    await criarAgendamento(pedido(r.dias.flatMap((x) => x.slots)[0]!.inicio, 99), { ip: '203.0.113.6', idempotencyKey: randomUUID() });
+    expect(freeBusy() - antes).toBe(1);
   });
 });
