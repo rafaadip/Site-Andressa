@@ -29,7 +29,6 @@ import { Confirmacao } from './Confirmacao';
 import { BarraAcoes, BotaoAcao } from './BarraAcoes';
 
 const JANELA_DIAS = 14;
-const HORIZONTE_DIAS = 60;
 const CHAVE_RASCUNHO = 'agendamento:rascunho';
 const VALIDADE_RASCUNHO_MS = 30 * 60_000;
 
@@ -43,9 +42,15 @@ const TITULOS = {
 type Etapa = 1 | 2 | 3 | 4;
 type Alerta = { texto: string; repetir?: boolean } | null;
 
-type Props = { tipos: TipoConsultaPublico[]; hoje: string; fuso: string };
+type Props = {
+  tipos: TipoConsultaPublico[];
+  hoje: string;
+  fuso: string;
+  /** Até quantos dias à frente a agenda abre (política do painel). */
+  horizonteDias: number;
+};
 
-export function FluxoAgendamento({ tipos, hoje, fuso }: Props) {
+export function FluxoAgendamento({ tipos, hoje, fuso, horizonteDias }: Props) {
   const [etapa, setEtapa] = useState<Etapa>(1);
   const [direcao, setDirecao] = useState<'frente' | 'tras'>('frente');
   const [tipo, setTipo] = useState<string | null>(tipos.length === 1 ? tipos[0]!.slug : null);
@@ -251,7 +256,7 @@ export function FluxoAgendamento({ tipos, hoje, fuso }: Props) {
   }
 
   // ── Render ────────────────────────────────────────────────────────────
-  const hojeMaisHorizonte = somarDias(hoje, HORIZONTE_DIAS);
+  const hojeMaisHorizonte = somarDias(hoje, horizonteDias);
   const podeVoltarJanela = janela > hoje;
   const podeAvancarJanela = somarDias(janela, JANELA_DIAS) <= hojeMaisHorizonte;
   const diaSel = disp.estado === 'ok' ? disp.dias.find((d) => d.data === dia) : undefined;

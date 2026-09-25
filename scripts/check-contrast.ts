@@ -7,6 +7,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { MARCA } from '../lib/marca';
 
 const css = readFileSync(resolve(process.cwd(), 'app/globals.css'), 'utf8');
 
@@ -79,8 +80,21 @@ if (ouroTexto >= 4.5) {
   );
 }
 
-if (falhas > 0) {
-  console.error(`\n  ${falhas} par(es) reprovado(s). Corrija os tokens.\n`);
+// lib/marca.ts (e-mail, OpenGraph, theme-color) é espelho, não segunda
+// paleta: cada valor precisa ser IDÊNTICO ao token de globals.css.
+let divergentes = 0;
+for (const [nome, hex] of Object.entries(MARCA)) {
+  const real = token(nome);
+  if (real.toLowerCase() !== hex.toLowerCase()) {
+    divergentes++;
+    console.error(`  ✗ lib/marca.ts: ${nome} = ${hex}, mas globals.css diz ${real}`);
+  }
+}
+
+if (falhas > 0 || divergentes > 0) {
+  if (falhas > 0) console.error(`\n  ${falhas} par(es) reprovado(s). Corrija os tokens.`);
+  if (divergentes > 0) console.error(`\n  ${divergentes} cor(es) de lib/marca.ts fora de sincronia com globals.css.`);
+  console.error('');
   process.exit(1);
 }
-console.log(`\n  ${CASOS.length} pares aprovados.\n`);
+console.log(`\n  ${CASOS.length} pares aprovados · lib/marca.ts em sincronia (${Object.keys(MARCA).length} cores).\n`);

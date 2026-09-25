@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { PROFISSIONAL } from '@/lib/config';
+import { MARCA } from '@/lib/marca';
 import { fonteDisplay, fonteSans, fonteCitacao } from '@/lib/fonts';
 import { urlSite } from '@/lib/seo';
 import './globals.css';
@@ -28,7 +29,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   // viewport-fit=cover: necessário para env(safe-area-inset-*) no iPhone.
   viewportFit: 'cover',
-  themeColor: '#FBF8F3',
+  themeColor: MARCA['ivory-50'],
   // NUNCA maximumScale/userScalable: bloquear zoom viola acessibilidade.
 };
 

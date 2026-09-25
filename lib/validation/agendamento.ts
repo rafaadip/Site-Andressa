@@ -7,6 +7,13 @@
 import { z } from 'zod';
 import { normalizarTelefone, telefoneValido } from '../telefone';
 
+/**
+ * Versão do texto de consentimento exibido no formulário (FASE-10 §3.3).
+ * Mudou o texto em lib/content/site.ts (CONSENTIMENTO)? Suba a versão: cada
+ * agendamento registra qual texto a pessoa aceitou.
+ */
+export const VERSAO_CONSENTIMENTO = '2026-09-25';
+
 export const MSG = {
   nome: 'Informe nome e sobrenome.',
   // U+2011 (hífen inseparável): o exemplo não quebra no meio.

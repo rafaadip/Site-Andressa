@@ -55,6 +55,13 @@ const PROIBIDOS: Regra[] = [
 /** CRM escrito à mão fora do config. */
 const CRM_LITERAL = /CRM[- ]?SP\s*\d/i;
 
+/**
+ * Regra nº 6: nenhum hex cru fora de app/globals.css. lib/marca.ts é o
+ * espelho para e-mail/OG, conferido valor a valor por check:contrast.
+ */
+const HEX_CRU = /#[0-9a-f]{6}\b|#[0-9a-f]{3}\b(?![0-9a-z-])/i;
+const HEX_PERMITIDO = ['app/globals.css', 'lib/marca.ts'];
+
 function arquivos(dir: string): string[] {
   const alvo = join(RAIZ, dir);
   let entradas: string[];
@@ -88,6 +95,12 @@ for (const dir of DIRS) {
         if (regra.padrao.test(linha)) {
           achados.push({ arquivo: rel, linha: i + 1, trecho: linha.trim(), motivo: regra.motivo });
         }
+      }
+      if (!HEX_PERMITIDO.includes(rel) && /\.(ts|tsx|css)$/.test(rel) && HEX_CRU.test(linha.replace(/https?:\/\/\S+/g, ''))) {
+        achados.push({
+          arquivo: rel, linha: i + 1, trecho: linha.trim(),
+          motivo: 'Cor em hex cru. Use o token de app/globals.css (ou MARCA de lib/marca.ts fora do CSS).',
+        });
       }
       if (CRM_LITERAL.test(linha)) {
         achados.push({

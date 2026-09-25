@@ -22,6 +22,7 @@ d('anti-overbooking sob concorrência', () => {
 
   beforeAll(async () => {
     sql = postgres(URL_TESTE!, { max: 25, onnotice: () => {} });
+    await sql`DELETE FROM notification`;
     await sql`DELETE FROM appointment`;
   });
 
