@@ -128,6 +128,27 @@ describe('fatiar', () => {
       .toHaveLength(0);
   });
 
+  it('compromisso que termina fora da grade (14:07) não desalinha os slots', () => {
+    // Bug: o cursor partia do fim do compromisso → 14:07, 14:57, 15:47…
+    const s = fatiar([iv('2026-09-15T17:07:00Z', '2026-09-15T21:00:00Z')], PRESENCIAL, 5);
+    expect(s.map((x) => x.rotulo)).toEqual(['14:10', '15:00', '15:50', '16:40']);
+  });
+
+  it('bloco que não é múltiplo da grade: o próximo slot volta para a grade', () => {
+    // 43 min + 0 de buffer, grade 15 → 14:00, 14:45 (não 14:43), 15:30…
+    const s = fatiar([iv('2026-09-15T17:00:00Z', '2026-09-15T19:00:00Z')],
+      { ...PRESENCIAL, duracaoMin: 43, bufferDepoisMin: 0 }, 15);
+    expect(s.map((x) => x.rotulo)).toEqual(['14:00', '14:45']);
+    // 15:30 + 43 = 16:13 > 16:00: não cabe.
+  });
+
+  it('com buffer ANTES, é o horário CLÍNICO que cai na grade', () => {
+    const s = fatiar([iv('2026-09-15T17:02:00Z', '2026-09-15T19:00:00Z')],
+      { ...PRESENCIAL, bufferAntesMin: 7 }, 5);
+    // 14:02 + 7 = 14:09 → 14:10; bloqueio 14:03–15:00. Próximo: 14:10 + 57 = 15:07 → 15:10.
+    expect(s.map((x) => x.rotulo)).toEqual(['14:10', '15:10']);
+  });
+
   it('o horário exibido é o CLÍNICO, com buffer antes descontado', () => {
     const comBufferAntes = { ...PRESENCIAL, bufferAntesMin: 10 };
     const s = fatiar(janela, comBufferAntes, 5);
@@ -172,6 +193,14 @@ describe('calcularDisponibilidade — pipeline', () => {
       }],
     });
     expect(dias[0]!.slots.map((s) => s.rotulo)).toEqual(['09:00', '09:50']);
+  });
+
+  it('compromisso do Google até 14:07 → slots seguem a grade (14:10, 15:00…)', () => {
+    const dias = calcularDisponibilidade({
+      ...base,
+      ocupadosExternos: [iv('2026-09-15T17:00:00Z', '2026-09-15T17:07:00Z')],
+    });
+    expect(dias[1]!.slots.map((s) => s.rotulo)).toEqual(['14:10', '15:00', '15:50', '16:40']);
   });
 
   it('agenda pessoal do Google remove slots', () => {

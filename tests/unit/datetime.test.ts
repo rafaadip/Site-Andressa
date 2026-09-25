@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   horaLocalParaUtc, dataLocal, horaLocal, diaDaSemana,
-  diasNoIntervalo, emUtcCompacto, emLocalCompacto, DataInvalidaError,
+  diasNoIntervalo, emUtcCompacto, emLocalCompacto, DataInvalidaError, alinharAGrade, fimDoDiaLocal,
 } from '@/lib/datetime';
 
 describe('horaLocalParaUtc', () => {
@@ -50,6 +50,24 @@ describe('horário de verão', () => {
   });
 });
 
+describe('fimDoDiaLocal', () => {
+  const horas = (dia: string) =>
+    (fimDoDiaLocal(dia).getTime() - horaLocalParaUtc(dia, '00:00').getTime()) / 3_600_000;
+
+  it('dia comum: 24 h, termina à meia-noite local', () => {
+    expect(fimDoDiaLocal('2026-09-15').toISOString()).toBe('2026-09-16T03:00:00.000Z');
+    expect(horas('2026-09-15')).toBe(24);
+  });
+
+  it('dia de horário de verão tem 23 ou 25 h — "início + 24 h" erraria por 1 h', () => {
+    // São Paulo: DST começou em 04/11/2018 e terminou em 16/02/2019.
+    expect(horas('2018-11-04')).toBe(23);
+    expect(horas('2019-02-16')).toBe(25);
+    expect(horaLocal(fimDoDiaLocal('2019-02-16'))).toBe('00:00');
+    expect(dataLocal(fimDoDiaLocal('2019-02-16'))).toBe('2019-02-17');
+  });
+});
+
 describe('diasNoIntervalo', () => {
   it('inclui as duas pontas', () => {
     expect(diasNoIntervalo('2026-09-14', '2026-09-16'))
@@ -70,5 +88,28 @@ describe('formatos do RFC 5545', () => {
   });
   it('emLocalCompacto usa a hora de parede, sem sufixo', () => {
     expect(emLocalCompacto(new Date('2026-09-15T17:00:00Z'))).toBe('20260915T140000');
+  });
+});
+
+describe('alinharAGrade', () => {
+  const local = (hora: string) => horaLocalParaUtc('2026-10-06', hora);
+
+  it('arredonda PARA CIMA ao próximo múltiplo da grade no relógio da clínica', () => {
+    expect(horaLocal(alinharAGrade(local('14:07'), 5))).toBe('14:10');
+    expect(horaLocal(alinharAGrade(local('14:07'), 15))).toBe('14:15');
+    expect(horaLocal(alinharAGrade(local('14:58'), 15))).toBe('15:00');
+  });
+
+  it('já alinhado fica onde está; segundos contam como minuto começado', () => {
+    expect(alinharAGrade(local('14:10'), 5).toISOString()).toBe(local('14:10').toISOString());
+    const quebrado = new Date(local('14:10').getTime() + 30_000);
+    expect(horaLocal(alinharAGrade(quebrado, 5))).toBe('14:15');
+  });
+
+  it('alinha a hora de PAREDE, não o UTC (offset de 45 min em Katmandu)', () => {
+    // 14:07 em Katmandu = 08:22Z. Grade de 60 na parede → 15:00 local;
+    // alinhar o UTC daria 09:00Z = 14:45 local.
+    const k = horaLocalParaUtc('2026-10-06', '14:07', 'Asia/Kathmandu');
+    expect(horaLocal(alinharAGrade(k, 60, 'Asia/Kathmandu'), 'Asia/Kathmandu')).toBe('15:00');
   });
 });

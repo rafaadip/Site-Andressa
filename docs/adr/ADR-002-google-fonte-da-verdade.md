@@ -58,6 +58,7 @@ Não podemos deixar o site "quebrar" junto com a API:
 | FreeBusy falha ao listar slots | Serve o último resultado em cache (TTL estendido para 15 min) + aviso discreto: *"confirmaremos seu horário por WhatsApp"* |
 | Cache também vazio | Oferta slots só a partir de **D+2** e marca `sync_state='pending'` — a médica confirma manualmente |
 | `events.insert` falha na confirmação | Agendamento **é mantido**; job de reconciliação tenta de novo com backoff (5 tentativas / 24 h); alerta ao admin |
+| Acesso revogado, ou agenda desconectada no painel | Oferta slots só a partir de **D+2** e o painel alerta até reconectar. A linha da conexão fica (sem credencial, marcada como revogada): o sistema não "esquece" que a agenda existiu e não passa a ofertar por cima dos plantões |
 
 O princípio: **nunca perder o agendamento por falha de integração.** Um evento
 faltando na agenda é recuperável; um paciente que desistiu, não.

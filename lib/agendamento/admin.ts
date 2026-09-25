@@ -11,7 +11,7 @@
 import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, lt, sql } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
 import { db, schema } from '../db';
-import { dataLocal, horaLocalParaUtc, somarDiasLocal, somarMinutos, formatarParaPaciente } from '../datetime';
+import { dataLocal, fimDoDiaLocal, horaLocalParaUtc, somarDiasLocal, somarMinutos, formatarParaPaciente } from '../datetime';
 import { codigoPg, PG_EXCLUSION_VIOLATION, SlotIndisponivelError } from '../db/reservas';
 import { hashToken } from '../seguranca';
 import { enfileirar } from '../notificacoes/fila';
@@ -59,14 +59,15 @@ const colunasItem = { ag: appointment, label: appointmentType.label, kind: appoi
 /** Consultas ativas de hoje (inclusive as que já passaram) até `dias` à frente. */
 export async function agenda(dias = 30, agora = new Date()): Promise<ItemAgenda[]> {
   const pid = await practitionerId();
-  const inicio = horaLocalParaUtc(dataLocal(agora), '00:00');
+  const hoje = dataLocal(agora);
+  const inicio = horaLocalParaUtc(hoje, '00:00');
   const linhas = await db().select(colunasItem).from(appointment)
     .innerJoin(appointmentType, eq(appointment.typeId, appointmentType.id))
     .where(and(
       eq(appointment.practitionerId, pid),
       inArray(appointment.status, ['confirmed', 'no_show']),
       gte(appointment.visitStartsAt, inicio),
-      lt(appointment.visitStartsAt, somarMinutos(inicio, (dias + 1) * 24 * 60)),
+      lt(appointment.visitStartsAt, fimDoDiaLocal(somarDiasLocal(hoje, dias))),
     ))
     .orderBy(asc(appointment.visitStartsAt));
   return linhas.map(paraItem);
@@ -386,11 +387,22 @@ function normalizarEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+/**
+ * Vazio ou sem "@" não é titular: linha já anonimizada tem e-mail '' — sem
+ * esta guarda, buscar por '' devolveria todas elas.
+ */
+function emailDeTitular(email: string): string | null {
+  const e = normalizarEmail(email);
+  return /^[^\s@]+@[^\s@]+$/.test(e) ? e : null;
+}
+
 export async function consultasDoTitular(email: string) {
+  const alvo = emailDeTitular(email);
+  if (!alvo) return [];
   const pid = await practitionerId();
   return db().select({ ag: appointment, tipo: appointmentType.label }).from(appointment)
     .innerJoin(appointmentType, eq(appointment.typeId, appointmentType.id))
-    .where(and(eq(appointment.practitionerId, pid), eq(appointment.patientEmail, normalizarEmail(email))))
+    .where(and(eq(appointment.practitionerId, pid), eq(appointment.patientEmail, alvo)))
     .orderBy(desc(appointment.visitStartsAt));
 }
 
@@ -437,11 +449,12 @@ export function paraCsv(dados: Awaited<ReturnType<typeof exportarTitular>>): str
  * e saem da agenda do Google; o link de gestão deixa de funcionar.
  */
 export async function anonimizarTitular(email: string, agora = new Date()): Promise<{ consultas: number; canceladas: string[] }> {
-  const linhas = await consultasDoTitular(email);
+  if (!emailDeTitular(email)) throw new OperacaoInvalidaError('Informe o e-mail do titular.');
+  // Só conta (e registra) o que de fato é anonimizado agora.
+  const linhas = (await consultasDoTitular(email)).filter(({ ag }) => !ag.anonymizedAt);
   const canceladas: string[] = [];
   await db().transaction(async (tx) => {
     for (const { ag } of linhas) {
-      if (ag.anonymizedAt) continue;
       const futuraAtiva = ag.status === 'confirmed' && ag.visitStartsAt > agora;
       if (futuraAtiva) canceladas.push(ag.id);
       await tx.update(appointment).set({
