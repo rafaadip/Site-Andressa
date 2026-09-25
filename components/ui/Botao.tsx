@@ -19,16 +19,18 @@ type Props = {
   variante?: Variante;
   /** Largura total abaixo de 768px — alvo grande, alcance do polegar. */
   larguraTotalMobile?: boolean;
+  /** Força <a> nativo na mesma aba (ex.: download de .ics, rota de API). */
+  nativo?: boolean;
   icone?: ReactNode;
   children: ReactNode;
 } & Omit<ComponentProps<typeof Link>, 'href' | 'className' | 'children'>;
 
 export function Botao({
-  href, variante = 'ouro', larguraTotalMobile = false, icone, children, ...resto
+  href, variante = 'ouro', larguraTotalMobile = false, nativo = false, icone, children, ...resto
 }: Props) {
   // Rota interna → <Link>. Qualquer outra coisa (https, mailto, tel) → <a> nativo.
   const interno = href.startsWith('/') || href.startsWith('#');
-  const novaAba = /^https?:/.test(href);
+  const novaAba = /^https?:/.test(href) && !nativo;
   const classes = [
     'inline-flex items-center justify-center gap-2.5',
     'min-h-12 px-7 rounded-full border',
@@ -39,7 +41,7 @@ export function Botao({
     VARIANTES[variante],
   ].join(' ');
 
-  if (!interno) {
+  if (!interno || nativo) {
     return (
       <a
         href={href}

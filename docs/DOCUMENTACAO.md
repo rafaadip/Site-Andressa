@@ -297,7 +297,14 @@ Pontos que exigem confirmação antes de codificar:
       **Custo enquanto durar:** o pacote local do Google ("nutrólogo perto de mim")
       fica praticamente fora de alcance — ver
       [FASE-11](fases/FASE-11-seo-performance.md)
-- [ ] **Horários reais de atendimento** — alimentam `availability_rule`
+- [ ] **Horários reais de atendimento** — alimentam `availability_rule`.
+      Hoje o seed usa horários **fictícios** (seg–sex 9–12 e 14–18; tele ter/qui
+      18:30–20:30) só para desenvolvimento
+- [ ] **Google Calendar (FASE-05) antes de abrir o agendamento ao público** —
+      sem ele o site não enxerga os plantões dela. Produção sem Google exige
+      `AGENDAMENTO_SEM_GOOGLE=aceito`, decisão consciente
+- [ ] **E-mail de confirmação (FASE-08)** — até lá, o paciente leva o
+      compromisso pelos botões de calendário e pelo link mostrado na tela
 - [ ] **Duração das consultas** — o protótipo assume 40 min
 - [ ] **Domínio** — `draandressacorreia.com.br` é hipótese
 - [ ] **Revisão jurídica** de publicidade médica antes do go-live

@@ -131,10 +131,18 @@ indistinguível de UX normal.
 ## Consequências
 
 - Buffers (`buffer_before_min` / `buffer_after_min`) entram em `starts_at`/`ends_at`
-  no momento da inserção — o intervalo persistido é o **bloqueado**, não o
-  clínico. Guardar os dois separadamente é possível, mas complica a constraint;
-  para o MVP, o intervalo bloqueado basta, com o horário clínico derivado na
-  exibição.
+  no momento da inserção — é o intervalo **bloqueado** que a constraint protege.
+- **Atualização (FASE-07):** o horário **clínico** é gravado à parte, em
+  `visit_starts_at`/`visit_ends_at` (migration 0002), e **não** derivado dos
+  buffers. Derivar faria todo agendamento antigo mudar de hora na tela se a
+  médica alterasse o intervalo entre consultas no painel. Um `CHECK` garante
+  que o horário clínico fica dentro do bloqueado.
+- **Atualização (FASE-07):** o Drizzle 0.45 embrulha o erro do driver em
+  `DrizzleQueryError`, com o SQLSTATE só em `.cause.code`. `codigoPg()` percorre
+  a cadeia de `cause`; lendo só `e.code`, todo conflito viraria HTTP 500.
+- **Atualização (FASE-07):** a idempotência é rechecada **depois** do advisory
+  lock. Sem isso, dois envios simultâneos com a mesma chave (o reenvio do 4G
+  ruim) faziam o segundo receber "horário ocupado" pela própria consulta.
 - Reservas `held` expiram por `held_until`. Um cron a cada 2 min faz
   `UPDATE ... SET status='expired' WHERE status='held' AND held_until < now()`,
   liberando o horário.

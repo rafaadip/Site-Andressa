@@ -8,6 +8,20 @@
       "when": 1789016379422,
       "tag": "0000_inicial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790298074610,
+      "tag": "0001_exclusion",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790298084463,
+      "tag": "0002_horario_clinico",
+      "breakpoints": true
     }
   ]
 }

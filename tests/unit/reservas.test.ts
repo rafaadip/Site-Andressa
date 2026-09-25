@@ -65,3 +65,26 @@ describe('reservarSlot', () => {
     })).rejects.toThrow('coluna inexistente');
   });
 });
+
+describe('codigoPg — erros embrulhados pelo Drizzle', () => {
+  it('lê o SQLSTATE em .cause (DrizzleQueryError)', async () => {
+    const { codigoPg } = await import('@/lib/db/reservas');
+    const embrulhado = Object.assign(new Error('Failed query'), {
+      cause: Object.assign(new Error('conflito'), { code: '23P01' }),
+    });
+    expect(codigoPg(embrulhado)).toBe('23P01');
+  });
+
+  it('reservarSlot traduz conflito embrulhado em SlotIndisponivelError', async () => {
+    await expect(reservarSlot(async () => {
+      throw Object.assign(new Error('Failed query'), {
+        cause: Object.assign(new Error('conflito'), { code: '23P01' }),
+      });
+    })).rejects.toBeInstanceOf(SlotIndisponivelError);
+  });
+
+  it('ignora `code` que não é SQLSTATE (ex.: códigos de rede do Node)', async () => {
+    const { codigoPg } = await import('@/lib/db/reservas');
+    expect(codigoPg(Object.assign(new Error('x'), { code: 'ECONNREFUSED' }))).toBeUndefined();
+  });
+});

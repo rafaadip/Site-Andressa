@@ -71,6 +71,15 @@ export const appointment = pgTable('appointment', {
   /** Intervalo BLOQUEADO (inclui buffers) — é o que a exclusion protege. */
   startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
   endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+  /**
+   * Horário CLÍNICO (o que o paciente vê), gravado no momento da reserva.
+   * Não é derivado dos buffers do tipo: se a médica mudar o intervalo entre
+   * consultas, os agendamentos já feitos não podem mudar de hora na tela.
+   */
+  visitStartsAt: timestamp('visit_starts_at', { withTimezone: true }).notNull(),
+  visitEndsAt: timestamp('visit_ends_at', { withTimezone: true }).notNull(),
+  /** Idempotency-Key do POST: repetir a requisição não duplica a consulta. */
+  idempotencyKey: text('idempotency_key').unique(),
   status: text('status').notNull().default('held'),
 
   patientName: text('patient_name').notNull(),
@@ -107,6 +116,8 @@ export const appointment = pgTable('appointment', {
   check('appointment_status', sql`${t.status} in ('held','confirmed','cancelled','expired','no_show','completed')`),
   check('appointment_sync_state', sql`${t.syncState} in ('pending','synced','failed','skipped')`),
   check('appointment_order', sql`${t.startsAt} < ${t.endsAt}`),
+  check('appointment_visit_inside', sql`${t.visitStartsAt} >= ${t.startsAt} and ${t.visitEndsAt} <= ${t.endsAt}`),
+  index('appointment_ip_recente_idx').on(t.consentIpHash, t.createdAt),
 ]);
 
 export const calendarConnection = pgTable('calendar_connection', {

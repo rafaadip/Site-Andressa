@@ -178,15 +178,16 @@ export const FAQ = [
   {
     pergunta: 'Como recebo o horário no meu celular?',
     resposta:
-      'Ao confirmar, você recebe um e-mail com o convite da consulta. No iPhone '
-      + 'ele aparece com o botão "Adicionar"; no Android e no Outlook, abre '
-      + 'direto no calendário. Também há um botão para o Google Agenda.',
+      'Ao confirmar, a própria tela mostra os botões para adicionar a consulta '
+      + 'ao Google Agenda ou ao calendário do iPhone, Android e Outlook — sem '
+      + 'depender de e-mail.',
   },
   {
     pergunta: 'Posso remarcar ou cancelar?',
     resposta:
-      'Sim. Use o link que chega no e-mail de confirmação, até 24 horas antes '
-      + 'da consulta. Depois disso, fale pelo WhatsApp.',
+      'Sim, até 24 horas antes, pelo link da sua consulta — ele aparece na tela '
+      + 'de confirmação e fica salvo no evento do seu calendário. Depois desse '
+      + 'prazo, fale pelo WhatsApp.',
   },
   {
     pergunta: 'Atende convênio?',

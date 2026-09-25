@@ -41,10 +41,21 @@ export class SlotIndisponivelError extends Error {
   }
 }
 
-function codigoPg(e: unknown): string | undefined {
-  return typeof e === 'object' && e !== null && 'code' in e
-    ? String((e as { code: unknown }).code)
-    : undefined;
+/**
+ * SQLSTATE do erro, procurando na cadeia de `cause`.
+ *
+ * O Drizzle 0.45 embrulha o erro do driver em `DrizzleQueryError`, com o
+ * código SÓ em `.cause.code` (verificado empiricamente). Ler apenas `e.code`
+ * transformaria todo conflito de horário em HTTP 500.
+ */
+export function codigoPg(e: unknown): string | undefined {
+  let atual: unknown = e;
+  for (let nivel = 0; nivel < 5 && typeof atual === 'object' && atual !== null; nivel++) {
+    const codigo = (atual as { code?: unknown }).code;
+    if (typeof codigo === 'string' && /^[0-9A-Z]{5}$/.test(codigo)) return codigo;
+    atual = (atual as { cause?: unknown }).cause;
+  }
+  return undefined;
 }
 
 /**

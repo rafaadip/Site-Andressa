@@ -14,8 +14,8 @@ import {
 const URL_TESTE = process.env.DATABASE_URL_TEST;
 const d = URL_TESTE ? describe : describe.skip;
 
-const PRACTITIONER = '11111111-1111-1111-1111-111111111111';
-const TIPO = '22222222-2222-2222-2222-222222222222';
+const PRACTITIONER = '00000000-0000-4000-8000-000000000001';
+const TIPO = '00000000-0000-4000-8000-000000000011';
 
 d('anti-overbooking sob concorrência', () => {
   let sql: postgres.Sql;
@@ -33,11 +33,11 @@ d('anti-overbooking sob concorrência', () => {
       await travarSlot(tx as never, PRACTITIONER, new Date(inicio));
       return tx`
         INSERT INTO appointment (
-          practitioner_id, type_id, starts_at, ends_at, status,
+          practitioner_id, type_id, starts_at, ends_at, visit_starts_at, visit_ends_at, status,
           patient_name, patient_email, patient_phone,
           consent_lgpd_at, consent_ip_hash, manage_token_hash, ics_uid
         ) VALUES (
-          ${PRACTITIONER}, ${TIPO}, ${inicio}, ${fim}, 'confirmed',
+          ${PRACTITIONER}, ${TIPO}, ${inicio}, ${fim}, ${inicio}, ${fim}, 'confirmed',
           ${'Paciente ' + uid}, ${uid + '@x.com'}, '11999990000',
           now(), 'hash', 'token', ${uid}
         ) RETURNING id`;
@@ -47,11 +47,11 @@ d('anti-overbooking sob concorrência', () => {
   async function agendar(inicio: string, fim: string, uid: string) {
     return sql`
       INSERT INTO appointment (
-        practitioner_id, type_id, starts_at, ends_at, status,
+        practitioner_id, type_id, starts_at, ends_at, visit_starts_at, visit_ends_at, status,
         patient_name, patient_email, patient_phone,
         consent_lgpd_at, consent_ip_hash, manage_token_hash, ics_uid
       ) VALUES (
-        ${PRACTITIONER}, ${TIPO}, ${inicio}, ${fim}, 'confirmed',
+        ${PRACTITIONER}, ${TIPO}, ${inicio}, ${fim}, ${inicio}, ${fim}, 'confirmed',
         ${'Paciente ' + uid}, ${uid + '@x.com'}, '11999990000',
         now(), 'hash', 'token', ${uid}
       ) RETURNING id`;
@@ -106,12 +106,12 @@ d('anti-overbooking sob concorrência', () => {
   it('reserva "held" também bloqueia — não só "confirmed"', async () => {
     await sql`
       INSERT INTO appointment (
-        practitioner_id, type_id, starts_at, ends_at, status,
+        practitioner_id, type_id, starts_at, ends_at, visit_starts_at, visit_ends_at, status,
         patient_name, patient_email, patient_phone,
         consent_lgpd_at, consent_ip_hash, manage_token_hash, ics_uid, held_until
       ) VALUES (
         ${PRACTITIONER}, ${TIPO}, '2026-10-09 17:00:00+00', '2026-10-09 17:50:00+00',
-        'held', 'Em checkout', 'h@x.com', '11999990000',
+        '2026-10-09 17:00:00+00', '2026-10-09 17:50:00+00', 'held', 'Em checkout', 'h@x.com', '11999990000',
         now(), 'hash', 'token', 'reserva-temp', now() + interval '10 minutes'
       )`;
     await expect(

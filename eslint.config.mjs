@@ -11,6 +11,12 @@ export default defineConfig([
   ]),
   {
     rules: {
+      // Parâmetro prefixado com _ = intencionalmente não usado (ex.: stubs da FASE-05).
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    rules: {
       /**
        * Regra inviolável nº 1 (docs/DOCUMENTACAO.md §6):
        * conversão de fuso SÓ em lib/datetime.ts.

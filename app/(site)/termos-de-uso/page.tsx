@@ -36,7 +36,7 @@ export default function TermosDeUso() {
         <h2>Agendamento</h2>
         <ul>
           <li>O horário só está garantido após a confirmação.</li>
-          <li>Remarcações e cancelamentos podem ser feitos pelo link do e-mail de confirmação até 24 horas antes da consulta. Depois disso, fale pelo WhatsApp.</li>
+          <li>Cancelamentos podem ser feitos pelo link da sua consulta (mostrado ao confirmar e salvo no evento do calendário) até 24 horas antes. Depois disso, fale pelo WhatsApp.</li>
           <li>Informe dados corretos: são eles que permitem confirmar e lembrar a sua consulta.</li>
         </ul>
 
