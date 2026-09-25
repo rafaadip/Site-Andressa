@@ -11,7 +11,8 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
+    // .tsx = componentes (cada arquivo declara `@vitest-environment jsdom`).
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     globalSetup: ['tests/setup/banco.ts'],
     // Integração compartilha UM banco: arquivos em série evitam que um
     // DELETE de um teste apague as linhas de outro.
