@@ -3,6 +3,7 @@ import { CalendarCheck, Mail } from 'lucide-react';
 import { estadoPainel } from '@/lib/agendamento/admin';
 import { formatarCurto } from '@/lib/datetime';
 import { webhookPossivel } from '@/lib/calendar/canal';
+import { DESCONECTADA_PELO_PAINEL } from '@/lib/calendar/conexao';
 import { DesconectarGoogle, SincronizarAgora } from '@/components/admin/AcoesIntegracao';
 
 export const metadata: Metadata = { title: 'Integrações' };
@@ -46,7 +47,7 @@ export default async function Integracoes({ searchParams }: { searchParams: Prom
           </>}
           {e.google === 'revogado' && <>
             <Estado ok={false}>Desconectada{e.contaGoogle ? ` — ${e.contaGoogle}` : ''}</Estado>
-            <p className="text-texto-2">O acesso foi revogado ou expirou. Até reconectar, o site só oferece horários a partir de depois de amanhã.</p>
+            <p className="text-texto-2">{e.erroGoogle === DESCONECTADA_PELO_PAINEL ? 'Você desconectou a agenda.' : 'O acesso foi revogado ou expirou.'} Até reconectar, o site só oferece horários a partir de depois de amanhã.</p>
           </>}
           {e.google === 'desconectado' && <Estado ok={false}>Não conectada</Estado>}
           {e.google === 'nao-configurado' && <p className="text-texto-2">As credenciais do Google (GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET) não estão configuradas neste ambiente.</p>}

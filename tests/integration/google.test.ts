@@ -12,7 +12,8 @@ import { dataLocal, somarMinutos } from '@/lib/datetime';
 import { somarDias } from '@/lib/datetime-cliente';
 import { decifrar } from '@/lib/crypto';
 import { _limparTokens, removerConexao } from '@/lib/calendar/conexao';
-import { agendamentoOnlineHabilitado, estadoAgenda } from '@/lib/calendar/freebusy';
+import { ANTECEDENCIA_DEGRADADA_H, agendamentoOnlineHabilitado, buscarOcupadosExternos, estadoAgenda } from '@/lib/calendar/freebusy';
+import { estadoPainel } from '@/lib/agendamento/admin';
 import {
   criarAgendamento, cancelarPorToken, disponibilidade, practitionerId, revogarMotivoPorToken,
 } from '@/lib/agendamento/servico';
@@ -383,10 +384,39 @@ d('agenda do Google (FASE-05)', () => {
         await removerConexao(pid);
         expect(google.revogado).toBe(true);
         expect(google.canais.every((c) => c.parado)).toBe(true);
-        expect(await sql()`SELECT 1 FROM calendar_connection`).toHaveLength(0);
+        const [c] = await sql()`SELECT refresh_token_enc, sync_token, channel_id, revoked_at FROM calendar_connection`;
+        expect(c!.refresh_token_enc).toBe('');
+        expect(c!.sync_token).toBeNull();
+        expect(c!.channel_id).toBeNull();
+        expect(c!.revoked_at).not.toBeNull();
         expect((await linha(r.agendamento.id)).status).toBe('confirmed');
       } finally {
         vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'http://localhost:3100');
+      }
+    });
+
+    it('desconectada NÃO vira "sem Google": degrada para D+2 (mesmo com o opt-in), sem e-mail de alerta', async () => {
+      // Bug: a linha era apagada → 'sem-google' → com AGENDAMENTO_SEM_GOOGLE=aceito
+      // o site ofertava tudo por cima dos plantões.
+      vi.stubEnv('AGENDAMENTO_SEM_GOOGLE', 'aceito');
+      try {
+        await removerConexao(pid);
+        expect(await estadoAgenda(pid)).toBe('revogada');
+        const ocupados = await buscarOcupadosExternos(pid, new Date(), new Date(Date.now() + 86_400_000));
+        expect(ocupados).toMatchObject({ degradado: true, antecedenciaMinimaHoras: ANTECEDENCIA_DEGRADADA_H });
+        const { lista } = await slots();
+        expect(lista.length).toBeGreaterThan(0);
+        expect(lista.every((s) => new Date(s.inicio).getTime() >= Date.now() + 48 * 3_600_000)).toBe(true);
+        expect((await estadoPainel()).google).toBe('revogado');
+        await processarFila();
+        expect(resend.enviados.filter((e) => e.subject.includes('agenda do Google foi desconectada'))).toHaveLength(0);
+
+        // Desconectar de novo não quebra; reconectar volta ao normal.
+        await removerConexao(pid);
+        expect((await concluirConexaoAgenda(pid, tokensOAuth())).ok).toBe(true);
+        expect(await estadoAgenda(pid)).toBe('conectada');
+      } finally {
+        vi.stubEnv('AGENDAMENTO_SEM_GOOGLE', '');
       }
     });
 
