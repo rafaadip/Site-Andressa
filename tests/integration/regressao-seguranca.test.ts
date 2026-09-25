@@ -13,6 +13,8 @@ import { _limparCacheEnv } from '@/lib/env';
 import { _limparTokens } from '@/lib/calendar/conexao';
 import { concluirConexaoAgenda } from '@/lib/auth/oauth';
 import { receberDaAgenda } from '@/lib/calendar/receber';
+import { sincronizarAgendamento } from '@/lib/calendar/sincronizar';
+import { idEventoGoogle } from '@/lib/calendar/google';
 import { ENV_INTEGRACOES, instalarServicosFalsos, type GoogleFalso } from '../setup/servicos-falsos';
 import type { CriarAgendamento } from '@/lib/validation/agendamento';
 import { inserirConsulta, limparBanco } from '../setup/fabrica';
@@ -99,6 +101,23 @@ d('SEC-04: POST recusado não custa chamada ao Google', () => {
         .rejects.toBeInstanceOf(SlotIndisponivelError);
     }
     expect(freeBusy() - antes).toBe(0);
+  });
+
+  it('SEC-16: evento com o nosso id mas sem a nossa marca não move a consulta', async () => {
+    const de = somarDiasLocal(dataLocal(new Date()), 3);
+    const r = await disponibilidade({ tipo: 'consulta-presencial', de, ate: somarDiasLocal(de, 6) });
+    const inicio = r.dias.flatMap((x) => x.slots)[0]!.inicio;
+    const c = await criarAgendamento(pedido(inicio, 77), { ip: '203.0.113.7', idempotencyKey: randomUUID() });
+    await sincronizarAgendamento(c.agendamento.id);
+    await receberDaAgenda(pid);
+
+    const id = idEventoGoogle(c.agendamento.id);
+    delete google.eventos.get(id)!.extendedProperties;     // a "cópia" sem a marca
+    const novo = new Date(new Date(inicio).getTime() + 3 * 3_600_000);
+    google.moverPelaMedica(id, novo, new Date(novo.getTime() + 40 * 60_000));
+    expect(await receberDaAgenda(pid)).toMatchObject({ remarcados: 0 });
+    const [l] = await sql()`SELECT visit_starts_at FROM appointment WHERE id = ${c.agendamento.id}`;
+    expect(new Date(l!.visit_starts_at).toISOString()).toBe(new Date(inicio).toISOString());
   });
 
   it('horário ofertado continua conferido AO VIVO na agenda real', async () => {
