@@ -26,6 +26,7 @@ import { comLimiteDeTempo, ESGOTOU } from '../limite-tempo';
 import { VERSAO_CONSENTIMENTO, type CriarAgendamento } from '../validation/agendamento';
 import { enfileirar, type Executor } from '../notificacoes/fila';
 import { log } from '../log';
+import { tetoAgendamentosPorHora } from '../env';
 import { dadosIcs, podeCancelarPeloLink, type Linha, type LinhaProfissional } from './apresentacao';
 import type {
   AgendamentoConfirmado, RespostaDisponibilidade, TipoConsultaPublico,
@@ -490,8 +491,9 @@ async function conferirLimites(ex: Executor, p: { pid: string; ipHash: string; e
   }
   const [naHora] = await ex.select({ n: count() }).from(appointment).where(and(
     eq(appointment.practitionerId, p.pid), gte(appointment.createdAt, umaHoraAtras)));
-  if ((naHora?.n ?? 0) >= LIMITES.porHoraNoTotal) {
-    log.aviso('agendamento.limite-global', { limite: LIMITES.porHoraNoTotal });
+  const teto = tetoAgendamentosPorHora(LIMITES.porHoraNoTotal);
+  if ((naHora?.n ?? 0) >= teto) {
+    log.aviso('agendamento.limite-global', { limite: teto });
     throw new LimiteExcedidoError('Muitos agendamentos agora. Tente de novo em alguns minutos ou fale pelo WhatsApp.');
   }
 }

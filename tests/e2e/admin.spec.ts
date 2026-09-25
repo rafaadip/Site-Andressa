@@ -108,7 +108,15 @@ test.describe('celular (375px), com uma mão', () => {
   test('bloquear período com consulta dentro exige decisão; cancelar avisa e libera o link do paciente', async ({ page, context, request }) => {
     const c = await agendarLonge(request);
     await entrar(context);
-    await page.goto(`/admin/disponibilidade/bloquear?de=${c.inicio.slice(0, 10)}&diaInteiro=on&nota=Congresso`);
+    // Só o intervalo DESTA consulta (data e hora de Brasília): o dia inteiro
+    // pegava consultas de outros testes em paralelo, e o bloqueio (com razão)
+    // exigia decisão também para elas.
+    const fuso = { timeZone: 'America/Sao_Paulo' } as const;
+    const dia = new Intl.DateTimeFormat('en-CA', fuso).format(new Date(c.inicio));
+    const hora = (d: Date) => new Intl.DateTimeFormat('pt-BR', { ...fuso, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
+    const hi = hora(new Date(c.inicio));
+    const hf = hora(new Date(new Date(c.inicio).getTime() + 40 * 60_000));
+    await page.goto(`/admin/disponibilidade/bloquear?de=${dia}&hi=${hi}&hf=${hf}&nota=Congresso`);
     const grupo = page.getByRole('group', { name: new RegExp(c.nome) });
     await expect(grupo).toBeVisible();
 

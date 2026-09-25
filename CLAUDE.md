@@ -98,8 +98,8 @@ Rodar o site local: copie `.env.example` para `.env.local` e preencha
 
 ## Estado
 
-Todas as fases de código (01–13) implementadas; 14 é roadmap. Testes: 648
-no Vitest (234 unitários, 220 de componentes em jsdom, 126 de integração, 68
+Todas as fases de código (01–13) implementadas; 14 é roadmap. Testes: 650
+no Vitest (234 unitários, 220 de componentes em jsdom, 128 de integração, 68
 funcionais de API), 123 E2E (inclui 9 aparelhos), carga, resiliência e
 Lighthouse CI. Cobertura: 96 % de `lib/`, 92 % de `components/`. Segurança
 em `docs/SEGURANCA.md`; QA em `docs/QA.md`.

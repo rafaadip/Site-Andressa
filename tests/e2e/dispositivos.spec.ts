@@ -8,6 +8,7 @@
  * principal funciona NO TOQUE, em cada formato de tela.
  */
 import { test, expect, devices, type Page, type BrowserContext } from '@playwright/test';
+import { marcar } from './util';
 import { randomUUID } from 'node:crypto';
 import { criarSessao } from '@/lib/auth/sessao';
 import { ENV_PAINEL_E2E } from '../../playwright.config';
@@ -84,7 +85,7 @@ for (const a of APARELHOS) {
 
     test('agendamento completo no toque, e cancelamento pelo link', async ({ page }) => {
       await page.goto('/agendar');
-      await tocar(page, page.getByRole('radio', { name: /Consulta presencial/ }));
+      await marcar(page.getByRole('radio', { name: /Consulta presencial/ }), (l) => tocar(page, l));
       await tocar(page, page.getByRole('button', { name: /Continuar/ }));
       // Um dia do MEIO da janela e o último horário dele: os outros specs,
       // em paralelo, disputam os primeiros dias e o fim da janela.

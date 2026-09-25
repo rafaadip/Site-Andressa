@@ -43,6 +43,9 @@ export default defineConfig({
       NEXT_PUBLIC_SITE_URL: 'http://localhost:3100',
       // Teste é o caso consciente: sem agenda conectada, com regras fictícias.
       AGENDAMENTO_SEM_GOOGLE: 'aceito',
+      // A suíte cria dezenas de consultas em minutos, em 2 workers: o teto
+      // global de produção (30/h) está coberto pelo teste de integração.
+      AGENDAMENTO_TETO_POR_HORA: '1000',
       // Painel: credenciais FALSAS — o login real passa pelo Google; o E2E
       // assina a sessão com o mesmo segredo (tests/e2e/admin.spec.ts).
       ...ENV_PAINEL_E2E,

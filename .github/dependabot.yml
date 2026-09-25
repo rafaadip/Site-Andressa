@@ -33,9 +33,21 @@ updates:
           - "patch"
     # Majors NÃO entram nos grupos acima: como não há update-type "major" em
     # nenhum grupo, o Dependabot abre um PR individual por major (ex.: next 17,
-    # react 20, typescript 6/7, eslint 10) em vez de ignorá-los — a intenção é
-    # dar visibilidade e forçar revisão manual, nunca agrupar/mesclar um major
-    # junto com patches.
+    # react 20) em vez de ignorá-los — a intenção é dar visibilidade e forçar
+    # revisão manual, nunca agrupar/mesclar um major junto com patches.
+    # Um major só entra com o CI VERDE no próprio PR.
+    ignore:
+      # O typescript-eslint (via eslint-config-next) aceita TypeScript
+      # ">=4.8.4 <6.1.0": com o 7.0 o lint nem carrega e o CI quebra.
+      # Remover quando o eslint-config-next trouxer um typescript-eslint com
+      # suporte (typescript-eslint/typescript-eslint#10940).
+      - dependency-name: "typescript"
+        versions: [">= 6.1"]
+      # eslint-plugin-react/-import/-jsx-a11y (via eslint-config-next 16) pedem
+      # eslint ^9: com o 10, "contextOrFilename.getFilename is not a function".
+      # Remover quando o eslint-config-next declarar suporte ao ESLint 10.
+      - dependency-name: "eslint"
+        versions: [">= 10"]
 
   # GitHub Actions usadas em .github/workflows/*.yml
   - package-ecosystem: "github-actions"
