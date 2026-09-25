@@ -1,7 +1,8 @@
 # Site Dra. Andressa Chaves Correia
 
-Site com agendamento online sincronizado com Google Calendar.
-Plano completo em `docs/` — comece por `docs/DOCUMENTACAO.md`.
+Site com agendamento online sincronizado com Google Calendar, e-mails e
+painel da médica. Plano completo em `docs/` — comece por `docs/DOCUMENTACAO.md`.
+Colocar no ar e operar: `docs/OPERACAO.md`.
 
 ## Comandos
 
@@ -16,6 +17,8 @@ npm run db:generate      # gera migration a partir de lib/db/schema.ts
 
 Testes de integração e E2E de agendamento precisam de `DATABASE_URL_TEST`;
 sem ela, pulam sozinhos. O setup migra e semeia o banco de teste sozinho.
+Google e Resend são simulados em memória (`tests/setup/servicos-falsos.ts`);
+o E2E do painel assina a sessão com o `AUTH_SECRET` de teste.
 
 ```bash
 # Postgres local (uma vez)
@@ -62,19 +65,48 @@ Rodar o site local: copie `.env.example` para `.env.local` e preencha
    chegou a apagar todos os `mt-*`/`pt-*` do site.
 10. **Texto do site em `lib/content/site.ts`**, não no JSX. Passa pelo
     `check:conformidade`. O texto só promete o que o sistema já faz (ex.:
-    nada de "você recebe um e-mail" antes da FASE-08).
+    "você recebe um e-mail" só onde a Resend estiver garantidamente
+    configurada — a tela de confirmação não depende disso).
 11. **Sem Google Calendar, produção só oferta horários com
     `AGENDAMENTO_SEM_GOOGLE=aceito`.** Sem ele o site não sabe dos plantões
-    da médica; sem o opt-in, `/agendar` cai no WhatsApp.
+    da médica; sem o opt-in, `/agendar` cai no WhatsApp. Agenda que FOI
+    conectada e caiu degrada para D+2 (ADR-002) e o painel alerta.
+12. **Efeito externo (Google, e-mail) nunca dentro da requisição.** O fato e a
+    notificação são gravados na MESMA transação (`enfileirar()`); o envio vem
+    depois (`after(() => efeitosDe(id))`) e o cron reprocessa. Falha de
+    integração nunca perde consulta.
+13. **Nada de script inline sem nonce.** A CSP (`lib/csp.ts`, via `proxy.ts`)
+    bloqueia; por isso as páginas são dinâmicas (ADR-006).
+14. **Número de política no texto vem do banco.** Antecedência, horizonte e
+    prazo de cancelamento são editáveis no painel: texto público com "24
+    horas" escrito à mão vira promessa falsa (`prazoCancelamentoPublico()`).
+15. **`position: fixed` nunca dentro de elemento com `backdrop-filter`.** Ele
+    vira o bloco de contenção — foi assim que o menu do celular abriu com
+    altura zero.
+16. **PII nunca em log.** Use `log` de `lib/log.ts` (filtra por chave e por
+    padrão); nunca `console.log` de objeto de paciente.
 
 ## Estado
 
-| Fase | Situação |
+Todas as fases de código (01–13) implementadas; 14 é roadmap. Testes:
+211 unitários + integração, 80 E2E, Lighthouse CI no pipeline.
+
+| Fase | Onde |
 |---|---|
-| 01 Design System | tokens, contraste verificado, reset mobile-first, CSS em `@layer` |
-| 02 Fundação | Next 16, TS estrito, Drizzle, migrations, CI local |
-| 04 Motor de disponibilidade | `lib/availability/engine.ts` — completo e testado |
-| 06 `.ics` | `lib/calendar/ics.ts` — completo e testado |
-| 03 Site institucional | home, /sobre, /agendar (provisória), privacidade, termos, sitemap, JSON-LD — 49 testes E2E |
-| 07 Fluxo de agendamento | 4 etapas, API, gestão/cancelamento por link, `.ics` — 25 testes de integração + 10 E2E |
-| 05, 08–14 | pendentes |
+| 01 Design System | `app/globals.css`, `lib/marca.ts` (espelho conferido) |
+| 02 Fundação | Next 16, TS estrito, Drizzle, migrations pelo journal, CI no GitHub Actions |
+| 03 Site institucional | home, /sobre, /agendar, privacidade, termos, sitemap, JSON-LD, OG |
+| 04 Motor | `lib/availability/engine.ts` |
+| 05 Google Calendar | `lib/calendar/{google,conexao,freebusy,sincronizar,receber,canal}.ts` |
+| 06 `.ics` | `lib/calendar/ics.ts` |
+| 07 Fluxo | `components/agendamento/*`, `lib/agendamento/servico.ts` |
+| 08 E-mails | `lib/email/*`, `lib/notificacoes/*` (outbox + lembretes) |
+| 09 Painel | `app/admin/*`, `lib/agendamento/admin.ts`, `lib/auth/*`, `proxy.ts` |
+| 10 LGPD/CFM | `lib/lgpd/retencao.ts`, painel → Privacidade, `docs/RIPD.md` |
+| 11 SEO/perf | `app/opengraph-image.tsx`, `lib/fonts.ts`, `docs/GUIA-PERFIL-EMPRESA-GOOGLE.md` |
+| 12 QA | `tests/` (unit, integration, e2e com axe e matriz de viewports) |
+| 13 Deploy | `vercel.json`, `/api/health`, `instrumentation.ts`, `.github/workflows/ci.yml` |
+
+Pendências que NÃO são de código (ver `docs/DOCUMENTACAO.md` §9): endereço
+do consultório, horários reais, domínio, DNS do e-mail, revisão jurídica e
+testes manuais em aparelho real.

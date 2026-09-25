@@ -6,6 +6,9 @@
 
 ---
 
+> **Estado da implementação (25/09/2026):** implementada — JSON-LD, metadados, OG 1200×630 gerada no build, AVIF/WebP, fontes só `latin`, Lighthouse CI no pipeline, guia do Perfil da Empresa. **Medido (Lighthouse mobile, 4G simulado):** Acessibilidade, SEO e Boas práticas 100; Performance 92–93; CLS 0; LCP simulado 3,2 s (observado ~0,2 s local). A CSP com nonce exige página dinâmica ([ADR-006](../adr/ADR-006-integracoes-sem-sdk-e-painel.md)).
+
+
 ## 1. SEO local — onde a busca realmente acontece
 
 Para consultório, a maior parte do tráfego qualificado vem de busca **local com
@@ -151,7 +154,7 @@ export const metadata: Metadata = {
 AVIF com WebP de fallback; `width`/`height` sempre; abaixo da dobra, `loading="lazy"`.
 
 **Fontes** — `next/font/local`, WOFF2, `display: 'swap'`, `preload` **só** em Jost
-400 e Playfair 600. Subset latin + latin-ext (o português precisa de `ã`, `ç`, `õ`).
+400 e Playfair 600. Subset **só `latin`**: ele já cobre `ã`, `ç`, `õ` e toda a acentuação (U+0000–00FF); `latin-ext` (ą, ő, ł…) com preload custava ~80 KB à toa no LCP — medido.
 Zero request a CDN de terceiro (ADR-005).
 
 **JavaScript** — a home é quase toda Server Component. O widget de agendamento é o
@@ -167,21 +170,21 @@ da dobra. `motion` importado só onde é usado.
 
 ## 5. Entregáveis
 
-- [ ] JSON-LD `Physician` + `FAQPage`
-- [ ] `metadata` por rota, `sitemap.ts`, `robots.ts`
-- [ ] `opengraph-image.tsx`
-- [ ] Imagens em AVIF/WebP, três tamanhos
-- [ ] Fontes self-hosted com subset
-- [ ] Lighthouse CI no pipeline, com orçamento de performance
-- [ ] Guia (em `docs/`) para a médica configurar o Perfil da Empresa no Google
+- [x] JSON-LD `Physician` + `FAQPage`
+- [x] `metadata` por rota, `sitemap.ts`, `robots.ts`
+- [x] `opengraph-image.tsx`
+- [x] Imagens em AVIF/WebP, três tamanhos
+- [x] Fontes self-hosted com subset
+- [x] Lighthouse CI no pipeline, com orçamento de performance
+- [x] Guia (em `docs/`) para a médica configurar o Perfil da Empresa no Google
 
 ## 6. Critérios de aceite
 
-- [ ] Lighthouse mobile: Performance ≥ 95, Acessibilidade 100, SEO 100
-- [ ] LCP ≤ 1,8 s no teste de campo simulado
-- [ ] CLS ≤ 0,03 (sem salto de fonte nem de imagem)
-- [ ] JSON-LD sem erro no Rich Results Test
-- [ ] `/admin` e `/consulta/*` fora do sitemap e com `noindex`
-- [ ] Nenhuma requisição a domínio de terceiro no carregamento inicial
-- [ ] Prévia de link correta ao compartilhar no WhatsApp
-- [ ] JSON-LD válido tanto com `endereco: null` quanto preenchido
+- [ ] Lighthouse mobile: Performance ≥ 95, Acessibilidade 100, SEO 100 — *medido: 92–93 / 100 / 100 — o gargalo é o volume de JS do React no 4G simulado*
+- [ ] LCP ≤ 1,8 s no teste de campo simulado — *simulado 3,2 s; revalidar em campo (Vercel Analytics)*
+- [x] CLS ≤ 0,03 (sem salto de fonte nem de imagem)
+- [ ] JSON-LD sem erro no Rich Results Test — *validar com o domínio no ar*
+- [x] `/admin` e `/consulta/*` fora do sitemap e com `noindex`
+- [x] Nenhuma requisição a domínio de terceiro no carregamento inicial
+- [ ] Prévia de link correta ao compartilhar no WhatsApp — *imagem de 169 KB testada por E2E; conferir no aparelho*
+- [x] JSON-LD válido tanto com `endereco: null` quanto preenchido

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { disponibilidade } from '@/lib/agendamento/servico';
+import { disponibilidade, practitionerId } from '@/lib/agendamento/servico';
 import { agendamentoOnlineHabilitado } from '@/lib/calendar/freebusy';
 import { dataLocal } from '@/lib/datetime';
 import { erro, SEM_CACHE, traduzirErro } from '@/lib/api/respostas';
@@ -15,9 +15,6 @@ const consulta = z.object({
 
 /** GET /api/disponibilidade?tipo=consulta-presencial&de=2026-09-14&ate=2026-09-27 */
 export async function GET(req: Request) {
-  if (!agendamentoOnlineHabilitado()) {
-    return erro(503, { erro: 'INDISPONIVEL', mensagem: 'Agendamento online indisponível. Fale pelo WhatsApp.' });
-  }
   const p = consulta.safeParse(Object.fromEntries(new URL(req.url).searchParams));
   if (!p.success) return erro(422, { erro: 'VALIDACAO', mensagem: 'Parâmetros inválidos.' });
 
@@ -27,6 +24,9 @@ export async function GET(req: Request) {
   if (de < hoje) return erro(422, { erro: 'VALIDACAO', mensagem: 'A data inicial já passou.' });
 
   try {
+    if (!(await agendamentoOnlineHabilitado(await practitionerId()))) {
+      return erro(503, { erro: 'INDISPONIVEL', mensagem: 'Agendamento online indisponível. Fale pelo WhatsApp.' });
+    }
     return Response.json(await disponibilidade({ tipo: p.data.tipo, de, ate }), { headers: SEM_CACHE });
   } catch (e) {
     return traduzirErro(e);

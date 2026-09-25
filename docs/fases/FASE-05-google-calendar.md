@@ -12,6 +12,9 @@
 
 ---
 
+> **Estado da implementação (25/09/2026):** implementada — `lib/calendar/{google,conexao,freebusy,sincronizar,receber,canal}.ts`, rotas em `app/api/{oauth,webhooks,cron}`, tela em `/admin/integracoes`. Cliente REST sobre `fetch`, sem `googleapis` ([ADR-006](../adr/ADR-006-integracoes-sem-sdk-e-painel.md)). 23 testes de integração contra um Google Calendar falso em memória.
+
+
 ## 1. Configuração no Google Cloud
 
 1. Criar projeto **"Agenda Dra. Andressa"**.
@@ -284,21 +287,21 @@ Backoff: 1 min → 5 → 15 → 60 → 240. Na 5ª falha, alerta ao admin e Sent
 
 ## 7. Entregáveis
 
-- [ ] `lib/calendar/google.ts` — cliente com refresh automático
-- [ ] `lib/crypto.ts` — AES-256-GCM com testes
-- [ ] `app/api/oauth/google/{start,callback}/route.ts`
-- [ ] `app/api/webhooks/google/route.ts`
-- [ ] `app/api/cron/{reconciliar,renovar-canal}/route.ts`
-- [ ] `/admin/integracoes` — status da conexão, reconectar, revogar
-- [ ] Fixtures de teste com respostas reais da API (gravadas, não inventadas)
+- [x] `lib/calendar/google.ts` — cliente com refresh automático
+- [x] `lib/crypto.ts` — AES-256-GCM com testes
+- [x] `app/api/oauth/google/{start,callback}/route.ts`
+- [x] `app/api/webhooks/google/route.ts`
+- [x] `app/api/cron/{reconciliar,renovar-canal}/route.ts`
+- [x] `/admin/integracoes` — status da conexão, reconectar, revogar
+- [ ] Fixtures de teste com respostas reais da API (gravadas, não inventadas) — *o serviço falso segue a documentação pública; gravar respostas reais no primeiro deploy*
 
 ## 8. Critérios de aceite
 
-- [ ] Conectar a conta grava refresh token **cifrado** (verificado lendo o `bytea`)
-- [ ] Agendamento confirmado aparece na agenda em < 10 s
-- [ ] Apagar o evento no Google marca o agendamento como cancelado e notifica
-- [ ] Mover o evento no Google atualiza `starts_at` e reenvia `.ics` com `SEQUENCE+1`
-- [ ] Com a API mockada em erro, o agendamento **é criado** com `sync_state='pending'`
-- [ ] Reconciliação recupera todos os pendentes quando a API volta
-- [ ] `syncToken` expirado (410) dispara full sync sem intervenção
-- [ ] Escopos concedidos são exatamente os dois listados — nem mais
+- [x] Conectar a conta grava refresh token **cifrado** (verificado lendo o `bytea`)
+- [ ] Agendamento confirmado aparece na agenda em < 10 s — *enviado logo após a resposta (`after()`); medir com a conta real no go-live*
+- [x] Apagar o evento no Google marca o agendamento como cancelado e notifica
+- [x] Mover o evento no Google atualiza `starts_at` e reenvia `.ics` com `SEQUENCE+1`
+- [x] Com a API mockada em erro, o agendamento **é criado** com `sync_state='pending'`
+- [x] Reconciliação recupera todos os pendentes quando a API volta
+- [x] `syncToken` expirado (410) dispara full sync sem intervenção
+- [x] Escopos concedidos são exatamente os dois listados — nem mais

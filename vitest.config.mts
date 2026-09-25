@@ -2,7 +2,13 @@ import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
-  resolve: { alias: { '@': fileURLToPath(new URL('.', import.meta.url)) } },
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('.', import.meta.url)),
+      // Fora do Next, `server-only` lançaria ao ser importado.
+      'server-only': fileURLToPath(new URL('./tests/setup/vazio.ts', import.meta.url)),
+    },
+  },
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
@@ -17,7 +23,12 @@ export default defineConfig({
     },
     coverage: {
       include: ['lib/**/*.ts'],
-      thresholds: { lines: 80, functions: 80 },
+      thresholds: {
+        lines: 85, functions: 80,
+        // FASE-12 §8: o núcleo (motor e calendário) com ≥ 90 %.
+        'lib/availability/**': { statements: 90, lines: 90 },
+        'lib/calendar/**': { statements: 90, lines: 90 },
+      },
     },
   },
 });

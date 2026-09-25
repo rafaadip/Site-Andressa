@@ -153,7 +153,12 @@ export const COMO_AGENDAR = {
   ],
 } as const;
 
-export const FAQ = [
+/**
+ * Perguntas frequentes. O prazo de cancelamento vem do painel
+ * (/admin/configuracoes) — escrito à mão aqui, o site prometeria um prazo
+ * que o sistema não cumpre quando ela o mudasse.
+ */
+export const perguntasFrequentes = (prazoCancelamentoHoras: number) => [
   {
     pergunta: 'Como funciona a primeira consulta?',
     resposta:
@@ -185,7 +190,7 @@ export const FAQ = [
   {
     pergunta: 'Posso remarcar ou cancelar?',
     resposta:
-      'Sim, até 24 horas antes, pelo link da sua consulta — ele aparece na tela '
+      `Sim, até ${prazoCancelamentoHoras} horas antes, pelo link da sua consulta — ele aparece na tela `
       + 'de confirmação e fica salvo no evento do seu calendário. Depois desse '
       + 'prazo, fale pelo WhatsApp.',
   },
@@ -203,4 +208,21 @@ export const URGENCIA = {
     'Em caso de dor no peito, falta de ar intensa, perda de consciência ou '
     + 'sinais de AVC, procure o pronto-socorro mais próximo ou ligue',
   telefone: '192 (SAMU)',
+} as const;
+
+/**
+ * Textos de consentimento do formulário (LGPD Art. 8º e 11).
+ * ⚠️ Mudou o texto? Suba VERSAO_CONSENTIMENTO em
+ * lib/validation/agendamento.ts: cada consulta registra a versão aceita.
+ */
+export const CONSENTIMENTO = {
+  dados: {
+    texto: 'Autorizo o uso do meu nome, telefone e e-mail para agendar, confirmar e me lembrar desta consulta, conforme a',
+    link: 'política de privacidade',
+  },
+  saude: {
+    antes: 'O motivo que escrevi é',
+    destaque: 'informação de saúde',
+    depois: '. Autorizo o seu registro para esta consulta. Ele é apagado 90 dias depois.',
+  },
 } as const;

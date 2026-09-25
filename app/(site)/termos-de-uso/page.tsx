@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { PROFISSIONAL } from '@/lib/config';
 import { URGENCIA } from '@/lib/content/site';
 import { Secao } from '@/components/ui/Secao';
+import { prazoCancelamentoPublico } from '@/lib/agendamento/servico';
 
 export const metadata: Metadata = {
   title: 'Termos de uso',
@@ -12,7 +13,8 @@ export const metadata: Metadata = {
 /** ⚠️ REVISÃO JURÍDICA OBRIGATÓRIA antes do go-live (FASE-13). */
 const ATUALIZADO_EM = '25 de setembro de 2026';
 
-export default function TermosDeUso() {
+export default async function TermosDeUso() {
+  const prazo = await prazoCancelamentoPublico();
   return (
     <Secao>
       <article className="prosa mx-auto">
@@ -36,7 +38,7 @@ export default function TermosDeUso() {
         <h2>Agendamento</h2>
         <ul>
           <li>O horário só está garantido após a confirmação.</li>
-          <li>Cancelamentos podem ser feitos pelo link da sua consulta (mostrado ao confirmar e salvo no evento do calendário) até 24 horas antes. Depois disso, fale pelo WhatsApp.</li>
+          <li>Cancelamentos podem ser feitos pelo link da sua consulta (mostrado ao confirmar e salvo no evento do calendário) até {prazo} horas antes. Depois disso, fale pelo WhatsApp.</li>
           <li>Informe dados corretos: são eles que permitem confirmar e lembrar a sua consulta.</li>
         </ul>
 

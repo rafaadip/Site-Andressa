@@ -75,6 +75,18 @@ export function formatarCurto(instante: Date, zona: string = TZ_CLINICA): string
     .toFormat("ccc, dd/MM 'às' HH:mm");
 }
 
+/** "quinta-feira, 11 de setembro" — cabeçalho de dia no painel. */
+export function formatarDia(instante: Date, zona: string = TZ_CLINICA): string {
+  return DateTime.fromJSDate(instante).setZone(zona).setLocale('pt-BR').toFormat("cccc, d 'de' LLLL");
+}
+
+/** 'YYYY-MM-DD' local + n dias (aritmética de calendário, sem offset). */
+export function somarDiasLocal(data: string, n: number, zona: string = TZ_CLINICA): string {
+  const dt = DateTime.fromISO(data, { zone: zona });
+  if (!dt.isValid) throw new DataInvalidaError(data);
+  return dt.plus({ days: n }).toISODate()!;
+}
+
 /** Formato compacto UTC do RFC 5545: 20260915T170000Z */
 export function emUtcCompacto(instante: Date): string {
   return DateTime.fromJSDate(instante).toUTC().toFormat("yyyyLLdd'T'HHmmss'Z'");
@@ -105,32 +117,9 @@ export function diasNoIntervalo(
   return dias;
 }
 
-/** Constrói um Interval a partir de dois instantes. */
-export function intervalo(inicio: Date, fim: Date): Interval {
-  return Interval.fromDateTimes(inicio, fim);
-}
-
 /** Soma minutos a um instante. Seguro: opera sobre o instante, não sobre a parede. */
 export function somarMinutos(instante: Date, minutos: number): Date {
   return DateTime.fromJSDate(instante).plus({ minutes: minutos }).toJSDate();
-}
-
-/**
- * Fuso do navegador do paciente, quando difere do da clínica.
- * Usado na teleconsulta para mostrar "14:00 (Brasília) · 13:00 no seu horário".
- * Retorna `null` quando é o mesmo fuso ou não dá para detectar.
- */
-export function fusoDoPaciente(): string | null {
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (!tz || tz === TZ_CLINICA) return null;
-    // Fusos diferentes com o mesmo offset não interessam ao paciente.
-    const agora = DateTime.now();
-    if (agora.setZone(tz).offset === agora.setZone(TZ_CLINICA).offset) return null;
-    return tz;
-  } catch {
-    return null;
-  }
 }
 
 export { DateTime, Interval };

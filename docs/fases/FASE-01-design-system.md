@@ -11,6 +11,9 @@
 
 ---
 
+> **Estado da implementação (25/09/2026):** implementada — tokens em `app/globals.css` (contraste verificado por `npm run check:contrast`), espelho para e-mail/OG em `lib/marca.ts` conferido valor a valor.
+
+
 ## 1. Leitura da marca
 
 O material fornecido já define a linguagem visual — o trabalho não é *inventar* um

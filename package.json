@@ -10,9 +10,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "check:contrast": "tsx scripts/check-contrast.ts",
     "check:conformidade": "tsx scripts/check-conformidade.ts",
     "db:generate": "drizzle-kit generate",
@@ -30,6 +31,8 @@
     "postgres": "^3.4.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "sharp": "^0.35.4",
     "zod": "^4.1.13"
   },
   "devDependencies": {
@@ -40,6 +43,7 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^5.0.0",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",

@@ -102,6 +102,11 @@ Registrada no momento em que foi assumida, com o custo de resolver:
 | Buffers embutidos em `starts_at`/`ends_at` | [ADR-004](../adr/ADR-004-antioverbooking.md) — simplifica a constraint | Separar exigiria repensar a exclusão |
 | App OAuth em modo *Testing* | [FASE-05 §1](FASE-05-google-calendar.md) — evita verificação do Google | Se o token expirar em 7 dias: publicar e verificar, ou migrar para Workspace |
 | Sem fila de mensagens | Cron + `sync_state` bastam neste volume | Acima de ~200 agendamentos/semana, avaliar fila real |
+| Páginas dinâmicas por causa da CSP com nonce | [ADR-006](../adr/ADR-006-integracoes-sem-sdk-e-painel.md) — segurança acima de cache de CDN | Lighthouse Performance 92–93 (alvo 95). Se pesar: SRI experimental do Next e páginas estáticas |
+| Testes de integração contra serviços **falsos** | Google/Resend simulados pela documentação pública | Gravar respostas reais no primeiro deploy e trocar as fixtures |
+| Clientes REST próprios (Google, Resend, Sentry) | [ADR-006](../adr/ADR-006-integracoes-sem-sdk-e-painel.md) | Acompanhar mudanças de API na revisão trimestral |
+| Status `held` sem uso | O fluxo grava `confirmed` direto, sob advisory lock | Remover do CHECK se continuar sem uso |
+| Uma sala fixa de teleconsulta | `practitioner.telehealth_url` | Link por consulta exigiria integração com Meet/Zoom |
 
 ---
 

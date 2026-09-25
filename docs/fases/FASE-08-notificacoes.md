@@ -6,6 +6,9 @@
 
 ---
 
+> **Estado da implementação (25/09/2026):** implementada — `lib/email/{cliente,layout,templates,webhook}.ts`, fila (outbox) em `lib/notificacoes/`, crons de lembrete e webhook da Resend. HTML em tabela + texto puro a partir do mesmo modelo, sem React Email ([ADR-006](../adr/ADR-006-integracoes-sem-sdk-e-painel.md)). 14 testes de integração + unitários de template.
+
+
 ## 1. Matriz de notificações
 
 | Evento | Para o paciente | Para a médica | Canal |
@@ -162,22 +165,22 @@ reexecução do cron manda o lembrete duas vezes.
 
 ## 6. Entregáveis
 
-- [ ] `lib/email/templates/` — Confirmacao, Cancelamento, Remarcacao, LembreteD1,
+- [x] `lib/email/templates/` — Confirmacao, Cancelamento, Remarcacao, LembreteD1, — em `lib/email/templates.ts` (um módulo, não um diretório)
       LembreteH2, AvisoMedica
-- [ ] `lib/email/client.ts` — envio com retry e log
-- [ ] `app/api/cron/lembretes-{d1,h2}/route.ts`
-- [ ] `app/api/webhooks/resend/route.ts` — bounce e reclamação
-- [ ] SPF, DKIM e DMARC configurados e verificados
-- [ ] Colunas `reminder_d1_at`, `reminder_h2_at` em `appointment`
+- [x] `lib/email/client.ts` — envio com retry e log — `lib/email/cliente.ts` + backoff da fila
+- [x] `app/api/cron/lembretes-{d1,h2}/route.ts`
+- [x] `app/api/webhooks/resend/route.ts` — bounce e reclamação
+- [ ] SPF, DKIM e DMARC configurados e verificados — *DNS — ver OPERACAO §2.3*
+- [x] Colunas `reminder_d1_at`, `reminder_h2_at` em `appointment`
 
 ## 7. Critérios de aceite
 
-- [ ] Confirmação chega em < 30 s
-- [ ] Anexo `.ics` abre no Apple Mail (iOS), Gmail (web e app) e Outlook
-- [ ] Layout íntegro em Gmail, Apple Mail, Outlook e Yahoo (teste com Litmus ou
+- [ ] Confirmação chega em < 30 s — *medir no go-live*
+- [ ] Anexo `.ics` abre no Apple Mail (iOS), Gmail (web e app) e Outlook — *roteiro manual §1*
+- [ ] Layout íntegro em Gmail, Apple Mail, Outlook e Yahoo (teste com Litmus ou — *roteiro manual §1.8*
       contas reais)
-- [ ] Versão texto puro legível e completa
-- [ ] Cron rodado duas vezes **não** duplica lembrete
-- [ ] Nenhum lembrete para agendamento cancelado
-- [ ] SPF, DKIM e DMARC passando (`mail-tester` ≥ 9/10)
-- [ ] Máximo de 3 e-mails por agendamento no caminho feliz
+- [x] Versão texto puro legível e completa
+- [x] Cron rodado duas vezes **não** duplica lembrete
+- [x] Nenhum lembrete para agendamento cancelado
+- [ ] SPF, DKIM e DMARC passando (`mail-tester` ≥ 9/10) — *roteiro manual §4*
+- [x] Máximo de 3 e-mails por agendamento no caminho feliz

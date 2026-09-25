@@ -10,6 +10,9 @@
 
 ---
 
+> **Estado da implementação (25/09/2026):** implementada — home, /sobre, /agendar, privacidade, termos, sitemap, robots, JSON-LD e imagem OpenGraph. Corrigido em 25/09: o menu do celular abria com altura zero (painel `fixed` dentro de header com `backdrop-filter`).
+
+
 ## 1. Arquitetura de informação
 
 Minimalismo aqui não é "menos conteúdo" — é **menos caminhos**. Uma home em rolagem

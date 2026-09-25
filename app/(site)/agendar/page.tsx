@@ -4,7 +4,6 @@ import { PROFISSIONAL } from '@/lib/config';
 import { URGENCIA } from '@/lib/content/site';
 import { dataLocal, TZ_CLINICA } from '@/lib/datetime';
 import type { TipoConsultaPublico } from '@/lib/agendamento/tipos';
-import { agendamentoOnlineHabilitado } from '@/lib/calendar/freebusy';
 import { Secao } from '@/components/ui/Secao';
 import { FluxoAgendamento } from '@/components/agendamento/FluxoAgendamento';
 import { AgendarPorContato } from '@/components/agendamento/AgendarPorContato';
@@ -18,20 +17,25 @@ export const metadata: Metadata = {
 // Horários mudam a cada agendamento: nunca pré-renderizar.
 export const dynamic = 'force-dynamic';
 
-async function carregarTipos(): Promise<TipoConsultaPublico[]> {
-  if (!agendamentoOnlineHabilitado()) return [];
+type Oferta = { tipos: TipoConsultaPublico[]; horizonteDias: number };
+
+async function carregarOferta(): Promise<Oferta> {
   try {
-    const { listarTipos } = await import('@/lib/agendamento/servico');
-    return await listarTipos();
+    const { listarTipos, profissional } = await import('@/lib/agendamento/servico');
+    const { agendamentoOnlineHabilitado } = await import('@/lib/calendar/freebusy');
+    const prof = await profissional();
+    if (!(await agendamentoOnlineHabilitado(prof.id))) return { tipos: [], horizonteDias: 0 };
+    return { tipos: await listarTipos(), horizonteDias: prof.horizonDays };
   } catch (e) {
     // Banco fora do ar não pode derrubar a página: cai no WhatsApp.
-    console.error('[agendar] sem acesso aos tipos de consulta:', e instanceof Error ? e.message : e);
-    return [];
+    const { log } = await import('@/lib/log');
+    log.excecao('agendar.sem-banco', e);
+    return { tipos: [], horizonteDias: 0 };
   }
 }
 
 export default async function PaginaAgendar() {
-  const tipos = await carregarTipos();
+  const { tipos, horizonteDias } = await carregarOferta();
   const online = tipos.length > 0;
 
   return (
@@ -49,7 +53,7 @@ export default async function PaginaAgendar() {
 
         <div className="md:rounded-lg md:border md:border-borda md:bg-elevado md:p-10 md:shadow-md md:border-t-4 md:border-t-gold-500">
           {online
-            ? <FluxoAgendamento tipos={tipos} hoje={dataLocal(new Date())} fuso={TZ_CLINICA} />
+            ? <FluxoAgendamento tipos={tipos} hoje={dataLocal(new Date())} fuso={TZ_CLINICA} horizonteDias={horizonteDias} />
             : <AgendarPorContato />}
         </div>
 

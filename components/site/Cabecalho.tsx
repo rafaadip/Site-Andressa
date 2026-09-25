@@ -69,6 +69,7 @@ export function Cabecalho() {
   }, [aberto, fechar]);
 
   return (
+    <>
     <header className="sticky top-0 z-50 bg-fundo/95 backdrop-blur-md border-b border-borda">
       <div className="wrap flex items-center justify-between h-16 lg:h-[4.75rem]">
         <Link
@@ -111,12 +112,17 @@ export function Cabecalho() {
           {aberto ? <X aria-hidden size={24} strokeWidth={1.5} /> : <Menu aria-hidden size={24} strokeWidth={1.5} />}
         </button>
       </div>
+    </header>
 
+      {/* ⚠️ FORA do <header>: o backdrop-filter dele cria um bloco de contenção
+          para `position: fixed`, e o painel ficava com altura ZERO — o menu
+          "abria" invisível no celular. Logo depois do header no DOM, a ordem
+          de Tab continua botão → links do painel. */}
       <div
         ref={painelRef}
         id={idPainel}
         hidden={!aberto}
-        className="lg:hidden fixed inset-x-0 top-16 bottom-0 bg-fundo overflow-y-auto"
+        className="lg:hidden fixed inset-x-0 top-16 bottom-0 z-40 bg-fundo overflow-y-auto"
       >
         <nav aria-label="Principal (celular)" className="wrap flex flex-col min-h-full pt-6 pb-[calc(1.5rem+var(--safe-bottom))]">
           <ul className="flex flex-col">
@@ -140,6 +146,6 @@ export function Cabecalho() {
           </div>
         </nav>
       </div>
-    </header>
+    </>
   );
 }

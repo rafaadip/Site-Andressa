@@ -20,6 +20,7 @@ d('serviço de agendamento', () => {
   const sql = () => sqlCliente();
 
   beforeEach(async () => {
+    await sql()`DELETE FROM notification`;
     await sql()`DELETE FROM audit_log`;
     await sql()`DELETE FROM appointment`;
   });
@@ -113,6 +114,12 @@ d('serviço de agendamento', () => {
       const p = pedido(slot!.inicio);
       const [a, b] = await Promise.all([criarAgendamento(p, c), criarAgendamento(p, c)]);
       expect(a.agendamento.id).toBe(b.agendamento.id);
+      // O perdedor da corrida precisa devolver o link que ABRE a consulta
+      // do vencedor — não um token derivado de um id que nunca foi gravado.
+      expect(b.agendamento.urlGestao).toBe(a.agendamento.urlGestao);
+      for (const r of [a, b]) {
+        expect(await buscarPorToken(r.agendamento.urlGestao.split('/').pop()!)).not.toBeNull();
+      }
       const [{ n }] = await sql()`SELECT count(*)::int AS n FROM appointment` as [{ n: number }];
       expect(n).toBe(1);
     });

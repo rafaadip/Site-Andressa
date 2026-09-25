@@ -1,10 +1,10 @@
 /**
- * Dados de DESENVOLVIMENTO e TESTE.
+ * Dados iniciais: profissional, modalidades e (só em dev/teste) horários.
  *
- * ⚠️ Os horários abaixo são FICTÍCIOS. Os horários reais da médica ainda
- * não foram informados; em produção eles vêm do painel (FASE-09) ou de um
- * seed próprio aprovado por ela. Rodar isto em produção ofertaria horários
- * inventados — por isso o script exige confirmação fora de dev.
+ * ⚠️ Os horários abaixo são FICTÍCIOS. Em produção os horários reais vêm do
+ * painel (/admin/disponibilidade) — e este script NÃO toca neles: apagar e
+ * recriar a semana padrão depois de a médica configurá-la seria perder o
+ * trabalho dela. Em produção ele só garante profissional e modalidades.
  *
  * Idempotente: pode rodar quantas vezes quiser.
  */
@@ -28,7 +28,8 @@ const REGRAS = [
   { dia: 4, de: '18:30', ate: '20:30', modalidade: 'telehealth' },
 ];
 
-export async function semear(url: string) {
+export async function semear(url: string, opcoes: { horariosFicticios?: boolean } = {}) {
+  const comHorarios = opcoes.horariosFicticios ?? true;
   const sql = postgres(url, { max: 1, onnotice: () => {} });
   try {
     await sql.begin(async (tx) => {
@@ -38,6 +39,15 @@ export async function semear(url: string) {
         ON CONFLICT (id) DO UPDATE SET full_name = EXCLUDED.full_name, crm = EXCLUDED.crm`;
 
       for (const t of TIPOS) {
+        if (!comHorarios) {
+          // Produção: só cria o que falta — nome, duração e intervalos são
+          // editados no painel e não podem ser sobrescritos por um re-seed.
+          await tx`
+            INSERT INTO appointment_type (id, practitioner_id, slug, label, duration_min, buffer_before_min, buffer_after_min, location_kind)
+            VALUES (${t.id}, ${PRACTITIONER_ID}, ${t.slug}, ${t.label}, ${t.duracao}, 0, ${t.depois}, ${t.modalidade})
+            ON CONFLICT (practitioner_id, slug) DO NOTHING`;
+          continue;
+        }
         await tx`
           INSERT INTO appointment_type (id, practitioner_id, slug, label, duration_min, buffer_before_min, buffer_after_min, location_kind)
           VALUES (${t.id}, ${PRACTITIONER_ID}, ${t.slug}, ${t.label}, ${t.duracao}, 0, ${t.depois}, ${t.modalidade})
@@ -46,6 +56,7 @@ export async function semear(url: string) {
             buffer_after_min = EXCLUDED.buffer_after_min, is_active = true`;
       }
 
+      if (!comHorarios) return;
       await tx`DELETE FROM availability_rule WHERE practitioner_id = ${PRACTITIONER_ID}`;
       for (const r of REGRAS) {
         await tx`
@@ -61,11 +72,12 @@ export async function semear(url: string) {
 async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('Defina DATABASE_URL.');
-  if (process.env.NODE_ENV === 'production' && process.env.SEED_CONFIRMO_FICTICIO !== 'sim') {
-    throw new Error('Seed com horários FICTÍCIOS em produção. Defina SEED_CONFIRMO_FICTICIO=sim se é mesmo isso.');
-  }
-  await semear(url);
-  console.log('\n  ✓ Seed aplicado (horários FICTÍCIOS de desenvolvimento).\n');
+  const producao = process.env.NODE_ENV === 'production';
+  const ficticios = !producao || process.env.SEED_CONFIRMO_FICTICIO === 'sim';
+  await semear(url, { horariosFicticios: ficticios });
+  console.log(ficticios
+    ? '\n  ✓ Seed aplicado (horários FICTÍCIOS de desenvolvimento).\n'
+    : '\n  ✓ Profissional e modalidades garantidos. Horários: configure em /admin/disponibilidade.\n');
 }
 
 if (process.argv[1]?.endsWith('seed.ts')) {

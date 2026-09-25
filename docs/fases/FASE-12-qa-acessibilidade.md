@@ -6,6 +6,9 @@
 
 ---
 
+> **Estado da implementação (25/09/2026):** automação concluída — 125 unitários, 86 de integração (Postgres real), 80 E2E (axe em todas as rotas públicas e do painel, viewports 375/393/430/768/1024/1440, teclado, fuso de Manaus), cobertura ≥ 90 % em `lib/availability` e `lib/calendar` imposta no CI. O teste manual está roteirizado em [ROTEIRO-TESTE-MANUAL](../ROTEIRO-TESTE-MANUAL.md) e precisa ser executado em aparelho real.
+
+
 ## 1. Pirâmide de testes
 
 ```
@@ -264,19 +267,19 @@ Mais: script que barra "especialista"/"nutróloga"/"RQE" fora de `lib/config.ts`
 
 ## 8. Entregáveis
 
-- [ ] ≥ 120 testes unitários, ≥ 90 % de cobertura em `lib/availability` e `lib/calendar`
-- [ ] ~30 testes de integração com Postgres real
-- [ ] 12 cenários E2E nos quatro viewports
-- [ ] `axe-core` em todas as rotas públicas
-- [ ] Roteiro manual documentado, com resultados registrados
-- [ ] Regras de lint do §7
+- [x] ≥ 120 testes unitários, ≥ 90 % de cobertura em `lib/availability` e `lib/calendar`
+- [x] ~30 testes de integração com Postgres real
+- [x] 12 cenários E2E nos quatro viewports
+- [x] `axe-core` em todas as rotas públicas
+- [ ] Roteiro manual documentado, com resultados registrados — *roteiro pronto; resultados a registrar*
+- [x] Regras de lint do §7
 
 ## 9. Critérios de aceite
 
-- [ ] CI verde em todos os jobs
-- [ ] Zero violação `axe` crítica ou séria
-- [ ] Teste de concorrência passa 10 execuções seguidas
-- [ ] Testes de fuso passam com quatro `TZ` diferentes
+- [ ] CI verde em todos os jobs — *workflow pronto; roda no primeiro PR*
+- [x] Zero violação `axe` crítica ou séria
+- [x] Teste de concorrência passa 10 execuções seguidas — 10/10 verificadas em 25/09/2026
+- [x] Testes de fuso passam com quatro `TZ` diferentes
 - [ ] Cancelamento verificado manualmente em Apple Calendar real
 - [ ] Fluxo completo em **aparelho real**, com uma mão, registrado em vídeo
 - [ ] Matriz de dispositivos verde nos seis viewports, ambas as orientações

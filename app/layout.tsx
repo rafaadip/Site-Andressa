@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
+import Script from 'next/script';
 import { PROFISSIONAL } from '@/lib/config';
+import { MARCA } from '@/lib/marca';
 import { fonteDisplay, fonteSans, fonteCitacao } from '@/lib/fonts';
 import { urlSite } from '@/lib/seo';
 import './globals.css';
@@ -18,7 +21,7 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'pt_BR',
     siteName: PROFISSIONAL.nomeCurto,
-    images: [{ url: '/retratos/andressa-circular.png', width: 900, height: 900 }],
+    // Imagem: app/opengraph-image.tsx (1200×630, leve para o WhatsApp).
   },
   formatDetection: { telephone: false },   // o iOS não reformata o telefone por conta própria
 };
@@ -28,11 +31,21 @@ export const viewport: Viewport = {
   initialScale: 1,
   // viewport-fit=cover: necessário para env(safe-area-inset-*) no iPhone.
   viewportFit: 'cover',
-  themeColor: '#FBF8F3',
+  themeColor: MARCA['ivory-50'],
   // NUNCA maximumScale/userScalable: bloquear zoom viola acessibilidade.
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/**
+ * Analytics sem cookie (ADR-005), opcional: só com NEXT_PUBLIC_PLAUSIBLE_DOMAIN.
+ * Sem ele, nenhum script de terceiro é carregado.
+ */
+const PLAUSIBLE = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Ler o cabeçalho torna a renderização dinâmica — é o que permite a CSP
+  // com nonce novo a cada requisição (proxy.ts). O Next aplica o nonce aos
+  // próprios scripts sozinho; o daqui é para o script opcional de analytics.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
     <html
       lang="pt-BR"
@@ -41,6 +54,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <a href="#conteudo" className="pular-para-conteudo">Pular para o conteúdo</a>
         {children}
+        {PLAUSIBLE && (
+          <Script
+            src="https://plausible.io/js/script.js"
+            data-domain={PLAUSIBLE}
+            strategy="afterInteractive"
+            nonce={nonce}
+          />
+        )}
       </body>
     </html>
   );

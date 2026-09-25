@@ -59,7 +59,7 @@ export const Confirmacao = forwardRef<HTMLHeadingElement, Props>(function Confir
 
       <section aria-labelledby="titulo-link" className="mt-5">
         <h3 id="titulo-link" className="font-medium text-texto">Link da sua consulta</h3>
-        <p className="mt-1 text-sm text-texto-2">Guarde-o: é por ele que você cancela, até 24 horas antes.</p>
+        <p className="mt-1 text-sm text-texto-2">Guarde-o: é por ele que você cancela, até {ag.prazoCancelamentoHoras} horas antes.</p>
         <div className="mt-3 flex gap-2">
           <input
             readOnly

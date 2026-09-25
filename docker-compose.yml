@@ -1,0 +1,15 @@
+# Postgres local de desenvolvimento (a trava anti-overbooking precisa de
+# Postgres de verdade — btree_gist). Uso: docker compose up -d postgres
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: andressa
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-andressa:/var/lib/postgresql/data
+
+volumes:
+  pg-andressa: {}

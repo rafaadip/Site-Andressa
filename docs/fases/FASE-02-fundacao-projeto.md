@@ -7,6 +7,9 @@
 
 ---
 
+> **Estado da implementação (25/09/2026):** implementada — Next.js 16, TS estrito, Drizzle, migrations pelo journal (`npm run db:migrate` confere a trava anti-overbooking), CI no GitHub Actions. Sem shadcn/ui ([ADR-006](../adr/ADR-006-integracoes-sem-sdk-e-painel.md)).
+
+
 ## 1. Estrutura de diretórios
 
 ```

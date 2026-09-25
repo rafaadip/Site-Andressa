@@ -6,6 +6,9 @@
 
 ---
 
+> **Estado da implementação (25/09/2026):** implementada — `app/admin/*`, `lib/agendamento/admin.ts`, `lib/auth/*`, `proxy.ts`. Login Google com sessão própria em vez de Auth.js ([ADR-006](../adr/ADR-006-integracoes-sem-sdk-e-painel.md)); semana padrão por faixas de horário (representa exatamente o banco) em vez da grade manhã/tarde/noite. 21 testes de integração + 9 E2E em 375 px.
+
+
 ## 1. Premissa de projeto
 
 O usuário deste painel é **uma médica plantonista** — vai abri-lo no celular, com
@@ -138,19 +141,19 @@ com aviso).
 
 ## 5. Entregáveis
 
-- [ ] Auth.js com allowlist de uma conta + `middleware.ts`
-- [ ] `/admin` (agenda), `/admin/disponibilidade`, `/admin/integracoes`,
+- [x] Auth.js com allowlist de uma conta + `middleware.ts` — sessão HMAC própria + `proxy.ts` (Next 16)
+- [x] `/admin` (agenda), `/admin/disponibilidade`, `/admin/integracoes`,
       `/admin/configuracoes` — todas usáveis com uma mão em 375 px
       ([01-MOBILE-FIRST](../01-MOBILE-FIRST.md))
-- [ ] Server Actions para bloqueio, cancelamento e remarcação
-- [ ] Exportação LGPD (CSV + JSON)
-- [ ] `noindex` em todo o `/admin`
+- [x] Server Actions para bloqueio, cancelamento e remarcação
+- [x] Exportação LGPD (CSV + JSON)
+- [x] `noindex` em todo o `/admin`
 
 ## 6. Critérios de aceite
 
-- [ ] E-mail fora da allowlist não entra, nem com sessão válida do Google
-- [ ] Toda operação do dia a dia é usável em 375 px, com uma mão
-- [ ] Bloquear período com agendamento exige decisão explícita
-- [ ] Cancelar pelo painel notifica o paciente e limpa a agenda do Google
-- [ ] "Bloquear o resto de hoje" leva ≤ 2 toques a partir de `/admin`
-- [ ] `/admin` não aparece no `sitemap.xml` nem é indexável
+- [x] E-mail fora da allowlist não entra, nem com sessão válida do Google
+- [x] Toda operação do dia a dia é usável em 375 px, com uma mão
+- [x] Bloquear período com agendamento exige decisão explícita
+- [x] Cancelar pelo painel notifica o paciente e limpa a agenda do Google
+- [x] "Bloquear o resto de hoje" leva ≤ 2 toques a partir de `/admin` — 1 toque sem consulta no caminho
+- [x] `/admin` não aparece no `sitemap.xml` nem é indexável

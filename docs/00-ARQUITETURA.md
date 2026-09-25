@@ -203,6 +203,14 @@ requisito. Detalhes em [ADR-003](adr/ADR-003-ics-para-o-paciente.md).
 | Testes | **Vitest** + **Playwright** + **axe-core** | Matemática de slots é a parte que mais quebra em silêncio |
 | CI/CD | **GitHub Actions** → **Vercel** | Preview por PR |
 
+> **Atualização de 25/09/2026 (implementação):** Next.js 16; login do painel
+> com sessão própria em vez de Auth.js; Google, Resend e Sentry via `fetch`
+> (sem SDK); sem shadcn/ui e sem Motion; CSP com nonce ⇒ páginas dinâmicas.
+> Justificativas no [ADR-006](adr/ADR-006-integracoes-sem-sdk-e-painel.md).
+> O passo 4 do §8.2 ("INSERT `held`") não foi necessário: a consulta nasce
+> `confirmed` depois da revalidação ao vivo, dentro de uma transação com
+> advisory lock ([ADR-004](adr/ADR-004-antioverbooking.md)).
+
 ### 5.1 Alternativa avaliada e recusada
 
 O protótipo HTML atual traz comentários indicando **FastAPI** como backend futuro.

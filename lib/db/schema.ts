@@ -2,12 +2,12 @@
  * Schema — docs/00-ARQUITETURA.md §6
  *
  * A constraint EXCLUDE USING gist que impede overbooking NÃO é gerada pelo
- * Drizzle; vive numa migration escrita à mão (0002_exclusion.sql).
+ * Drizzle; vive numa migration escrita à mão (0001_exclusion.sql).
  * Ver docs/adr/ADR-004-antioverbooking.md
  */
 import {
   pgTable, uuid, text, integer, smallint, boolean, timestamp, date, time,
-  jsonb, bigserial, index, unique, check,
+  jsonb, bigserial, index, unique, check, primaryKey,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -17,7 +17,27 @@ export const practitioner = pgTable('practitioner', {
   crm: text('crm').notNull(),
   timezone: text('timezone').notNull().default('America/Sao_Paulo'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+
+  // ── Políticas editáveis no /admin/configuracoes (FASE-09 §3.4) ──────────
+  /** Antecedência mínima para agendar, em horas. */
+  leadTimeHours: smallint('lead_time_hours').notNull().default(12),
+  /** Até quantos dias à frente a agenda abre. */
+  horizonDays: smallint('horizon_days').notNull().default(60),
+  /** Até quantas horas antes o paciente cancela sozinho pelo link. */
+  cancelDeadlineHours: smallint('cancel_deadline_hours').notNull().default(24),
+  /** Sala fixa de vídeo (Meet, Zoom…). Sem ela, o link vai por WhatsApp. */
+  telehealthUrl: text('telehealth_url'),
+  /**
+   * O motivo (dado de saúde) vai na descrição do evento do Google?
+   * FASE-05 §4: ela é a controladora e precisa dele para se preparar; com
+   * `false`, o evento leva só o link do painel.
+   */
+  includeNoteInEvent: boolean('include_note_in_event').notNull().default(true),
+}, (t) => [
+  check('lead_time_range', sql`${t.leadTimeHours} between 0 and 168`),
+  check('horizon_range', sql`${t.horizonDays} between 7 and 180`),
+  check('cancel_deadline_range', sql`${t.cancelDeadlineHours} between 0 and 168`),
+]);
 
 export const appointmentType = pgTable('appointment_type', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -92,11 +112,17 @@ export const appointment = pgTable('appointment', {
   consentHealthAt: timestamp('consent_health_at', { withTimezone: true }),
   /** SHA-256(ip + salt): prova de consentimento sem armazenar o IP. */
   consentIpHash: text('consent_ip_hash').notNull(),
+  /** Versão do texto de consentimento aceito (FASE-10 §3.3). */
+  consentVersion: text('consent_version'),
 
   googleEventId: text('google_event_id'),
   syncState: text('sync_state').notNull().default('pending'),
   syncAttempts: smallint('sync_attempts').notNull().default(0),
+  /** Código curto do erro (nunca a mensagem crua: pode carregar PII). */
   syncLastError: text('sync_last_error'),
+  /** Backoff da fila: 1 → 5 → 15 → 60 → 240 min (FASE-05 §6). */
+  syncNextAt: timestamp('sync_next_at', { withTimezone: true }),
+  syncedAt: timestamp('synced_at', { withTimezone: true }),
 
   manageTokenHash: text('manage_token_hash').notNull(),
   icsUid: text('ics_uid').notNull().unique(),
@@ -105,6 +131,16 @@ export const appointment = pgTable('appointment', {
 
   reminderD1At: timestamp('reminder_d1_at', { withTimezone: true }),
   reminderH2At: timestamp('reminder_h2_at', { withTimezone: true }),
+
+  cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+  /** 'patient' (link) · 'practitioner' (painel) · 'calendar' (apagado no Google). */
+  cancelledBy: text('cancelled_by'),
+  /** Recado opcional da médica ao cancelar — vai no e-mail ao paciente. */
+  cancelReason: text('cancel_reason'),
+  /** Hard bounce/reclamação no e-mail (webhook da Resend): avisar por WhatsApp. */
+  emailBouncedAt: timestamp('email_bounced_at', { withTimezone: true }),
+  /** LGPD Art. 18: eliminação anonimiza a linha em vez de apagá-la. */
+  anonymizedAt: timestamp('anonymized_at', { withTimezone: true }),
 
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -118,6 +154,8 @@ export const appointment = pgTable('appointment', {
   check('appointment_order', sql`${t.startsAt} < ${t.endsAt}`),
   check('appointment_visit_inside', sql`${t.visitStartsAt} >= ${t.startsAt} and ${t.visitEndsAt} <= ${t.endsAt}`),
   index('appointment_ip_recente_idx').on(t.consentIpHash, t.createdAt),
+  index('appointment_email_idx').on(t.patientEmail),
+  check('appointment_cancelled_by', sql`${t.cancelledBy} is null or ${t.cancelledBy} in ('patient','practitioner','calendar')`),
 ]);
 
 export const calendarConnection = pgTable('calendar_connection', {
@@ -131,11 +169,60 @@ export const calendarConnection = pgTable('calendar_connection', {
   refreshTokenEnc: text('refresh_token_enc').notNull(),
   syncToken: text('sync_token'),
   channelId: text('channel_id'),
+  /** `resourceId` do canal push: o webhook confere, contra replay (§9). */
+  channelResourceId: text('channel_resource_id'),
   channelExpiresAt: timestamp('channel_expires_at', { withTimezone: true }),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  connectedAt: timestamp('connected_at', { withTimezone: true }).notNull().defaultNow(),
+  lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
+  lastError: text('last_error'),
 }, (t) => [
   unique('calendar_connection_unica').on(t.practitionerId, t.provider, t.calendarId),
   check('provider_google', sql`${t.provider} = 'google'`),
+]);
+
+/**
+ * Cache do FreeBusy, por DIA local. Serve a degradação da ADR-002: se o
+ * Google falhar, o último resultado (até 15 min) continua valendo.
+ * Guarda só intervalos ocupados — nenhum título, nenhum detalhe.
+ */
+export const busyCache = pgTable('busy_cache', {
+  practitionerId: uuid('practitioner_id').notNull().references(() => practitioner.id),
+  day: date('day').notNull(),
+  /** [[inicioISO, fimISO], …] */
+  intervals: jsonb('intervals').$type<[string, string][]>().notNull(),
+  fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  primaryKey({ columns: [t.practitionerId, t.day] }),
+]);
+
+/**
+ * Fila de saída (outbox) de e-mails. A linha nasce na MESMA transação do
+ * fato que a motiva; o envio acontece depois e é reprocessável.
+ * `dedup_key` único: rodar o cron duas vezes nunca duplica e-mail (FASE-08).
+ */
+export const notification = pgTable('notification', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dedupKey: text('dedup_key').notNull().unique(),
+  appointmentId: uuid('appointment_id').references(() => appointment.id),
+  kind: text('kind').notNull(),
+  /** 'patient' | 'practitioner' */
+  recipient: text('recipient').notNull(),
+  status: text('status').notNull().default('pending'),
+  attempts: smallint('attempts').notNull().default(0),
+  nextAt: timestamp('next_at', { withTimezone: true }).notNull().defaultNow(),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  /** Id da Resend — liga o webhook de bounce ao agendamento. */
+  providerId: text('provider_id'),
+  lastError: text('last_error'),
+  /** Dados do e-mail que não moram no agendamento (ex.: alerta ao admin). */
+  meta: jsonb('meta').$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('notification_fila_idx').on(t.status, t.nextAt),
+  index('notification_provider_idx').on(t.providerId),
+  check('notification_status', sql`${t.status} in ('pending','sent','failed','skipped')`),
+  check('notification_recipient', sql`${t.recipient} in ('patient','practitioner')`),
 ]);
 
 export const auditLog = pgTable('audit_log', {
@@ -145,4 +232,7 @@ export const auditLog = pgTable('audit_log', {
   action: text('action').notNull(),
   subjectId: uuid('subject_id'),
   meta: jsonb('meta').notNull().default({}),
-});
+}, (t) => [
+  // Retenção (FASE-10 §3.5) apaga por data.
+  index('audit_log_at_idx').on(t.at),
+]);

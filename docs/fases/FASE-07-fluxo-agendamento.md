@@ -12,6 +12,9 @@
 
 ---
 
+> **Estado da implementação (25/09/2026):** implementada — fluxo em 4 etapas, API, gestão por link. Corrigido em 25/09: numa corrida com a mesma Idempotency-Key, o segundo pedido recebia um link de gestão que não abria. Novo: apagar o motivo pelo link (LGPD) e link da sala de teleconsulta.
+
+
 ## 1. O fluxo
 
 ```

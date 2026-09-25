@@ -14,6 +14,7 @@ export default async function globalSetup() {
   });
   await semear(url);
   const sql = postgres(url, { max: 1, onnotice: () => {} });
+  await sql`DELETE FROM notification`;
   await sql`DELETE FROM audit_log`;
   await sql`DELETE FROM appointment`;
   await sql.end();

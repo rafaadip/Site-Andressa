@@ -17,6 +17,8 @@ export type DiaPublico = { data: string; diaSemana: number; slots: SlotPublico[]
 export type RespostaDisponibilidade = {
   timezone: string;
   hoje: string;
+  /** Até quantos dias à frente a agenda abre (política editável no painel). */
+  horizonteDias: number;
   tipo: TipoConsultaPublico;
   dias: DiaPublico[];
   /** true quando a agenda externa falhou e servimos sem ela (ADR-002). */
@@ -35,6 +37,8 @@ export type AgendamentoConfirmado = {
   urlGestao: string;
   urlIcs: string;
   urlGoogle: string;
+  /** Até quantas horas antes dá para cancelar pelo link (política do painel). */
+  prazoCancelamentoHoras: number;
 };
 
 export type ErroApi = {

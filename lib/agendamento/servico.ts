@@ -3,31 +3,42 @@
  *
  * Os Route Handlers só traduzem HTTP ↔ este módulo. Toda regra vive aqui,
  * onde os testes de integração a exercitam contra Postgres real.
+ *
+ * Efeitos externos (Google, e-mail) NÃO acontecem aqui dentro: o serviço
+ * grava o fato e enfileira as notificações na mesma transação; quem
+ * chama dispara `efeitosDe()` depois de responder (lib/agendamento/efeitos.ts).
  */
-import { and, asc, count, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm';
+import { and, asc, count, eq, gt, gte, inArray, lt, ne, sql } from 'drizzle-orm';
 import { Interval } from 'luxon';
 import { db, schema } from '../db';
-import { calcularDisponibilidade, type Excecao, type RegraSemanal } from '../availability/engine';
+import { calcularDisponibilidade, type Excecao, type Politicas, type RegraSemanal } from '../availability/engine';
 import {
   TZ_CLINICA, dataLocal, formatarParaPaciente, horaLocalParaUtc, somarMinutos, DataInvalidaError,
 } from '../datetime';
 import { chaveDoSlot, codigoPg, reservarSlot, SlotIndisponivelError } from '../db/reservas';
 import { buscarOcupadosExternos } from '../calendar/freebusy';
-import { gerarIcs, linkGoogleCalendar, novoUid, type DadosIcs } from '../calendar/ics';
+import { gerarIcs, linkGoogleCalendar, novoUid } from '../calendar/ics';
 import { hashIp, hashToken, tokenGestaoPara, tokenValido } from '../seguranca';
-import { localConsulta, PROFISSIONAL, type Modalidade } from '../config';
+import { localConsulta, type Modalidade } from '../config';
 import { urlSite } from '../seo';
-import type { CriarAgendamento } from '../validation/agendamento';
+import { VERSAO_CONSENTIMENTO, type CriarAgendamento } from '../validation/agendamento';
+import { enfileirar } from '../notificacoes/fila';
+import { dadosIcs, podeCancelarPeloLink, type Linha, type LinhaProfissional } from './apresentacao';
 import type {
   AgendamentoConfirmado, RespostaDisponibilidade, TipoConsultaPublico,
 } from './tipos';
 
 const { appointment, appointmentType, availabilityRule, availabilityException, practitioner, auditLog } = schema;
 
+export { dadosIcs };
+
 // ── Erros de domínio (os handlers mapeiam para HTTP) ─────────────────────
 
 export class TipoInexistenteError extends Error {
   constructor() { super('Tipo de consulta inexistente.'); this.name = 'TipoInexistenteError'; }
+}
+export class AgendamentoInexistenteError extends Error {
+  constructor() { super('Consulta não encontrada.'); this.name = 'AgendamentoInexistenteError'; }
 }
 export class LimiteExcedidoError extends Error {
   constructor(msg: string) { super(msg); this.name = 'LimiteExcedidoError'; }
@@ -39,8 +50,8 @@ export class IdempotenciaConflitanteError extends Error {
   }
 }
 export class PrazoCancelamentoError extends Error {
-  constructor() {
-    super('Faltam menos de 24 horas para a consulta. Para cancelar, fale pelo WhatsApp.');
+  constructor(horas: number) {
+    super(`Faltam menos de ${horas} horas para a consulta. Para cancelar, fale pelo WhatsApp.`);
     this.name = 'PrazoCancelamentoError';
   }
 }
@@ -48,16 +59,50 @@ export { SlotIndisponivelError };
 
 // ── Políticas ────────────────────────────────────────────────────────────
 
+/**
+ * Limites FIXOS contra abuso. As políticas que a médica ajusta (antecedência,
+ * horizonte, prazo de cancelamento) moram no banco — /admin/configuracoes.
+ */
 export const LIMITES = {
   /** Agendamentos criados por origem (hash de IP) por hora. */
   porIpPorHora: 5,
   /** Consultas futuras confirmadas por e-mail. */
   futurasPorEmail: 3,
-  /** Antecedência mínima para cancelar/remarcar pelo link. */
-  prazoCancelamentoHoras: 24,
   /** Janela máxima de uma consulta de disponibilidade. */
   janelaMaximaDias: 31,
 } as const;
+
+/** Grade de alinhamento dos slots (min). */
+const GRADE_MIN = 5;
+
+/** Prazo de cancelamento se o banco estiver fora do ar (é o padrão da coluna). */
+export const PRAZO_CANCELAMENTO_PADRAO_H = 24;
+
+let prazoCache: { valor: number; ate: number } | null = null;
+
+/**
+ * Prazo de cancelamento para os TEXTOS públicos (FAQ, termos). Nunca
+ * derruba nem trava a home: cache de 60 s e, se o banco não responder em
+ * 800 ms, usa o último valor conhecido (ou o padrão).
+ */
+export async function prazoCancelamentoPublico(): Promise<number> {
+  if (prazoCache && prazoCache.ate > Date.now()) return prazoCache.valor;
+  const reserva = prazoCache?.valor ?? PRAZO_CANCELAMENTO_PADRAO_H;
+  try {
+    const valor = await Promise.race([
+      profissional().then((p) => p.cancelDeadlineHours),
+      new Promise<number>((r) => setTimeout(() => r(-1), 800)),
+    ]);
+    if (valor < 0) return reserva;
+    prazoCache = { valor, ate: Date.now() + 60_000 };
+    return valor;
+  } catch {
+    return reserva;
+  }
+}
+
+/** Só para testes: o prazo muda entre casos. */
+export function _limparCachePrazo() { prazoCache = null; }
 
 // ── Leitura ──────────────────────────────────────────────────────────────
 
@@ -73,6 +118,17 @@ export async function practitionerId(): Promise<string> {
   return p.id;
 }
 
+/** Linha do profissional, com as políticas editáveis (lidas a cada uso). */
+export async function profissional(): Promise<LinhaProfissional> {
+  const pid = await practitionerId();
+  const [p] = await db().select().from(practitioner).where(eq(practitioner.id, pid)).limit(1);
+  return p!;
+}
+
+export function politicasDe(p: LinhaProfissional): Politicas {
+  return { leadTimeHoras: p.leadTimeHours, horizonteDias: p.horizonDays, grade: GRADE_MIN };
+}
+
 export async function listarTipos(): Promise<TipoConsultaPublico[]> {
   const pid = await practitionerId();
   const linhas = await db().select().from(appointmentType)
@@ -83,10 +139,10 @@ export async function listarTipos(): Promise<TipoConsultaPublico[]> {
   }));
 }
 
-async function tipoPorSlug(pid: string, slug: string) {
+async function tipoPorSlug(pid: string, slug: string, soAtivo = true) {
   const [t] = await db().select().from(appointmentType)
     .where(and(eq(appointmentType.practitionerId, pid), eq(appointmentType.slug, slug),
-      eq(appointmentType.isActive, true)))
+      ...(soAtivo ? [eq(appointmentType.isActive, true)] : [])))
     .limit(1);
   if (!t) throw new TipoInexistenteError();
   return t;
@@ -105,10 +161,17 @@ function janelaValida(de: string, ate: string): { inicio: Date; fim: Date } {
 
 export async function disponibilidade(p: {
   tipo: string; de: string; ate: string; agora?: Date;
+  /** Revalidação da criação: ignora o cache do FreeBusy. */
+  aoVivo?: boolean;
+  /** Remarcação pelo painel: a própria consulta não se bloqueia. */
+  ignorarAgendamento?: string;
+  /** Painel: a médica pode encaixar dentro da antecedência mínima. */
+  semAntecedencia?: boolean;
 }): Promise<RespostaDisponibilidade> {
   const agora = p.agora ?? new Date();
-  const pid = await practitionerId();
-  const t = await tipoPorSlug(pid, p.tipo);
+  const prof = await profissional();
+  const pid = prof.id;
+  const t = await tipoPorSlug(pid, p.tipo, !p.ignorarAgendamento);
   const { inicio, fim } = janelaValida(p.de, p.ate);
 
   const [regras, excecoes, ocupados, externos] = await Promise.all([
@@ -119,14 +182,23 @@ export async function disponibilidade(p: {
     db().select({ s: appointment.startsAt, e: appointment.endsAt }).from(appointment).where(and(
       eq(appointment.practitionerId, pid),
       inArray(appointment.status, ['held', 'confirmed']),
-      lt(appointment.startsAt, fim), gt(appointment.endsAt, inicio))),
-    buscarOcupadosExternos(inicio, fim),
+      lt(appointment.startsAt, fim), gt(appointment.endsAt, inicio),
+      ...(p.ignorarAgendamento ? [ne(appointment.id, p.ignorarAgendamento)] : []))),
+    buscarOcupadosExternos(pid, inicio, fim, { aoVivo: p.aoVivo }),
   ]);
+
+  const pol = politicasDe(prof);
+  if (p.semAntecedencia) pol.leadTimeHoras = 0;
+  // Sem informação confiável da agenda externa: só a partir de D+2 (ADR-002).
+  if (externos.antecedenciaMinimaHoras) {
+    pol.leadTimeHoras = Math.max(pol.leadTimeHoras, externos.antecedenciaMinimaHoras);
+  }
 
   const dias = calcularDisponibilidade({
     de: p.de,
     ate: p.ate,
     agora,
+    politicas: pol,
     tipo: {
       slug: t.slug, duracaoMin: t.durationMin, bufferAntesMin: t.bufferBeforeMin,
       bufferDepoisMin: t.bufferAfterMin, modalidade: t.locationKind as Modalidade,
@@ -148,6 +220,7 @@ export async function disponibilidade(p: {
   return {
     timezone: TZ_CLINICA,
     hoje: dataLocal(agora),
+    horizonteDias: pol.horizonteDias,
     tipo: { slug: t.slug, label: t.label, duracaoMin: t.durationMin, modalidade: t.locationKind as Modalidade },
     dias: dias.map((d) => ({
       data: d.data,
@@ -160,9 +233,7 @@ export async function disponibilidade(p: {
 
 // ── Criação ──────────────────────────────────────────────────────────────
 
-type Linha = typeof appointment.$inferSelect;
-
-function paraConfirmado(ag: Linha, tipoLabel: string, modalidade: Modalidade, token: string): AgendamentoConfirmado {
+function paraConfirmado(ag: Linha, tipoLabel: string, modalidade: Modalidade, token: string, prazoCancelamentoHoras: number): AgendamentoConfirmado {
   const base = urlSite();
   const dados = dadosIcs(ag, tipoLabel, modalidade, `${base}/consulta/${token}`);
   return {
@@ -176,21 +247,7 @@ function paraConfirmado(ag: Linha, tipoLabel: string, modalidade: Modalidade, to
     urlGestao: `${base}/consulta/${token}`,
     urlIcs: `${base}/api/ics?t=${token}`,
     urlGoogle: linkGoogleCalendar(dados),
-  };
-}
-
-export function dadosIcs(ag: Linha, tipoLabel: string, modalidade: Modalidade, urlGestao?: string): DadosIcs {
-  return {
-    uid: ag.icsUid,
-    sequence: ag.icsSequence,
-    inicio: ag.visitStartsAt,
-    fim: ag.visitEndsAt,
-    tipoLabel,
-    modalidade,
-    pacienteNome: ag.patientName,
-    pacienteEmail: ag.patientEmail,
-    organizadorEmail: PROFISSIONAL.email,
-    urlGestao,
+    prazoCancelamentoHoras,
   };
 }
 
@@ -200,8 +257,9 @@ export type ResultadoCriacao = { agendamento: AgendamentoConfirmado; repetido: b
  * Cria um agendamento confirmado.
  *
  * Ordem (docs/00-ARQUITETURA.md §8.2):
- *   idempotência → limites → o horário é REALMENTE ofertado? →
- *   transação { advisory lock → INSERT (exclusion constraint) → auditoria }
+ *   idempotência → limites → o horário é REALMENTE ofertado (FreeBusy ao
+ *   vivo)? → transação { advisory lock → recheck → INSERT (exclusion
+ *   constraint) → auditoria → fila de e-mails }
  *
  * A sincronização com o Google fica `pending`: se a integração falhar ou
  * ainda não existir, a consulta continua marcada (ADR-002).
@@ -211,20 +269,30 @@ export async function criarAgendamento(
   ctx: { ip: string; idempotencyKey: string; agora?: Date },
 ): Promise<ResultadoCriacao> {
   const agora = ctx.agora ?? new Date();
-  const pid = await practitionerId();
+  const prof = await profissional();
+  const pid = prof.id;
   const t = await tipoPorSlug(pid, entrada.tipo);
   const modalidade = t.locationKind as Modalidade;
   const paciente = entrada.paciente;
 
-  // 1. Idempotência: a mesma chave devolve o MESMO agendamento.
-  const repetido = await buscarPorIdempotencia(ctx.idempotencyKey);
-  if (repetido) {
-    const mesmoPedido = repetido.patientEmail === paciente.email
-      && repetido.visitStartsAt.toISOString() === new Date(entrada.inicio).toISOString();
+  /**
+   * A mesma chave devolve o MESMO agendamento — e o MESMO link. O token é
+   * recomputado a partir da linha que EXISTE no banco (id + chave), nunca
+   * de um id gerado nesta requisição: o perdedor de uma corrida com a
+   * mesma chave recebia um link que não abria nada.
+   */
+  const devolverExistente = (linha: Linha): ResultadoCriacao => {
+    const mesmoPedido = linha.patientEmail === paciente.email
+      && linha.typeId === t.id
+      && linha.visitStartsAt.toISOString() === new Date(entrada.inicio).toISOString();
     if (!mesmoPedido) throw new IdempotenciaConflitanteError();
-    const token = tokenGestaoPara(repetido.id, ctx.idempotencyKey);
-    return { agendamento: paraConfirmado(repetido, t.label, modalidade, token), repetido: true };
-  }
+    const token = tokenGestaoPara(linha.id, ctx.idempotencyKey);
+    return { agendamento: paraConfirmado(linha, t.label, modalidade, token, prof.cancelDeadlineHours), repetido: true };
+  };
+
+  // 1. Idempotência (caminho rápido, sem lock).
+  const repetido = await buscarPorIdempotencia(ctx.idempotencyKey);
+  if (repetido) return devolverExistente(repetido);
 
   // 2. Limites contra abuso.
   const ipHash = hashIp(ctx.ip);
@@ -243,11 +311,12 @@ export async function criarAgendamento(
       `Você já tem ${LIMITES.futurasPorEmail} consultas marcadas. Para marcar outra, fale pelo WhatsApp.`);
   }
 
-  // 3. O horário pedido é um dos OFERTADOS agora? (impede reservar
-  //    fora do expediente mandando um POST à mão)
+  // 3. O horário pedido é um dos OFERTADOS agora — contra a agenda real,
+  //    ao vivo? (impede reservar fora do expediente com um POST à mão, e
+  //    pega o plantão que ela acabou de marcar no celular)
   const inicioClinico = new Date(entrada.inicio);
   const data = dataLocal(inicioClinico);
-  const disp = await disponibilidade({ tipo: t.slug, de: data, ate: data, agora });
+  const disp = await disponibilidade({ tipo: t.slug, de: data, ate: data, agora, aoVivo: true });
   const ofertado = disp.dias.some((d) => d.slots.some((s) => s.inicio === inicioClinico.toISOString()));
   if (!ofertado) throw new SlotIndisponivelError();
 
@@ -261,7 +330,8 @@ export async function criarAgendamento(
   const token = tokenGestaoPara(id, ctx.idempotencyKey);
 
   let criado: Linha;
-  let jaExistia = false;
+  // `as`: atribuída dentro do callback da transação — sem isso o TS estreita para `null`.
+  let existente = null as Linha | null;
   try {
     criado = await reservarSlot(() => db().transaction(async (tx) => {
       // Enfileira concorrentes do MESMO horário (ADR-004): 7s → 116ms.
@@ -273,9 +343,9 @@ export async function criarAgendamento(
       // senão esbarra na exclusion constraint e recebe "horário ocupado"
       // pela própria consulta. Em READ COMMITTED, este SELECT já enxerga o
       // commit que liberou o lock.
-      const [existente] = await tx.select().from(appointment)
+      const [ja] = await tx.select().from(appointment)
         .where(eq(appointment.idempotencyKey, ctx.idempotencyKey)).limit(1);
-      if (existente) { jaExistia = true; return existente; }
+      if (ja) { existente = ja; return ja; }
 
       const [linha] = await tx.insert(appointment).values({
         id,
@@ -293,6 +363,7 @@ export async function criarAgendamento(
         consentLgpdAt: agora,
         consentHealthAt: paciente.motivo ? agora : null,
         consentIpHash: ipHash,
+        consentVersion: VERSAO_CONSENTIMENTO,
         manageTokenHash: hashToken(token),   // só o hash vai para o banco
         icsUid: novoUid(),
         icsSequence: 0,
@@ -303,8 +374,10 @@ export async function criarAgendamento(
 
       await tx.insert(auditLog).values({
         actor: 'patient', action: 'appointment.created', subjectId: linha.id,
-        meta: { tipo: t.slug, comMotivo: Boolean(paciente.motivo) },   // nunca o motivo em si
+        meta: { tipo: t.slug, comMotivo: Boolean(paciente.motivo), consentimento: VERSAO_CONSENTIMENTO },   // nunca o motivo em si
       });
+      await enfileirar(tx, { tipo: 'confirmacao', chave: linha.id, appointmentId: linha.id });
+      await enfileirar(tx, { tipo: 'nova_consulta', chave: linha.id, appointmentId: linha.id });
       return linha;
     }));
   } catch (e) {
@@ -315,7 +388,8 @@ export async function criarAgendamento(
     throw e;
   }
 
-  return { agendamento: paraConfirmado(criado, t.label, modalidade, token), repetido: jaExistia };
+  if (existente) return devolverExistente(existente);
+  return { agendamento: paraConfirmado(criado, t.label, modalidade, token, prof.cancelDeadlineHours), repetido: false };
 }
 
 async function buscarPorIdempotencia(chave: string) {
@@ -333,50 +407,88 @@ export type AgendamentoGestao = {
   quando: string;
   local: string;
   podeCancelar: boolean;
+  prazoCancelamentoHoras: number;
+  telehealthUrl: string | null;
 };
 
 export async function buscarPorToken(token: string, agora = new Date()): Promise<AgendamentoGestao | null> {
   if (!tokenValido(token)) return null;
-  const [r] = await db().select({ a: appointment, label: appointmentType.label, kind: appointmentType.locationKind })
+  const [r] = await db().select({ a: appointment, label: appointmentType.label, kind: appointmentType.locationKind, prof: practitioner })
     .from(appointment)
     .innerJoin(appointmentType, eq(appointment.typeId, appointmentType.id))
+    .innerJoin(practitioner, eq(appointment.practitionerId, practitioner.id))
     .where(eq(appointment.manageTokenHash, hashToken(token)))
     .limit(1);
-  if (!r) return null;
+  if (!r || r.a.anonymizedAt) return null;
 
   const modalidade = r.kind as Modalidade;
-  const horasAte = (r.a.visitStartsAt.getTime() - agora.getTime()) / 3_600_000;
   return {
     linha: r.a,
     tipoLabel: r.label,
     modalidade,
     quando: formatarParaPaciente(r.a.visitStartsAt),
     local: localConsulta(modalidade),
-    podeCancelar: r.a.status === 'confirmed' && horasAte >= LIMITES.prazoCancelamentoHoras,
+    podeCancelar: podeCancelarPeloLink(r.a, r.prof.cancelDeadlineHours, agora),
+    prazoCancelamentoHoras: r.prof.cancelDeadlineHours,
+    telehealthUrl: modalidade === 'telehealth' ? r.prof.telehealthUrl : null,
   };
 }
 
 export async function cancelarPorToken(token: string, agora = new Date()): Promise<AgendamentoGestao> {
   const atual = await buscarPorToken(token, agora);
-  if (!atual) throw new TipoInexistenteError();
+  if (!atual) throw new AgendamentoInexistenteError();
   if (atual.linha.status === 'cancelled') return atual;       // idempotente
-  if (!atual.podeCancelar) throw new PrazoCancelamentoError();
+  if (!atual.podeCancelar) throw new PrazoCancelamentoError(atual.prazoCancelamentoHoras);
 
   await db().transaction(async (tx) => {
-    await tx.update(appointment).set({
+    const feitos = await tx.update(appointment).set({
       status: 'cancelled',
+      cancelledAt: agora,
+      cancelledBy: 'patient',
       // RFC 5545: sem incrementar, o iPhone IGNORA o cancelamento.
       icsSequence: sql`${appointment.icsSequence} + 1`,
-      syncState: 'pending',             // FASE-05 remove o evento do Google
+      syncState: 'pending',             // o evento sai da agenda do Google
+      syncAttempts: 0,
+      syncNextAt: null,
       updatedAt: agora,
-    }).where(and(eq(appointment.id, atual.linha.id), eq(appointment.status, 'confirmed')));
+    }).where(and(eq(appointment.id, atual.linha.id), eq(appointment.status, 'confirmed')))
+      .returning({ id: appointment.id });
+    // Dois cliques simultâneos: só quem de fato cancelou audita e avisa.
+    if (feitos.length === 0) return;
 
     await tx.insert(auditLog).values({
       actor: 'patient', action: 'appointment.cancelled', subjectId: atual.linha.id, meta: {},
     });
+    await enfileirar(tx, { tipo: 'cancelamento', chave: atual.linha.id, appointmentId: atual.linha.id });
+    await enfileirar(tx, { tipo: 'cancelamento_medica', chave: atual.linha.id, appointmentId: atual.linha.id });
   });
 
   return (await buscarPorToken(token, agora))!;
+}
+
+/**
+ * LGPD Art. 8º §5º: revogar o consentimento de saúde apaga o motivo NA
+ * HORA. O evento do Google é reescrito sem ele (sync volta a `pending`).
+ */
+export async function revogarMotivoPorToken(token: string): Promise<AgendamentoGestao> {
+  const atual = await buscarPorToken(token);
+  if (!atual) throw new AgendamentoInexistenteError();
+  if (!atual.linha.patientNote) return atual;
+
+  await db().transaction(async (tx) => {
+    await tx.update(appointment).set({
+      patientNote: null,
+      consentHealthAt: null,
+      syncState: atual.linha.status === 'confirmed' ? 'pending' : atual.linha.syncState,
+      syncAttempts: 0,
+      syncNextAt: null,
+      updatedAt: new Date(),
+    }).where(eq(appointment.id, atual.linha.id));
+    await tx.insert(auditLog).values({
+      actor: 'patient', action: 'data.health_note_revoked', subjectId: atual.linha.id, meta: {},
+    });
+  });
+  return (await buscarPorToken(token))!;
 }
 
 /** .ics do agendamento: REQUEST se ativo, CANCEL se cancelado. */

@@ -9,19 +9,21 @@ import { Contato } from '@/components/site/Contato';
 import { BarraAgendarMobile } from '@/components/site/BarraAgendarMobile';
 import { JsonLd } from '@/components/site/JsonLd';
 import { jsonLdProfissional, jsonLdFaq } from '@/lib/seo';
+import { prazoCancelamentoPublico } from '@/lib/agendamento/servico';
 
-export default function Home() {
+export default async function Home() {
+  const prazo = await prazoCancelamentoPublico();
   return (
     <>
       <JsonLd dados={jsonLdProfissional()} />
-      <JsonLd dados={jsonLdFaq()} />
+      <JsonLd dados={jsonLdFaq(prazo)} />
       <Hero />
       <Credenciais />
       <Sobre />
       <Atendimento />
       <Nutrologia />
       <ComoAgendar />
-      <Faq />
+      <Faq prazoCancelamentoHoras={prazo} />
       <Contato />
       <BarraAgendarMobile />
     </>

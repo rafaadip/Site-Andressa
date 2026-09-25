@@ -11,6 +11,9 @@
 
 ---
 
+> **Estado da implementação (25/09/2026):** implementada — consentimento duplo com versão gravada, retenção diária (`lib/lgpd/retencao.ts`), exportação/anonimização no painel, revogação do motivo pelo link do paciente, [RIPD](../RIPD.md) para assinatura. Falta a revisão jurídica.
+
+
 ## 1. O ponto mais sensível: título profissional
 
 ### O problema
@@ -177,22 +180,22 @@ não é apenas boa prática técnica.
 
 ## 5. Entregáveis
 
-- [ ] `lib/config.ts` como fonte única de título e registro
-- [ ] `/politica-de-privacidade` e `/termos-de-uso`
-- [ ] Duplo consentimento no formulário, com registro auditável
-- [ ] `/api/cron/retencao` com log de auditoria
-- [ ] Exportação e anonimização no `/admin`
-- [ ] Teste de build que barra "especialista"/"nutróloga"/"RQE" fora do config
-- [ ] RIPD (Relatório de Impacto) em `docs/RIPD.md` — exigível pela ANPD
+- [x] `lib/config.ts` como fonte única de título e registro
+- [x] `/politica-de-privacidade` e `/termos-de-uso`
+- [x] Duplo consentimento no formulário, com registro auditável
+- [x] `/api/cron/retencao` com log de auditoria
+- [x] Exportação e anonimização no `/admin`
+- [x] Teste de build que barra "especialista"/"nutróloga"/"RQE" fora do config
+- [x] RIPD (Relatório de Impacto) em `docs/RIPD.md` — exigível pela ANPD — rascunho completo, aguardando assinatura
 
 ## 6. Critérios de aceite
 
-- [ ] Nenhuma menção a "especialista" ou "nutróloga" no site
-- [ ] Nome e CRM em todas as páginas públicas
-- [ ] Nenhum preço, depoimento ou antes/depois
-- [ ] Consentimentos desmarcados por padrão e registrados com data/hora
-- [ ] Motivo da consulta apagado automaticamente após 90 dias (teste com relógio
+- [x] Nenhuma menção a "especialista" ou "nutróloga" no site
+- [x] Nome e CRM em todas as páginas públicas
+- [x] Nenhum preço, depoimento ou antes/depois
+- [x] Consentimentos desmarcados por padrão e registrados com data/hora
+- [x] Motivo da consulta apagado automaticamente após 90 dias (teste com relógio
       adiantado)
-- [ ] Política nomeia todos os operadores e a transferência internacional
-- [ ] Nenhum cookie não essencial (verificado com DevTools em janela limpa)
-- [ ] Revisão jurídica registrada antes do go-live
+- [x] Política nomeia todos os operadores e a transferência internacional
+- [x] Nenhum cookie não essencial (verificado com DevTools em janela limpa) — E2E: o paciente termina o agendamento sem cookie nenhum
+- [ ] Revisão jurídica registrada antes do go-live — *pendente — não é código*

@@ -10,7 +10,7 @@
  *    Nunca endereço aproximado — engana o paciente e quebra o NAP.
  */
 import { PROFISSIONAL } from './config';
-import { FAQ } from './content/site';
+import { perguntasFrequentes } from './content/site';
 
 export function urlSite(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000').replace(/\/$/, '');
@@ -51,11 +51,11 @@ export function jsonLdProfissional() {
   };
 }
 
-export function jsonLdFaq() {
+export function jsonLdFaq(prazoCancelamentoHoras: number) {
   return {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: FAQ.map((f) => ({
+    mainEntity: perguntasFrequentes(prazoCancelamentoHoras).map((f) => ({
       '@type': 'Question',
       name: f.pergunta,
       acceptedAnswer: { '@type': 'Answer', text: f.resposta },
