@@ -11,7 +11,7 @@
 import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, lt, sql } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
 import { db, schema } from '../db';
-import { dataLocal, horaLocalParaUtc, somarDiasLocal, somarMinutos, formatarParaPaciente } from '../datetime';
+import { dataLocal, fimDoDiaLocal, horaLocalParaUtc, somarDiasLocal, somarMinutos, formatarParaPaciente } from '../datetime';
 import { codigoPg, PG_EXCLUSION_VIOLATION, SlotIndisponivelError } from '../db/reservas';
 import { hashToken } from '../seguranca';
 import { enfileirar } from '../notificacoes/fila';
@@ -59,14 +59,15 @@ const colunasItem = { ag: appointment, label: appointmentType.label, kind: appoi
 /** Consultas ativas de hoje (inclusive as que já passaram) até `dias` à frente. */
 export async function agenda(dias = 30, agora = new Date()): Promise<ItemAgenda[]> {
   const pid = await practitionerId();
-  const inicio = horaLocalParaUtc(dataLocal(agora), '00:00');
+  const hoje = dataLocal(agora);
+  const inicio = horaLocalParaUtc(hoje, '00:00');
   const linhas = await db().select(colunasItem).from(appointment)
     .innerJoin(appointmentType, eq(appointment.typeId, appointmentType.id))
     .where(and(
       eq(appointment.practitionerId, pid),
       inArray(appointment.status, ['confirmed', 'no_show']),
       gte(appointment.visitStartsAt, inicio),
-      lt(appointment.visitStartsAt, somarMinutos(inicio, (dias + 1) * 24 * 60)),
+      lt(appointment.visitStartsAt, fimDoDiaLocal(somarDiasLocal(hoje, dias))),
     ))
     .orderBy(asc(appointment.visitStartsAt));
   return linhas.map(paraItem);

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   horaLocalParaUtc, dataLocal, horaLocal, diaDaSemana,
-  diasNoIntervalo, emUtcCompacto, emLocalCompacto, DataInvalidaError, alinharAGrade,
+  diasNoIntervalo, emUtcCompacto, emLocalCompacto, DataInvalidaError, alinharAGrade, fimDoDiaLocal,
 } from '@/lib/datetime';
 
 describe('horaLocalParaUtc', () => {
@@ -47,6 +47,24 @@ describe('horário de verão', () => {
     expect(depois.toISOString()).toBe('2026-11-02T14:00:00.000Z'); // EST, UTC-5
     expect(horaLocal(antes, 'America/New_York')).toBe('09:00');
     expect(horaLocal(depois, 'America/New_York')).toBe('09:00');
+  });
+});
+
+describe('fimDoDiaLocal', () => {
+  const horas = (dia: string) =>
+    (fimDoDiaLocal(dia).getTime() - horaLocalParaUtc(dia, '00:00').getTime()) / 3_600_000;
+
+  it('dia comum: 24 h, termina à meia-noite local', () => {
+    expect(fimDoDiaLocal('2026-09-15').toISOString()).toBe('2026-09-16T03:00:00.000Z');
+    expect(horas('2026-09-15')).toBe(24);
+  });
+
+  it('dia de horário de verão tem 23 ou 25 h — "início + 24 h" erraria por 1 h', () => {
+    // São Paulo: DST começou em 04/11/2018 e terminou em 16/02/2019.
+    expect(horas('2018-11-04')).toBe(23);
+    expect(horas('2019-02-16')).toBe(25);
+    expect(horaLocal(fimDoDiaLocal('2019-02-16'))).toBe('00:00');
+    expect(dataLocal(fimDoDiaLocal('2019-02-16'))).toBe('2019-02-17');
   });
 });
 

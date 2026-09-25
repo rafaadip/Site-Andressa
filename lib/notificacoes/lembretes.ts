@@ -7,7 +7,7 @@
  */
 import { and, eq, gte, isNull, lt } from 'drizzle-orm';
 import { db, schema } from '../db';
-import { dataLocal, horaLocalParaUtc, somarMinutos } from '../datetime';
+import { dataLocal, fimDoDiaLocal, horaLocalParaUtc, somarDiasLocal, somarMinutos } from '../datetime';
 import { enfileirar, processarFila } from './fila';
 
 const { appointment } = schema;
@@ -22,9 +22,9 @@ async function enfileirarTodos(tipo: 'lembrete_d1' | 'lembrete_h2', ids: { id: s
 
 /** Consultas de AMANHÃ (dia local da clínica). */
 export async function lembretesD1(agora = new Date()) {
-  const amanha = dataLocal(somarMinutos(horaLocalParaUtc(dataLocal(agora), '12:00'), 24 * 60));
+  const amanha = somarDiasLocal(dataLocal(agora), 1);
   const inicio = horaLocalParaUtc(amanha, '00:00');
-  const fim = somarMinutos(inicio, 24 * 60);
+  const fim = fimDoDiaLocal(amanha);   // 23 ou 25 h em dia de horário de verão
   const alvos = await db().select({ id: appointment.id }).from(appointment).where(and(
     eq(appointment.status, 'confirmed'),
     gte(appointment.visitStartsAt, inicio), lt(appointment.visitStartsAt, fim),

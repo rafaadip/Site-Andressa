@@ -149,6 +149,16 @@ d('e-mails e lembretes (FASE-08)', () => {
       expect(l!.reminder_d1_at).not.toBeNull();
     });
 
+    it('D-1 em dia de 25 h (fim do horário de verão): a consulta das 23:30 também é lembrada', async () => {
+      // 16/02/2019 em São Paulo teve 25 h: "00:00 + 24 h" terminava às 23:00 locais.
+      const { id } = await inserirConsulta(sql(), {
+        inicio: horaLocalParaUtc('2019-02-16', '23:30'), email: 'dst@exemplo.com', criadaEm: new Date('2019-01-01T12:00:00Z'),
+      });
+      const r = await lembretesD1(horaLocalParaUtc('2019-02-15', '18:00'));
+      expect(r.enfileirados).toBe(1);
+      expect(await sql()`SELECT 1 FROM notification WHERE appointment_id = ${id} AND kind = 'lembrete_d1'`).toHaveLength(1);
+    });
+
     it('D-1: nada para consulta cancelada, nem para quem acabou de agendar', async () => {
       await inserirConsulta(sql(), { inicio: amanhaAs10(), email: 'cancelada@exemplo.com', criadaEm: ontem(), status: 'cancelled' });
       await inserirConsulta(sql(), { inicio: somarMinutos(amanhaAs10(), 60), email: 'recente@exemplo.com' });

@@ -87,6 +87,15 @@ export function somarDiasLocal(data: string, n: number, zona: string = TZ_CLINIC
   return dt.plus({ days: n }).toISODate()!;
 }
 
+/**
+ * Fim do dia local `data` (= 00:00 do dia seguinte), como instante UTC.
+ * Dia com horário de verão tem 23 ou 25 h: `início + 24 h` erra por uma
+ * hora exatamente na virada — usar SEMPRE isto para janelas de dia local.
+ */
+export function fimDoDiaLocal(data: string, zona: string = TZ_CLINICA): Date {
+  return horaLocalParaUtc(somarDiasLocal(data, 1, zona), '00:00', zona);
+}
+
 /** Formato compacto UTC do RFC 5545: 20260915T170000Z */
 export function emUtcCompacto(instante: Date): string {
   return DateTime.fromJSDate(instante).toUTC().toFormat("yyyyLLdd'T'HHmmss'Z'");
