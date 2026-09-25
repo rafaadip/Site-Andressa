@@ -35,8 +35,9 @@ export async function aplicarRetencao(agora = new Date()) {
       .set({
         patientName: 'Titular removido', patientEmail: '', patientPhone: '', patientNote: null,
         consentHealthAt: null, anonymizedAt: agora, updatedAt: agora,
-        // O link de gestão deixa de abrir qualquer coisa.
-        manageTokenHash: sql`encode(sha256(gen_random_bytes(32)), 'hex')`,
+        // O link de gestão deixa de abrir: nenhum SHA-256 (64 hex) é igual a
+        // este valor. Sem depender de pgcrypto no search_path do Supabase.
+        manageTokenHash: sql`'anonimizado:' || ${appointment.id}`,
       })
       .where(and(isNull(appointment.anonymizedAt), lt(appointment.visitStartsAt, dias(agora, RETENCAO.contatoAnos * 365))))
       .returning({ id: appointment.id });

@@ -78,17 +78,31 @@ const GRADE_MIN = 5;
 /** Prazo de cancelamento se o banco estiver fora do ar (é o padrão da coluna). */
 export const PRAZO_CANCELAMENTO_PADRAO_H = 24;
 
+let prazoCache: { valor: number; ate: number } | null = null;
+
 /**
  * Prazo de cancelamento para os TEXTOS públicos (FAQ, termos). Nunca
- * derruba a página: sem banco, usa o padrão.
+ * derruba nem trava a home: cache de 60 s e, se o banco não responder em
+ * 800 ms, usa o último valor conhecido (ou o padrão).
  */
 export async function prazoCancelamentoPublico(): Promise<number> {
+  if (prazoCache && prazoCache.ate > Date.now()) return prazoCache.valor;
+  const reserva = prazoCache?.valor ?? PRAZO_CANCELAMENTO_PADRAO_H;
   try {
-    return (await profissional()).cancelDeadlineHours;
+    const valor = await Promise.race([
+      profissional().then((p) => p.cancelDeadlineHours),
+      new Promise<number>((r) => setTimeout(() => r(-1), 800)),
+    ]);
+    if (valor < 0) return reserva;
+    prazoCache = { valor, ate: Date.now() + 60_000 };
+    return valor;
   } catch {
-    return PRAZO_CANCELAMENTO_PADRAO_H;
+    return reserva;
   }
 }
+
+/** Só para testes: o prazo muda entre casos. */
+export function _limparCachePrazo() { prazoCache = null; }
 
 // ── Leitura ──────────────────────────────────────────────────────────────
 

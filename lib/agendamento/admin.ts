@@ -18,7 +18,7 @@ import { enfileirar } from '../notificacoes/fila';
 import { conexaoAtiva, ultimaConexao } from '../calendar/conexao';
 import { emailConfigurado, googleConfigurado } from '../env';
 import type { Modalidade } from '../config';
-import { disponibilidade, practitionerId } from './servico';
+import { _limparCachePrazo, disponibilidade, practitionerId } from './servico';
 import type { Linha } from './apresentacao';
 
 const { appointment, appointmentType, availabilityRule, availabilityException, practitioner, auditLog, notification } = schema;
@@ -327,6 +327,7 @@ export async function atualizarPoliticas(p: Politicas) {
   if (url && !/^https:\/\/[^\s]+$/.test(url)) throw new OperacaoInvalidaError('O link da teleconsulta precisa começar com https://');
   const pid = await practitionerId();
   await db().update(practitioner).set({ ...p, telehealthUrl: url }).where(eq(practitioner.id, pid));
+  _limparCachePrazo();          // textos públicos refletem na hora (nesta instância)
   await db().insert(auditLog).values({ actor: 'practitioner', action: 'settings.policies_updated', meta: {} });
 }
 

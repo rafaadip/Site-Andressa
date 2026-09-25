@@ -19,6 +19,8 @@ export function sqlCliente(): postgres.Sql {
     max: 5,
     prepare: false,
     idle_timeout: 20,
+    // Banco inacessível não pode pendurar a função por 30 s (padrão).
+    connect_timeout: 10,
     onnotice: () => {},
   });
   return global_.__sql;
