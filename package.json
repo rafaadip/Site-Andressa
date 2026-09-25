@@ -21,7 +21,9 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
     "verify": "npm run typecheck && npm run lint && npm run check:contrast && npm run check:conformidade && npm run test",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:carga": "tsx tests/nao-funcional/carga.ts",
+    "test:resiliencia": "tsx tests/nao-funcional/resiliencia.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",

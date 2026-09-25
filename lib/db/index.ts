@@ -19,8 +19,9 @@ export function sqlCliente(): postgres.Sql {
     max: 5,
     prepare: false,
     idle_timeout: 20,
-    // Banco inacessível não pode pendurar a função por 30 s (padrão).
-    connect_timeout: 10,
+    // Banco inacessível não pode pendurar a função por 30 s (padrão). O
+    // pooler do Supabase conecta em ~100–300 ms; 5 s é folga larga.
+    connect_timeout: 5,
     onnotice: () => {},
   });
   return global_.__sql;

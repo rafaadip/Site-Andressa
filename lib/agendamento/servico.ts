@@ -21,6 +21,7 @@ import { gerarIcs, linkGoogleCalendar, novoUid } from '../calendar/ics';
 import { hashIp, hashToken, tokenGestaoPara, tokenValido } from '../seguranca';
 import { localConsulta, type Modalidade } from '../config';
 import { urlSite } from '../seo';
+import { comLimiteDeTempo, ESGOTOU } from '../limite-tempo';
 import { VERSAO_CONSENTIMENTO, type CriarAgendamento } from '../validation/agendamento';
 import { enfileirar } from '../notificacoes/fila';
 import { dadosIcs, podeCancelarPeloLink, type Linha, type LinhaProfissional } from './apresentacao';
@@ -89,11 +90,8 @@ export async function prazoCancelamentoPublico(): Promise<number> {
   if (prazoCache && prazoCache.ate > Date.now()) return prazoCache.valor;
   const reserva = prazoCache?.valor ?? PRAZO_CANCELAMENTO_PADRAO_H;
   try {
-    const valor = await Promise.race([
-      profissional().then((p) => p.cancelDeadlineHours),
-      new Promise<number>((r) => setTimeout(() => r(-1), 800)),
-    ]);
-    if (valor < 0) return reserva;
+    const valor = await comLimiteDeTempo(profissional().then((p) => p.cancelDeadlineHours), 800);
+    if (valor === ESGOTOU) return reserva;
     prazoCache = { valor, ate: Date.now() + 60_000 };
     return valor;
   } catch {
