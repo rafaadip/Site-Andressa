@@ -40,7 +40,8 @@ async function agendarLonge(
   const disp = await (await request.get(`/api/disponibilidade?tipo=${TIPO}&de=${de}&ate=${ate}`)).json();
   const slots = disp.dias.flatMap((d: { slots: { inicio: string }[] }) => d.slots) as { inicio: string }[];
   const inicio = slots[slots.length - 1 - deslocamento]!.inicio;
-  const nome = `Paciente UX ${randomUUID().slice(0, 5)}`;
+  // Só letras: nome com dígito é recusado (SEC-05).
+  const nome = `Paciente Ux ${randomUUID().slice(0, 5).replace(/\d/g, (d) => 'ghijklmnop'[Number(d)]!)}`;
   const r = await request.post('/api/agendamentos', {
     headers: { 'Idempotency-Key': randomUUID(), 'x-forwarded-for': ip() },
     data: {
@@ -96,7 +97,9 @@ test.describe('agendamento (precisa de banco)', () => {
 
   test('UX-01: erro de modalidade fica visível ao tocar Continuar sem escolher', async ({ page }) => {
     await page.goto('/agendar');
-    await page.getByRole('button', { name: /Continuar/ }).click();
+    // `aria-disabled` (não `disabled`): continua tocável de propósito, para
+    // explicar o que falta. O Playwright só clica nele com `force`.
+    await page.getByRole('button', { name: /Continuar/ }).click({ force: true });
     await expect(page.locator('#erro-modalidade')).toBeInViewport();
   });
 

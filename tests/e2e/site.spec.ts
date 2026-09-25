@@ -206,10 +206,16 @@ test.describe('segurança e operação (FASE-13)', () => {
     expect([...new Set(externos)]).toEqual([]);
   });
 
-  test('métodos de diagnóstico (TRACE) são recusados com 405, sem erro 500 (pentest PT-04)', async ({ request }) => {
-    for (const caminho of ['/', '/agendar', '/admin/entrar']) {
-      const r = await request.fetch(caminho, { method: 'TRACE' });
-      expect(r.status()).toBe(405);
+  test('TRACE/TRACK recusados sem eco da requisição nem stack (pentest PT-04)', async ({ request }) => {
+    // O fetch do Node (undici) recusa TRACE antes do proxy.ts: o Next responde
+    // 500 genérico, sem refletir cabeçalhos (sem XST) e sem stack. Na Vercel a
+    // borda responde antes. Ver docs/SEGURANCA.md.
+    for (const metodo of ['TRACE', 'TRACK']) {
+      const r = await request.fetch('/', { method: metodo, headers: { 'X-Eco': 'segredo-refletido' } });
+      expect(r.status()).toBeGreaterThanOrEqual(400);
+      const corpo = await r.text();
+      expect(corpo).not.toContain('segredo-refletido');
+      expect(corpo).not.toMatch(/TypeError|\n\s+at /);
     }
   });
 

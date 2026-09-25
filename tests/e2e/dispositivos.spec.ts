@@ -86,7 +86,10 @@ for (const a of APARELHOS) {
       await page.goto('/agendar');
       await tocar(page, page.getByRole('radio', { name: /Consulta presencial/ }));
       await tocar(page, page.getByRole('button', { name: /Continuar/ }));
-      const slot = page.locator('[aria-labelledby="rotulo-horarios"] [role="radio"]').first();
+      // Um dia do MEIO da janela e o último horário dele: os outros specs,
+      // em paralelo, disputam os primeiros dias e o fim da janela.
+      await tocar(page, page.getByRole('radiogroup', { name: 'Dia da consulta' }).getByRole('radio', { disabled: false }).nth(4));
+      const slot = page.locator('[aria-labelledby="rotulo-horarios"] [role="radio"]').last();
       await expect(slot).toBeVisible();
       await semRolagemHorizontal(page);
       await tocar(page, slot);

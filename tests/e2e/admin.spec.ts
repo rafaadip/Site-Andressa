@@ -29,7 +29,8 @@ async function agendarLonge(request: APIRequestContext, deslocamento = 0) {
   const disp = await (await request.get(`/api/disponibilidade?tipo=consulta-presencial&de=${de}&ate=${ate}`)).json();
   const slots = disp.dias.flatMap((d: { slots: { inicio: string }[] }) => d.slots) as { inicio: string }[];
   const inicio = slots[slots.length - 1 - deslocamento]!.inicio;       // do fim: longe dos outros testes
-  const nome = `Paciente ${randomUUID().slice(0, 5)}`;
+  // Só letras: nome com dígito é recusado (SEC-05). a–f do UUID + g–p no lugar dos dígitos.
+  const nome = `Paciente ${randomUUID().slice(0, 5).replace(/\d/g, (d) => 'ghijklmnop'[Number(d)]!)}`;
   const r = await request.post('/api/agendamentos', {
     headers: { 'Idempotency-Key': randomUUID(), 'x-forwarded-for': ip() },
     data: { tipo: 'consulta-presencial', inicio, site: '', paciente: { nome, telefone: '11987654321', email: `adm.${randomUUID().slice(0, 8)}@exemplo.com`, consentimentoDados: true } },
