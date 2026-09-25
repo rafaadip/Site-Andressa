@@ -6,7 +6,7 @@
 
 ---
 
-> **Atualização (25/09/2026, rodada de QA):** 648 testes no Vitest (234 unitários, 220 de componentes, 126 de integração, 68 funcionais de API), 123 E2E com 9 aparelhos, carga e resiliência — ver [QA](../QA.md).
+> **Atualização (25/09/2026, rodada de QA):** 650 testes no Vitest (234 unitários, 220 de componentes, 128 de integração, 68 funcionais de API), 123 E2E com 9 aparelhos, carga e resiliência — ver [QA](../QA.md).
 >
 > **Estado da implementação (25/09/2026):** automação concluída — 125 unitários, 86 de integração (Postgres real), 80 E2E (axe em todas as rotas públicas e do painel, viewports 375/393/430/768/1024/1440, teclado, fuso de Manaus), cobertura ≥ 90 % em `lib/availability` e `lib/calendar` imposta no CI. O teste manual está roteirizado em [ROTEIRO-TESTE-MANUAL](../ROTEIRO-TESTE-MANUAL.md) e precisa ser executado em aparelho real.
 

@@ -223,16 +223,21 @@ export async function processarFila(p: { appointmentId?: string; limite?: number
   const limite = p.limite ?? 25;
   const filtro = p.appointmentId ? sql`AND appointment_id = ${p.appointmentId}` : sql``;
 
+  // Sem `agora` explícito, o corte é o relógio do BANCO: `next_at` nasce do
+  // now() do Postgres (microssegundos) e o Date da aplicação só tem
+  // milissegundos — no mesmo milissegundo, o recém-enfileirado parecia "do
+  // futuro" e não saía (teste do bounce intermitente no CI).
+  // (ISO, não Date: o Drizzle troca o serializador de data do cliente.)
+  const corte = p.agora ? sql`${agora.toISOString()}::timestamptz` : sql`now()`;
+
   // Pega com LEASE: next_at vai 5 min à frente e a tentativa é contada
   // ANTES do envio. Se o processo morrer, a linha volta sozinha à fila.
-  // (ISO, não Date: o Drizzle troca o serializador de data do cliente.)
-  const t = agora.toISOString();
   const pegas = await db().execute(sql`
     UPDATE notification
-       SET next_at = ${t}::timestamptz + interval '5 minutes', attempts = attempts + 1
+       SET next_at = ${corte} + interval '5 minutes', attempts = attempts + 1
      WHERE id IN (
        SELECT id FROM notification
-        WHERE status IN ('pending','failed') AND next_at <= ${t}::timestamptz
+        WHERE status IN ('pending','failed') AND next_at <= ${corte}
           AND attempts < ${MAX_TENTATIVAS} ${filtro}
         ORDER BY created_at
         LIMIT ${limite}

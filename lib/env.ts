@@ -90,6 +90,16 @@ export function emailDaMedica(): string {
 }
 
 /**
+ * Teto de agendamentos pelo site por hora, somando todas as origens
+ * (SEC-01). Produção usa o padrão; só o servidor do E2E sobe o valor — a
+ * suíte cria dezenas de consultas em minutos. Valor inválido = padrão.
+ */
+export function tetoAgendamentosPorHora(padrao: number): number {
+  const v = Number(process.env.AGENDAMENTO_TETO_POR_HORA);
+  return Number.isInteger(v) && v > 0 ? v : padrao;
+}
+
+/**
  * Ambiente de produção DE VERDADE (Vercel production). Preview e local não
  * são — e nunca podem tocar a agenda real (FASE-13 §1).
  */

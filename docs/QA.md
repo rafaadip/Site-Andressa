@@ -10,13 +10,13 @@
 |---|---|---|---|
 | Unitários de `lib/` | `tests/unit/` | Funções puras (motor, fuso, `.ics`, validação, PII, TLS, observabilidade) | 234 |
 | Componentes React | `tests/componentes/` | jsdom + Testing Library: papel, nome acessível, estado `aria-*` | 220 |
-| Integração | `tests/integration/` | **Postgres real** (constraint, locks, migrations pelo journal); Google e Resend falsos em memória | 126 |
+| Integração | `tests/integration/` | **Postgres real** (constraint, locks, migrations pelo journal); Google e Resend falsos em memória | 128 |
 | Funcionais de API | `tests/integration/api-*.test.ts` | Route handlers chamados com `Request` real: status, cabeçalhos, corpo de erro | 68 |
 | E2E | `tests/e2e/` | Build de produção (`next start`), Chromium, axe WCAG 2.2 AA, teclado, fuso de Manaus, 9 aparelhos | 123 |
 | Não funcionais | `tests/nao-funcional/` | Build de produção: carga e resiliência com orçamentos | 20 orçamentos |
 | Lighthouse CI | `.github/workflows/ci.yml` | Performance, acessibilidade, SEO | no pipeline |
 
-Total automatizado com Vitest: **648 testes**, mais 123 E2E. Cobertura das
+Total automatizado com Vitest: **650 testes**, mais 123 E2E. Cobertura das
 linhas: **96,4 % em `lib/`** e **92 % em `components/`** (95,3 % no total;
 limites no `vitest.config.mts`: 85 % global, 90 % no motor e no calendário).
 
@@ -122,6 +122,13 @@ componente; dividir por etapa é o próximo refactor.
 
 Os demais testes novos (componentes do painel, rotas, `lib/`) passaram sem
 achar bug de produção.
+
+## 5.2 Falhas intermitentes do CI — causa raiz
+
+| Sintoma | Causa | Correção |
+|---|---|---|
+| Teste do bounce: "alerta à médica" às vezes não saía | A fila grava `next_at` com o `now()` do Postgres (µs) e comparava com o `Date` da aplicação (ms) — no mesmo milissegundo, ou com o relógio da função atrás do banco (Vercel × Supabase), o recém-enfileirado parecia "do futuro" | Sem `agora` explícito, o corte é o `now()` do banco (`lib/notificacoes/fila.ts`); regressão determinística em `tests/integration/fila-relogio.test.ts` (relógio da aplicação 1 s atrás) |
+| E2E de agendamento falhando só com 2 workers | Testes em paralelo disputando os mesmos horários (o de teclado supunha 2 vagas no 1º dia) e o teto global de 30/h de produção atingido pela suíte | Dia com 2+ vagas escolhido pelo teclado; `AGENDAMENTO_TETO_POR_HORA` alto só no servidor do E2E (o teto de produção segue coberto pela integração); `marcar()` (`tests/e2e/util.ts`) só segue quando a opção ficou marcada. Reproduzido com `--workers=2 --repeat-each=4` (2 falhas) e verde depois (84/84) |
 
 ## 6. Como rodar
 

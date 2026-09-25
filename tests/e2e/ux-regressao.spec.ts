@@ -8,6 +8,7 @@
 import {
   test, expect, type APIRequestContext, type BrowserContext, type Page,
 } from '@playwright/test';
+import { marcar } from './util';
 import { randomUUID } from 'node:crypto';
 import { criarSessao } from '@/lib/auth/sessao';
 import { ENV_PAINEL_E2E } from '../../playwright.config';
@@ -60,7 +61,7 @@ async function agendarLonge(
 /** Preenche e confirma a etapa 3, pelo formulário (não pela API): é a UI que gera a Confirmacao. */
 async function completarPelaUi(page: Page) {
   await page.goto('/agendar');
-  await page.getByRole('radio', { name: /Consulta presencial/ }).click();
+  await marcar(page.getByRole('radio', { name: /Consulta presencial/ }));
   await page.getByRole('button', { name: /Continuar/ }).click();
   await expect(page.getByRole('radiogroup', { name: 'Dia da consulta' })).toBeVisible();
 

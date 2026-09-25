@@ -3,6 +3,7 @@
  * Pula sem DATABASE_URL_TEST.
  */
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
+import { marcar } from './util';
 import AxeBuilder from '@axe-core/playwright';
 import { randomUUID } from 'node:crypto';
 
@@ -21,7 +22,7 @@ const email = () => `e2e.${randomUUID().slice(0, 8)}@exemplo.com`;
 
 async function irParaHorarios(page: Page, modalidade = /Consulta presencial/) {
   await page.goto('/agendar');
-  await page.getByRole('radio', { name: modalidade }).click();
+  await marcar(page.getByRole('radio', { name: modalidade }));
   await page.getByRole('button', { name: /Continuar/ }).click();
   await expect(page.getByRole('radiogroup', { name: 'Dia da consulta' })).toBeVisible();
 }
@@ -102,7 +103,7 @@ test.describe('celular (375px)', () => {
 
     await page.goto('/agendar');
     expect(await semRolagem()).toBe(0);
-    await page.getByRole('radio', { name: /Consulta presencial/ }).click();
+    await marcar(page.getByRole('radio', { name: /Consulta presencial/ }));
     await expect(page.getByRole('button', { name: /Continuar/ })).toBeInViewport();
 
     await page.getByRole('button', { name: /Continuar/ }).click();
@@ -224,14 +225,17 @@ test.describe('teclado (desktop)', () => {
   test('fluxo completo sem mouse', async ({ page }) => {
     await page.goto('/agendar');
     const modalidade = page.getByRole('radio', { name: /Consulta presencial/ });
-    await modalidade.focus();
-    await page.keyboard.press('Space');
-    await expect(modalidade).toHaveAttribute('aria-checked', 'true');
+    await marcar(modalidade, async (l) => { await l.focus(); await page.keyboard.press('Space'); });
     await page.getByRole('button', { name: /Continuar/ }).focus();
     await page.keyboard.press('Enter');
 
     // título da etapa recebe o foco
     await expect(page.getByRole('heading', { name: 'Escolha o dia e o horário' })).toBeFocused();
+
+    // Um dia com 2+ vagas, do fim da janela (os testes em paralelo disputam os
+    // primeiros dias), escolhido pelo teclado: foco + Espaço.
+    const dia = page.getByRole('radiogroup', { name: 'Dia da consulta' }).getByRole('radio', { name: /, ([2-9]|\d{2,}) horários$/ }).last();
+    await marcar(dia, async (l) => { await l.focus(); await page.keyboard.press('Space'); });
 
     // setas percorrem os horários
     const slots = page.locator('[aria-labelledby="rotulo-horarios"] [role="radio"]');
@@ -283,7 +287,7 @@ test.describe('acessibilidade de cada etapa (axe)', () => {
     };
     await page.goto('/agendar');
     await verificar('etapa 1');
-    await page.getByRole('radio', { name: /Consulta presencial/ }).click();
+    await marcar(page.getByRole('radio', { name: /Consulta presencial/ }));
     await page.getByRole('button', { name: /Continuar/ }).click();
     await expect(page.getByRole('radiogroup', { name: 'Dia da consulta' })).toBeVisible();
     await verificar('etapa 2');

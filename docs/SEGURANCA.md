@@ -106,7 +106,7 @@ confirmadas (§6). **SCA:** 0 vulnerabilidades (produção e desenvolvimento).
 | **SEC-20.7** — `hashIp` = SHA-256(sal\|ip) | HMAC com a mesma chave não muda o cenário "sal vazado"; o hash expira da relevância em 1 h | Tratado como dado pessoal no RIPD |
 | **SEC-20.8** — OAuth sem PKCE | Cliente confidencial (segredo no servidor), `state` de 256 bits | Recomendado pela BCP OAuth 2.1; revisitar numa troca de biblioteca |
 | **PT-04** — `TRACE` → 500 | O `Request` do Node (undici) recusa o método antes do `proxy.ts`; não há eco (sem XST) nem stack, e nada vai ao Sentry | Na Vercel a borda responde antes. E2E garante: sem eco, sem stack |
-| Majors de ferramental | `eslint` 10, `typescript` 7, `@types/node` 26 têm breaking changes | Avaliação dedicada; o Dependabot abre PR individual para cada major |
+| Majors de ferramental | O `typescript-eslint` do `eslint-config-next` só aceita TypeScript `<6.1` (o 7.0 derrubou o lint e o CI da `main`); os plugins do `eslint-config-next` 16 pedem ESLint `^9` | `typescript` voltou ao 5.9; o Dependabot ignora `typescript >= 6.1` e `eslint >= 10` até o `eslint-config-next` suportar. `@types/node` 26 ficou (só tipos, CI verde) |
 
 ## 4. Configuração de produção (checklist)
 
@@ -135,11 +135,15 @@ confirmadas (§6). **SCA:** 0 vulnerabilidades (produção e desenvolvimento).
   Unlicense, CC-BY-4.0 (dado do `caniuse-lite`) e LGPL-3.0 no `libvips` do
   `sharp` (copyleft fraco, link dinâmico — permitido em software fechado).
   Nenhuma GPL/AGPL, nenhuma licença ausente.
-- **CI** (`.github/workflows/ci.yml`): Actions fixadas por SHA;
-  `npm audit --omit=dev --audit-level=high` bloqueia; auditoria completa
-  informativa; Lighthouse CI com versão exata.
+- **CI** (`.github/workflows/ci.yml`): Actions fixadas por SHA
+  (`checkout` 7.0.1, `setup-node` 7.0.0, `upload-artifact` 7.0.1 — as v4
+  rodavam em Node 20, descontinuado nos runners); `npm audit --omit=dev
+  --audit-level=high` bloqueia; auditoria completa informativa; Lighthouse
+  CI com versão exata.
 - **Dependabot** (`.github/dependabot.yml`): npm e Actions semanais, patch e
-  minor agrupados, major individual.
+  minor agrupados, major individual. **Major só entra com o CI verde no
+  próprio PR** — o TypeScript 7 foi mesclado com o CI vermelho e quebrou a
+  `main`. Versões sabidamente incompatíveis ficam em `ignore`, com o motivo.
 
 ## 6. Verificado e correto (não reanalisar sem mudança no código)
 
