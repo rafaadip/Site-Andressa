@@ -8,13 +8,13 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vites
 import { randomUUID } from 'node:crypto';
 import { sqlCliente } from '@/lib/db';
 import { _limparCacheEnv } from '@/lib/env';
-import { dataLocal } from '@/lib/datetime';
+import { dataLocal, somarMinutos } from '@/lib/datetime';
 import { somarDias } from '@/lib/datetime-cliente';
 import { decifrar } from '@/lib/crypto';
 import { _limparTokens, removerConexao } from '@/lib/calendar/conexao';
 import { agendamentoOnlineHabilitado, estadoAgenda } from '@/lib/calendar/freebusy';
 import {
-  criarAgendamento, cancelarPorToken, disponibilidade, practitionerId,
+  criarAgendamento, cancelarPorToken, disponibilidade, practitionerId, revogarMotivoPorToken,
 } from '@/lib/agendamento/servico';
 import { efeitosDe } from '@/lib/agendamento/efeitos';
 import { concluirConexaoAgenda } from '@/lib/auth/oauth';
@@ -228,6 +228,56 @@ d('agenda do Google (FASE-05)', () => {
       await sincronizarAgendamento(r.agendamento.id);
       expect(google.ativos()).toHaveLength(1);
       expect((await linha(r.agendamento.id)).sync_state).toBe('synced');
+    });
+
+    /** Executa `durante` no meio do INSERT do evento no Google (chamada em voo). */
+    function noMeioDoInsert(durante: () => Promise<unknown>) {
+      const original = globalThis.fetch;
+      let feito = false;
+      vi.stubGlobal('fetch', async (u: string | URL | Request, init?: RequestInit) => {
+        if (!feito && (init?.method ?? 'GET') === 'POST' && /\/events$/.test(new URL(String(u)).pathname)) {
+          feito = true;
+          await durante();
+        }
+        return original(u as string, init);
+      });
+      return () => vi.stubGlobal('fetch', original);
+    }
+
+    it('remarcada enquanto o INSERT estava em voo: não marca `synced` com o horário velho', async () => {
+      const { lista } = await slots();
+      const r = await criarAgendamento(pedido(lista[0]!.inicio), ctx());
+      const id = r.agendamento.id;
+      const novo = somarMinutos(new Date(lista[0]!.inicio), 24 * 60);
+      // O que remarcarPelaMedica() grava: horário novo, SEQUENCE+1, sync pending.
+      const restaurar = noMeioDoInsert(() => sql()`UPDATE appointment SET
+        visit_starts_at = ${novo.toISOString()}, visit_ends_at = ${somarMinutos(novo, 40).toISOString()},
+        starts_at = ${novo.toISOString()}, ends_at = ${somarMinutos(novo, 50).toISOString()},
+        ics_sequence = ics_sequence + 1, sync_state = 'pending', updated_at = now() WHERE id = ${id}`);
+      try {
+        expect(await sincronizarAgendamento(id)).toBe('ignorado');
+      } finally { restaurar(); }
+
+      expect((await linha(id)).sync_state).toBe('pending');          // o próximo ciclo reenvia
+      expect(await sincronizarAgendamento(id)).toBe('synced');
+      expect(new Date(google.eventos.get(idEventoGoogle(id))!.start.dateTime).toISOString()).toBe(novo.toISOString());
+      expect(google.ativos()).toHaveLength(1);
+    });
+
+    it('motivo revogado enquanto o INSERT estava em voo: o evento é reescrito sem ele', async () => {
+      const { lista } = await slots();
+      const r = await criarAgendamento(pedido(lista[0]!.inicio, { motivo: 'Dor de cabeça', consentimentoSaude: true }), ctx());
+      const id = r.agendamento.id;
+      const token = r.agendamento.urlGestao.split('/').pop()!;
+      const restaurar = noMeioDoInsert(() => revogarMotivoPorToken(token));
+      try {
+        expect(await sincronizarAgendamento(id)).toBe('ignorado');
+      } finally { restaurar(); }
+      expect(google.eventos.get(idEventoGoogle(id))!.description).toContain('Dor de cabeça');   // o que estava em voo
+
+      expect((await linha(id)).sync_state).toBe('pending');
+      expect(await sincronizarAgendamento(id)).toBe('synced');
+      expect(google.eventos.get(idEventoGoogle(id))!.description).not.toContain('Dor de cabeça');
     });
 
     it('cancelar pelo link apaga o evento da agenda dela', async () => {

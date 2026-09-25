@@ -110,12 +110,25 @@ export async function sincronizarAgendamento(id: string, agora = new Date()): Pr
     }
     // no_show / completed: o evento fica como registro na agenda dela.
 
-    // Grava SÓ se o status não mudou no meio do caminho (cancelado
-    // enquanto criávamos o evento → continua pending e o próximo ciclo apaga).
-    await db().update(appointment).set({
+    // Versão otimista: grava `synced` SÓ se nada que vai no evento mudou
+    // enquanto a chamada ao Google estava em voo — status, SEQUENCE
+    // (remarcar e cancelar incrementam) e o motivo (revogação LGPD o apaga).
+    // Mudou → continua como está (pending) e o próximo ciclo reenvia o
+    // estado novo. `updated_at` não serve de versão: quando vem do now() do
+    // banco tem µs, e a Date do JS só guarda ms — a igualdade falharia sempre.
+    const feitos = await db().update(appointment).set({
       syncState: 'synced', syncedAt: new Date(), googleEventId,
       syncAttempts: 0, syncLastError: null, syncNextAt: null,
-    }).where(and(eq(appointment.id, ag.id), eq(appointment.status, statusVisto)));
+    }).where(and(
+      eq(appointment.id, ag.id),
+      eq(appointment.status, statusVisto),
+      eq(appointment.icsSequence, ag.icsSequence),
+      ag.patientNote === null ? isNull(appointment.patientNote) : eq(appointment.patientNote, ag.patientNote),
+    )).returning({ id: appointment.id });
+    if (feitos.length === 0) {
+      log.info('google.sync.mudou-no-meio', { agendamento: ag.id });
+      return 'ignorado';
+    }
     return 'synced';
   } catch (e) {
     // Não é culpa desta consulta: não gasta tentativa. O aviso à médica sai
