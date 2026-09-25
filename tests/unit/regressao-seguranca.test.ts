@@ -1,7 +1,9 @@
 /**
  * Regressões unitárias da auditoria de segurança (docs/SEGURANCA.md).
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { DrizzleQueryError } from 'drizzle-orm/errors';
+import { _limparTetoSentry, reportarAoSentry } from '@/lib/observabilidade';
 import { errosPorCampo, MSG, schemaDadosPaciente } from '@/lib/validation/agendamento';
 import { escapar, gerarIcs, parametro } from '@/lib/calendar/ics';
 
@@ -79,5 +81,43 @@ describe('SEC-09: .ics sem CR solto e CN entre aspas', () => {
     expect(ics).not.toMatch(/\r(?!\n)/);
     expect(ics.split(/\r\n|\r|\n/).filter((l) => l === 'BEGIN:VEVENT')).toHaveLength(1);
     expect(ics).toMatch(/ATTENDEE;CN="Ana/);
+  });
+});
+
+describe('SEC-07: erro de banco não leva params (nome, motivo) ao Sentry', () => {
+  beforeEach(() => {
+    _limparTetoSentry();
+    vi.stubEnv('SENTRY_DSN', 'https://chave@o1.ingest.sentry.io/42');
+  });
+  afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); _limparTetoSentry(); });
+
+  const enviar = async (e: unknown) => {
+    const f = vi.fn(async () => new Response(null, { status: 200 })); vi.stubGlobal('fetch', f);
+    await reportarAoSentry('admin.cancelar', e);
+    return f;
+  };
+
+  it('DrizzleQueryError vira só o SQLSTATE; params e SQL não saem', async () => {
+    const causa = Object.assign(new Error('canceling statement due to statement timeout'), { code: '57014' });
+    const erro = new DrizzleQueryError('update "appointment" set "cancel_reason" = $1', ['Maria', 'remarcar apos exame de HIV'], causa);
+    const f = await enviar(erro);
+    const corpo = String((f.mock.calls[0] as unknown as [string, RequestInit])[1].body);
+    expect(corpo).toContain('postgres 57014');
+    expect(corpo).not.toMatch(/Maria|HIV|cancel_reason/);
+  });
+
+  it('mensagem de várias linhas: só a 1ª sai, mascarada', async () => {
+    const f = await enviar(new Error('falhou para ana@gmail.com\nparams: Maria,diabetes'));
+    const corpo = String((f.mock.calls[0] as unknown as [string, RequestInit])[1].body);
+    expect(corpo).toContain('[email]');
+    expect(corpo).not.toMatch(/Maria|diabetes/);
+  });
+
+  it('SEC-11: teto por minuto — erro provocado em massa não esgota a cota', async () => {
+    const f = vi.fn(async () => new Response(null, { status: 200 })); vi.stubGlobal('fetch', f);
+    for (let i = 0; i < 50; i++) await reportarAoSentry('api.erro', new Error('x'));
+    expect(f).toHaveBeenCalledTimes(5);
+    await reportarAoSentry('outro.evento', new Error('y'));
+    expect(f).toHaveBeenCalledTimes(6);
   });
 });
