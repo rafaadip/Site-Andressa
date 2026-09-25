@@ -15,9 +15,17 @@ const { appointment } = schema;
 /** Quem acabou de agendar já recebeu a confirmação: não emendar lembrete. */
 const RECENTE_MIN = 180;
 
-async function enfileirarTodos(tipo: 'lembrete_d1' | 'lembrete_h2', ids: { id: string }[]) {
-  for (const { id } of ids) await enfileirar(db(), { tipo, chave: id, appointmentId: id });
-  return ids.length;
+/**
+ * A chave leva o HORÁRIO da consulta: remarcada depois do lembrete, é outro
+ * lembrete (o do dia novo). Só o id travaria para sempre no primeiro.
+ * Conta só o que entrou de fato na fila — rodar de novo não infla a métrica.
+ */
+async function enfileirarTodos(tipo: 'lembrete_d1' | 'lembrete_h2', alvos: { id: string; inicio: Date }[]) {
+  let novos = 0;
+  for (const a of alvos) {
+    if (await enfileirar(db(), { tipo, chave: `${a.id}:${a.inicio.toISOString()}`, appointmentId: a.id })) novos++;
+  }
+  return novos;
 }
 
 /** Consultas de AMANHÃ (dia local da clínica). */
@@ -25,7 +33,7 @@ export async function lembretesD1(agora = new Date()) {
   const amanha = somarDiasLocal(dataLocal(agora), 1);
   const inicio = horaLocalParaUtc(amanha, '00:00');
   const fim = fimDoDiaLocal(amanha);   // 23 ou 25 h em dia de horário de verão
-  const alvos = await db().select({ id: appointment.id }).from(appointment).where(and(
+  const alvos = await db().select({ id: appointment.id, inicio: appointment.visitStartsAt }).from(appointment).where(and(
     eq(appointment.status, 'confirmed'),
     gte(appointment.visitStartsAt, inicio), lt(appointment.visitStartsAt, fim),
     isNull(appointment.reminderD1At), isNull(appointment.anonymizedAt),
@@ -40,7 +48,7 @@ export async function lembretesD1(agora = new Date()) {
  * se sobrepõe de propósito entre execuções — a chave impede duplicata.
  */
 export async function lembretesH2(agora = new Date()) {
-  const alvos = await db().select({ id: appointment.id }).from(appointment).where(and(
+  const alvos = await db().select({ id: appointment.id, inicio: appointment.visitStartsAt }).from(appointment).where(and(
     eq(appointment.status, 'confirmed'),
     gte(appointment.visitStartsAt, somarMinutos(agora, 90)),
     lt(appointment.visitStartsAt, somarMinutos(agora, 180)),

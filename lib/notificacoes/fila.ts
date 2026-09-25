@@ -56,17 +56,19 @@ export type Executor = Pick<Db, 'insert' | 'update' | 'select' | 'execute'>;
 /**
  * Enfileira (idempotente). `chave` diferencia repetições legítimas do
  * mesmo tipo — ex.: a 2ª remarcação da mesma consulta usa a nova SEQUENCE.
+ * Devolve `true` só se a linha foi criada agora (`false`: já existia).
  */
 export async function enfileirar(ex: Executor, n: {
   tipo: TipoNotificacao; chave: string; appointmentId?: string | null; meta?: Record<string, unknown>;
-}): Promise<void> {
-  await ex.insert(notification).values({
+}): Promise<boolean> {
+  const criadas = await ex.insert(notification).values({
     dedupKey: `${n.tipo}:${n.chave}`,
     appointmentId: n.appointmentId ?? null,
     kind: n.tipo,
     recipient: TIPOS_NOTIFICACAO[n.tipo],
     meta: n.meta ?? {},
-  }).onConflictDoNothing({ target: notification.dedupKey });
+  }).onConflictDoNothing({ target: notification.dedupKey }).returning({ id: notification.id });
+  return criadas.length > 0;
 }
 
 type LinhaNotificacao = typeof notification.$inferSelect;

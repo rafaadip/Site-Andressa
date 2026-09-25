@@ -6,7 +6,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vites
 import { createHmac, randomUUID } from 'node:crypto';
 import { sqlCliente } from '@/lib/db';
 import { _limparCacheEnv } from '@/lib/env';
-import { dataLocal, horaLocalParaUtc, somarMinutos } from '@/lib/datetime';
+import { dataLocal, horaLocalParaUtc, somarDiasLocal, somarMinutos } from '@/lib/datetime';
 import { somarDias } from '@/lib/datetime-cliente';
 import { criarAgendamento, cancelarPorToken, disponibilidade } from '@/lib/agendamento/servico';
 import { processarFila } from '@/lib/notificacoes/fila';
@@ -157,6 +157,38 @@ d('e-mails e lembretes (FASE-08)', () => {
       const r = await lembretesD1(horaLocalParaUtc('2019-02-15', '18:00'));
       expect(r.enfileirados).toBe(1);
       expect(await sql()`SELECT 1 FROM notification WHERE appointment_id = ${id} AND kind = 'lembrete_d1'`).toHaveLength(1);
+    });
+
+    it('remarcada DEPOIS do D-1: recebe o lembrete do dia novo (a chave leva o horário)', async () => {
+      const hoje = dataLocal(new Date());
+      const amanha = somarDiasLocal(hoje, 1);
+      const { id } = await inserirConsulta(sql(), { inicio: horaLocalParaUtc(amanha, '10:00'), email: 'remarcada@exemplo.com', criadaEm: ontem() });
+      await lembretesD1();
+      await processarFila({ agora: new Date(Date.now() + 60_000) });
+      expect(resend.para('remarcada@exemplo.com')).toHaveLength(1);
+
+      // O que remarcarPelaMedica() / receber.ts fazem: horário novo, lembretes zerados.
+      const novo = horaLocalParaUtc(somarDiasLocal(hoje, 2), '10:00');
+      await sql()`UPDATE appointment SET visit_starts_at = ${novo.toISOString()}, visit_ends_at = ${somarMinutos(novo, 40).toISOString()},
+        starts_at = ${novo.toISOString()}, ends_at = ${somarMinutos(novo, 50).toISOString()},
+        reminder_d1_at = NULL, ics_sequence = ics_sequence + 1 WHERE id = ${id}`;
+
+      // Cron do dia seguinte, 18h locais.
+      const as18 = horaLocalParaUtc(amanha, '18:00');
+      const r = await lembretesD1(as18);
+      await processarFila({ agora: somarMinutos(as18, 10) });
+      expect(r.enfileirados).toBe(1);
+      const m = resend.para('remarcada@exemplo.com');
+      expect(m).toHaveLength(2);
+      expect(m[1]!.subject).toMatch(/^Lembrete: sua consulta é amanhã/);
+    });
+
+    it('a métrica conta só o que entrou na fila: cron repetido com envio falhando não "enfileira" de novo', async () => {
+      await inserirConsulta(sql(), { inicio: amanhaAs10(), email: 'metrica@exemplo.com', criadaEm: ontem() });
+      resend.falharCom = 503;
+      expect((await lembretesD1()).enfileirados).toBe(1);
+      expect((await lembretesD1()).enfileirados).toBe(0);   // já estava na fila
+      expect(await sql()`SELECT 1 FROM notification WHERE kind = 'lembrete_d1'`).toHaveLength(1);
     });
 
     it('D-1: nada para consulta cancelada, nem para quem acabou de agendar', async () => {
