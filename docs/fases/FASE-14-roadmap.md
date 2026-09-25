@@ -21,11 +21,13 @@ número dedicado (não o pessoal), opt-in registrado.
 **Atenção:** aprovação de template leva dias; cobrança por conversa; opt-in é
 exigência da Meta **e** da LGPD.
 
-### 2.2 CalDAV para iCloud
-**Gatilho:** ela pedir evento nativo e editável no iPhone.
-**Escopo:** [FASE-06 §4.2](FASE-06-apple-ics-caldav.md). Só se o feed `webcal://`
-não bastar.
-**Risco:** senha de app quebra em silêncio quando ela troca a senha do Apple ID.
+### 2.2 Agenda da médica no iPhone
+**Gatilho:** ela pedir para ver os agendamentos no app Calendário do iPhone.
+**Contexto:** removido do escopo em 10/09/2026 a pedido do cliente
+([ADR-003](../adr/ADR-003-ics-para-o-paciente.md)); a agenda dela é só Google.
+**Escopo, se voltar:** feed `webcal://` assinado (~1 dia) — sem credencial da Apple
+no servidor, nunca quebra por troca de senha. CalDAV só se ela precisar **editar** o
+evento pelo iCloud, e aí com o risco de a senha de app expirar em silêncio.
 
 ### 2.3 Lista de espera
 **Gatilho:** slots esgotando com mais de 3 semanas de antecedência.
@@ -33,7 +35,17 @@ não bastar.
 da fila, com janela de 2 h para confirmar.
 **Valor:** transforma cancelamento em receita, e é o item de melhor retorno da lista.
 
-### 2.4 Reagendamento em um toque
+### 2.4 Ativar SEO local (quando o endereço existir)
+**Gatilho:** endereço do consultório definido.
+**Escopo:** preencher `PROFISSIONAL.endereco`, criar e verificar o Perfil da Empresa
+no Google, acrescentar `streetAddress`/`postalCode` ao JSON-LD, conferir o NAP.
+**Valor:** destrava o pacote local — a superfície de busca com maior intenção de
+conversão ("nutrólogo perto de mim"). Ver
+[FASE-11](FASE-11-seo-performance.md).
+**Custo:** ~meio dia de código; a verificação do perfil pode levar dias (o Google
+envia código por carta ou vídeo).
+
+### 2.5 Reagendamento em um toque
 **Gatilho:** volume de remarcações por WhatsApp.
 **Escopo:** no link de gestão, sugerir três horários próximos.
 
@@ -83,7 +95,9 @@ Registrada no momento em que foi assumida, com o custo de resolver:
 
 | Item | Origem | Custo |
 |---|---|---|
-| `VTIMEZONE` fixo em UTC−3 | [FASE-06 §2.3](FASE-06-apple-ics-caldav.md) — o Brasil não tem horário de verão hoje | Se voltar: acrescentar componente `DAYLIGHT` com `RRULE`. `// TODO(dst)` no código |
+| Endereço do consultório indefinido | Não definido pelo cliente até 10/09/2026 | Site opera em "modo sem endereço" ([FASE-03 §3.1](FASE-03-site-institucional.md)). Preencher um objeto destrava site, `.ics` e JSON-LD; o SEO local segue bloqueado até a verificação do perfil |
+| `VTIMEZONE` fixo em UTC−3 | [FASE-06 §2.3](FASE-06-ics-calendario-paciente.md) — o Brasil não tem horário de verão hoje | Se voltar: acrescentar componente `DAYLIGHT` com `RRULE`. `// TODO(dst)` no código |
+| **Google como ponto único de falha** | [ADR-003](../adr/ADR-003-ics-para-o-paciente.md) — Apple fora do escopo | Sem segunda via para ler disponibilidade se a API cair. Mitigado pela degradação graciosa da [FASE-05 §6](FASE-05-google-calendar.md), não eliminado |
 | Modelo de um profissional | `practitioner_id` existe, mas não há UI | ~3 dias para expor |
 | Buffers embutidos em `starts_at`/`ends_at` | [ADR-004](../adr/ADR-004-antioverbooking.md) — simplifica a constraint | Separar exigiria repensar a exclusão |
 | App OAuth em modo *Testing* | [FASE-05 §1](FASE-05-google-calendar.md) — evita verificação do Google | Se o token expirar em 7 dias: publicar e verificar, ou migrar para Workspace |

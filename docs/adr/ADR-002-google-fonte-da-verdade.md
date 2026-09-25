@@ -40,9 +40,14 @@ Ela cadastraria bloqueios no `/admin`.
 
 ## Decisão
 
-**Opção B.** Google Calendar é a fonte da verdade para *free/busy* e o destino
-primário dos eventos criados. O iCloud é destino **secundário e opcional**
-(ADR-003).
+**Opção B.** Google Calendar é a fonte da verdade para *free/busy* e o destino dos
+eventos criados.
+
+> **Atualização de 10/09/2026:** a opção C (iCloud) foi **removida do escopo** a
+> pedido do cliente — não é mais nem destino secundário
+> ([ADR-003](ADR-003-ics-para-o-paciente.md)). O Google passa a ser a **única**
+> integração de agenda, e portanto ponto único de falha. A degradação graciosa
+> descrita abaixo deixa de ser precaução e vira requisito de projeto.
 
 ### Degradação quando o Google está indisponível
 

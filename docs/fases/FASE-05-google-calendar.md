@@ -2,6 +2,11 @@
 
 > **Objetivo:** ler a agenda real da médica e escrever nela — de forma que
 > continue funcionando quando o Google falhar.
+>
+> ⚠️ **Esta é a única integração de agenda do sistema.** A sincronização com a Apple
+> foi removida do escopo ([ADR-003](../adr/ADR-003-ics-para-o-paciente.md)), o que
+> torna o Google um ponto único de falha: a degradação graciosa do §6 deixa de ser
+> precaução e passa a ser requisito.
 > **Depende de:** FASE-02, FASE-04 · **Habilita:** FASE-07
 > **Estimativa:** 4 dias
 
@@ -147,9 +152,7 @@ await calendar.events.insert({
     ].filter(Boolean).join('\n'),
     start: { dateTime: inicio.toISOString(), timeZone: TZ_CLINICA },
     end:   { dateTime: fim.toISOString(),    timeZone: TZ_CLINICA },
-    location: tipo.modalidade === 'in_person'
-      ? 'Consultório — Guarulhos, SP'
-      : 'Teleconsulta',
+    location: localConsulta(tipo.modalidade),   // lib/config.ts — FASE-03 §3.1
     reminders: { useDefault: false, overrides: [
       { method: 'popup', minutes: 24 * 60 },
       { method: 'popup', minutes: 120 },

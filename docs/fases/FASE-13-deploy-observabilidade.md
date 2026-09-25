@@ -147,8 +147,10 @@ sincronização. Consumido por um monitor externo (UptimeRobot) a cada 5 min.
 - [ ] Seed com dados reais (modalidades, horários reais da médica)
 - [ ] Google Calendar conectado à conta real
 - [ ] SPF, DKIM e DMARC verdes; teste de envio real
-- [ ] Feed `webcal://` assinado no iPhone dela e conferido
-- [ ] CRM-SP **confirmado dígito a dígito** com a médica
+- [x] ~~CRM-SP confirmado dígito a dígito~~ — CRM-SP 267.777, confirmado em 10/09/2026
+- [ ] Endereço do consultório: definido **ou** confirmado que o site sobe em
+      "modo sem endereço" ([FASE-03 §3.1](FASE-03-site-institucional.md)), com a
+      médica ciente do impacto em SEO local ([FASE-11](FASE-11-seo-performance.md))
 - [ ] Revisão de conformidade (FASE-10) assinada
 - [ ] Política de privacidade publicada
 - [ ] Lighthouse ≥ 95/100/100
@@ -159,7 +161,8 @@ sincronização. Consumido por um monitor externo (UptimeRobot) a cada 5 min.
 **No dia**
 - [ ] DNS apontado, HTTPS ativo
 - [ ] Agendamento de ponta a ponta em produção, com dados reais
-- [ ] `.ics` verificado no iPhone da médica
+- [ ] `.ics` verificado no iPhone de um paciente de teste
+- [ ] Fluxo de agendamento percorrido em aparelho real (celular e tablet)
 - [ ] Cancelamento verificado — evento some do calendário
 - [ ] Perfil da Empresa no Google atualizado com o link
 - [ ] Link no Instagram
@@ -181,4 +184,6 @@ sincronização. Consumido por um monitor externo (UptimeRobot) a cada 5 min.
 | Overbooking | Constraint removida numa migration | Conferir `\d appointment`; recriar `appointment_no_overlap` |
 | E-mail em spam | DKIM/DMARC quebrado | `mail-tester`; revisar DNS |
 | Cancelamento não some do iPhone | `UID` mudou ou `SEQUENCE` não subiu | Conferir `ics_uid` e `ics_sequence` |
+| Botão de avançar escondido no iPhone | Falta `safe-area-inset-bottom` na barra sticky | Ver [01-MOBILE-FIRST §6](../01-MOBILE-FIRST.md) |
+| Layout salta ao focar campo no iOS | Campo com `font-size` < 16 px | Subir para 16 px |
 | Webhook parou | Canal expirou | Rodar `/api/cron/renovar-canal`; conferir `channel_expires_at` |

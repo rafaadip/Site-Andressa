@@ -1,0 +1,51 @@
+/**
+ * Validação de ambiente — falhar cedo e com mensagem clara.
+ *
+ * Dividido POR ÁREA: o agendamento precisa só de banco e sal; exigir as
+ * credenciais do Google e da Resend aqui impediria o site de subir antes
+ * das FASES 05 e 08. Cada módulo pede apenas o que usa.
+ *
+ * Ver docs/fases/FASE-02-fundacao-projeto.md §3
+ */
+import { z } from 'zod';
+
+function validar<T extends z.ZodTypeAny>(nome: string, schema: T): z.infer<T> {
+  const r = schema.safeParse(process.env);
+  if (!r.success) {
+    const faltando = r.error.issues.map((i) => `  ${i.path.join('.')}: ${i.message}`).join('\n');
+    throw new Error(`Ambiente inválido (${nome}):\n${faltando}\n\nVer .env.example`);
+  }
+  return r.data;
+}
+
+const cache = new Map<string, unknown>();
+function memo<T>(chave: string, fn: () => T): T {
+  if (!cache.has(chave)) cache.set(chave, fn());
+  return cache.get(chave) as T;
+}
+
+export const envBanco = () => memo('banco', () => validar('banco', z.object({
+  DATABASE_URL: z.string().regex(/^postgres(ql)?:\/\//, 'Precisa ser uma URL postgres://'),
+})));
+
+export const envSeguranca = () => memo('seguranca', () => validar('segurança', z.object({
+  TOKEN_SALT: z.string().min(16, 'Mínimo 16 caracteres — openssl rand -hex 16'),
+})));
+
+export const envGoogle = () => memo('google', () => validar('google', z.object({
+  GOOGLE_CLIENT_ID: z.string().min(1),
+  GOOGLE_CLIENT_SECRET: z.string().min(1),
+  GOOGLE_CALENDAR_ID: z.string().default('primary'),
+  GOOGLE_WEBHOOK_TOKEN: z.string().min(16),
+  ENCRYPTION_KEY: z.string().length(44, 'Precisa ser 32 bytes em base64'),
+})));
+
+export const envEmail = () => memo('email', () => validar('e-mail', z.object({
+  RESEND_API_KEY: z.string().startsWith('re_'),
+  EMAIL_FROM: z.string().min(1),
+})));
+
+/** Google conectado? Sem ele, a disponibilidade vem só das regras + banco. */
+export function googleConfigurado(): boolean {
+  return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+}

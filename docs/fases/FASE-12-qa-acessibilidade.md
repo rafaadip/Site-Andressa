@@ -153,7 +153,22 @@ sincroniza cancelamento externo, `syncToken` expirado (410) dispara full sync.
 | 11 | Admin: e-mail fora da allowlist é rejeitado |
 | 12 | Download do `.ics` e validação do conteúdo baixado |
 
-Viewports: 375×667 (iPhone SE), 390×844 (iPhone 15), 768×1024, 1440×900.
+### Matriz de dispositivos
+
+Como o uso primário é celular e tablet, a matriz é obrigatória, não amostral:
+
+| Viewport | Aparelho | Orientação |
+|---|---|---|
+| 375×667 | iPhone SE — **o menor em uso** | retrato |
+| 393×852 | iPhone 15 — o mais comum | retrato |
+| 430×932 | iPhone Pro Max — alcance do polegar | retrato |
+| 768×1024 | iPad retrato | **retrato e paisagem** |
+| 1024×768 | iPad paisagem | paisagem |
+| 1440×900 | Desktop | — |
+
+Playwright cobre todos. Além disso, **teste manual em aparelho real** antes do
+go-live: emulador não reproduz teclado virtual, barra de endereço que some, barra de
+gestos nem latência de toque.
 
 ---
 
@@ -216,7 +231,9 @@ Automatizar não cobre isto. Roteiro documentado com prints:
 | Google Agenda (Android) | anexo e link `TEMPLATE` |
 | Google Agenda (web) | idem |
 | Outlook (web e desktop) | anexo `.ics` |
-| Feed `webcal://` no iPhone | assinatura, aparecimento, atualização |
+
+> O feed `webcal://` para a agenda da médica saiu do escopo
+> ([ADR-003](../adr/ADR-003-ics-para-o-paciente.md)) e não é testado.
 
 **O teste que mais importa:** marcar → cancelar → confirmar que o evento
 **desapareceu** do iPhone. É o que prova que `UID` e `SEQUENCE` estão certos.
@@ -261,5 +278,7 @@ Mais: script que barra "especialista"/"nutróloga"/"RQE" fora de `lib/config.ts`
 - [ ] Teste de concorrência passa 10 execuções seguidas
 - [ ] Testes de fuso passam com quatro `TZ` diferentes
 - [ ] Cancelamento verificado manualmente em Apple Calendar real
+- [ ] Fluxo completo em **aparelho real**, com uma mão, registrado em vídeo
+- [ ] Matriz de dispositivos verde nos seis viewports, ambas as orientações
 - [ ] Fluxo completo por teclado, sem mouse, registrado em vídeo
 - [ ] Fluxo completo com VoiceOver, registrado em vídeo

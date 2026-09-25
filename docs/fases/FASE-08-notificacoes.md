@@ -35,7 +35,9 @@ tipografia serifada no título.
 - Largura máxima 600 px
 - Fontes web não carregam: fallback `Georgia, serif` / `system-ui`
 - Imagem bloqueada por padrão → **nenhuma informação essencial dentro de imagem**
-- Alvo de toque ≥ 44 px também aqui
+- Alvo de toque ≥ 44 px também aqui — a maioria abrirá o e-mail no celular
+- Botões em largura total no mobile; corpo com `max-width: 600px` e padding lateral
+  de 16 px, senão o texto encosta na borda em telas de 375 px
 - Versão texto puro obrigatória (entregabilidade + leitores de tela)
 
 ### Confirmação
@@ -50,7 +52,7 @@ Assunto: Consulta confirmada — segunda, 15 de setembro às 14:00
   ┌──────────────────────────────────────┐
   │  Consulta em Nutrologia              │
   │  Segunda, 15 de setembro · 14:00     │
-  │  Consultório — Guarulhos, SP         │
+  │  Consultório em Guarulhos – SP       │
   │  Duração: 40 minutos                 │
   └──────────────────────────────────────┘
 
@@ -62,8 +64,13 @@ Assunto: Consulta confirmada — segunda, 15 de setembro às 14:00
   Chegue com 10 minutos de antecedência.
   Traga exames recentes, se tiver.
 
+  ⓘ Enquanto o endereço do consultório não estiver
+    definido, este e-mail traz o local por extenso
+    e o lembrete D-1 repete a informação. Ver
+    FASE-03 §3.1.
+
   ─────────────────────────────────────
-  Dra. Andressa Chaves Correia · CRM-SP 207.737
+  Dra. Andressa Chaves Correia · CRM-SP 267.777
   Este e-mail não atende urgências. Em emergência,
   procure o pronto-socorro ou ligue 192.
 ```

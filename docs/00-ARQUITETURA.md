@@ -7,17 +7,21 @@
 
 ## 1. Contexto
 
-Site profissional de médica com **agendamento online** e **sincronização com Google
-Agenda e Apple Calendar**. Escala: **1 profissional**, dois locais de atendimento
-(consultório em Guarulhos–SP e teleconsulta), volume estimado de 5–40
+Site profissional de médica com **agendamento online** e **sincronização com o
+Google Agenda**, entregando o compromisso ao paciente em qualquer calendário
+(Apple, Google, Outlook) via `.ics`. Escala: **1 profissional**, dois locais de
+atendimento (consultório em Guarulhos–SP e teleconsulta), volume estimado de 5–40
 agendamentos/semana.
+
+**Uso primário: celular e tablet** — o desktop é o caso derivado
+([01-MOBILE-FIRST](01-MOBILE-FIRST.md)).
 
 ### 1.1 Perfil (extraído do currículo)
 
 | Campo | Valor |
 |---|---|
 | Nome | Andressa Chaves Correia |
-| Registro | CRM-SP 207.737 *(confirmar dígitos antes do deploy)* |
+| Registro | CRM-SP 267.777 |
 | Graduação | Medicina — UNINOVE (2019–2024) |
 | Pós-graduação | Lato Sensu em **Nutrologia** — Afya (fev/2026 – jul/2027, **em curso**) |
 | Certificação | ACLS — *Advanced Cardiovascular Life Support* |
@@ -36,7 +40,7 @@ revisto.
 
 **Redação adotada no site até a obtenção do RQE:**
 
-> ✅ "Médica · CRM-SP 207.737 — com atuação em Nutrologia"
+> ✅ "Médica · CRM-SP 267.777 — com atuação em Nutrologia"
 > ✅ "Pós-graduanda em Nutrologia (Afya)"
 > ❌ "Especialista em Nutrologia" · ❌ "Nutróloga" · ❌ qualquer sigla RQE
 
@@ -61,7 +65,7 @@ OpenGraph). Centralizar agora evita uma caça a strings em 2027. Ver
 | RF-06 | E-mail de confirmação com `.ics` anexado | MVP |
 | RF-07 | Painel administrativo: ver agenda, definir disponibilidade, bloquear datas | MVP |
 | RF-08 | Cancelamento/remarcação por link seguro (sem login) | MVP |
-| RF-09 | Sincronização com Apple Calendar da médica | v1.1 |
+| ~~RF-09~~ | ~~Sincronização com Apple Calendar da médica~~ | ❌ **removido do escopo** em 10/09/2026 |
 | RF-10 | Lembretes automáticos (WhatsApp/e-mail) em D-1 e H-2 | v1.1 |
 
 ### 2.2 Não-funcionais
@@ -70,6 +74,7 @@ OpenGraph). Centralizar agora evita uma caça a strings em 2027. Ver
 |---|---|---|
 | RNF-01 | Performance | LCP ≤ 2,0 s · INP ≤ 200 ms · CLS ≤ 0,05 (4G, mobile mediano) |
 | RNF-02 | Acessibilidade | WCAG 2.2 nível AA, verificado |
+| RNF-02b | **Mobile-first** | **Uso primário é celular e tablet.** Projetado em 375 px; alvos ≥ 44 px; testado em aparelho real. Ver [01-MOBILE-FIRST](01-MOBILE-FIRST.md) |
 | RNF-03 | Disponibilidade | 99,5 % · degradação graciosa: se o Calendar cair, o agendamento continua (fila) |
 | RNF-04 | Privacidade | LGPD — minimização, consentimento destacado para dado de saúde |
 | RNF-05 | Publicidade médica | Resoluções CFM vigentes |
@@ -91,6 +96,10 @@ Marcar isto é uma decisão de arquitetura, não uma omissão:
   pós-agendamento usam link assinado de uso único.
 - ❌ **Multi-profissional / multi-clínica.** Modelado no banco (`practitioner_id`),
   mas sem UI.
+- ❌ **Sincronização da agenda da médica com a Apple.** Removida a pedido do cliente
+  em 10/09/2026: a agenda dela é exclusivamente Google Calendar. O `.ics` continua
+  para o **paciente**, por ser formato universal e não integração Apple
+  ([ADR-003](adr/ADR-003-ics-para-o-paciente.md)).
 
 ---
 
@@ -116,14 +125,14 @@ Precisa apenas ser **unidirecional e pontual**: o evento entra no telefone dele
 
 Apple **não oferece API pública de calendário**. Não existe "Login com Apple para
 Calendar". Quem tenta resolver o Problema B com API bate nesse muro e conclui,
-erradamente, que "não dá para integrar com Apple Calendar".
+erradamente, que "não dá para entregar a consulta no iPhone".
 
-Dá — mas pela porta certa:
+Dá — pela porta certa, e sem API nenhuma:
 
 | | Médica (Problema A) | Paciente (Problema B) |
 |---|---|---|
 | **Google** | Calendar API v3 + OAuth 2.0 (`offline`, refresh token) + canal push | Link `render?action=TEMPLATE` |
-| **Apple** | CalDAV no iCloud (senha de app) **ou** feed `webcal://` assinado | Arquivo `.ics` (RFC 5545) |
+| **Apple** | ❌ **fora de escopo** — agenda dela é só Google | Arquivo `.ics` (RFC 5545) |
 | **Outlook** | — | `.ics` |
 | Direção | ↔ contínua | → uma vez |
 | Autenticação | Uma vez, no `/admin` | **Nenhuma** |
@@ -133,10 +142,11 @@ Calendar e Thunderbird abrem nativamente. **É a resposta correta para o lado do
 paciente — não um paliativo.** Entregue como anexo do e-mail de confirmação, o iOS
 oferece "Adicionar ao Calendário" direto no Mail, sem download.
 
-Do lado da médica, o Google é **fonte da verdade** (tem API real, com webhooks) e o
-iCloud é destino **secundário**. Detalhes e alternativas em
-[ADR-002](adr/ADR-002-google-fonte-da-verdade.md) e
-[ADR-003](adr/ADR-003-apple-sem-api.md).
+Do lado da médica, o Google é a **única** integração de agenda — decisão do cliente
+em 10/09/2026, que removeu do escopo o feed `webcal://` e o CalDAV no iCloud. Isso
+torna o Google um ponto único de falha, e a degradação graciosa descrita em
+[ADR-002](adr/ADR-002-google-fonte-da-verdade.md) deixa de ser precaução e vira
+requisito. Detalhes em [ADR-003](adr/ADR-003-ics-para-o-paciente.md).
 
 ---
 
@@ -165,10 +175,10 @@ iCloud é destino **secundário**. Detalhes e alternativas em
                                     .ics)                   │
                         ┌───────────────────────────────────┘
                         ▼
-              ┌──────────────────┐        ┌────────────────────┐
-              │ /admin (médica)  │        │ iCloud (CalDAV)    │
-              │ Auth.js + Google │───────►│ ou feed webcal://  │
-              └──────────────────┘        └────────────────────┘
+              ┌──────────────────┐
+              │ /admin (médica)  │
+              │ Auth.js + Google │
+              └──────────────────┘
 ```
 
 ---
@@ -308,7 +318,7 @@ CREATE INDEX ON appointment (sync_state) WHERE sync_state IN ('pending','failed'
 CREATE TABLE calendar_connection (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   practitioner_id    uuid NOT NULL REFERENCES practitioner(id),
-  provider           text NOT NULL CHECK (provider IN ('google','caldav')),
+  provider           text NOT NULL CHECK (provider = 'google'),  -- CalDAV fora de escopo
   account_email      text NOT NULL,
   calendar_id        text NOT NULL,
   refresh_token_enc  bytea NOT NULL,     -- AES-256-GCM
@@ -467,7 +477,7 @@ FASE 02  Fundação do projeto ──┴──► FASE 03  Site institucional
 FASE 04  Motor de disponibilidade ────────┤
    │                                      │
    ├─► FASE 05  Google Calendar           │
-   ├─► FASE 06  Apple / .ics / CalDAV     │
+   ├─► FASE 06  .ics (paciente)           │
    │                                      │
    └──────────► FASE 07  Fluxo de agendamento ◄──┘
                      │
@@ -492,6 +502,6 @@ paralelo com as de backend.
 |---|---|
 | [ADR-001](adr/ADR-001-stack.md) | Next.js full-stack em vez de front estático + FastAPI |
 | [ADR-002](adr/ADR-002-google-fonte-da-verdade.md) | Google Calendar como fonte da verdade da agenda |
-| [ADR-003](adr/ADR-003-apple-sem-api.md) | Apple Calendar via `.ics` + CalDAV, sem API |
+| [ADR-003](adr/ADR-003-ics-para-o-paciente.md) | `.ics` universal para o paciente; agenda da médica só no Google |
 | [ADR-004](adr/ADR-004-antioverbooking.md) | Anti-overbooking com `EXCLUDE USING gist` |
 | [ADR-005](adr/ADR-005-analytics-sem-cookies.md) | Analytics sem cookies para eliminar o banner |

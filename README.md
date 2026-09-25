@@ -1,8 +1,7 @@
 # Site Dra. Andressa Chaves Correia
 
-Site profissional com agendamento online sincronizado com **Google Agenda** e
-**Apple Calendar**. Premium, minimalista, em conformidade com LGPD e com as normas
-de publicidade médica.
+Site profissional com agendamento online sincronizado com **Google Agenda**.
+Premium, minimalista, **mobile-first** — o uso primário é celular e tablet.
 
 ## 📖 Documentação
 
@@ -11,6 +10,7 @@ de publicidade médica.
 | | |
 |---|---|
 | [Arquitetura](docs/00-ARQUITETURA.md) | Requisitos, stack, modelo de dados, fluxos |
+| [Mobile-first](docs/01-MOBILE-FIRST.md) | Padrão obrigatório — celular e tablet como caso primário |
 | [Decisões (ADR)](docs/adr/) | 5 registros de decisão arquitetural |
 | [Fases](docs/fases/) | 14 fases de desenvolvimento, ~9 semanas |
 

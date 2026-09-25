@@ -29,7 +29,6 @@ site-andressa/
 │  │  ├─ disponibilidade/route.ts
 │  │  ├─ agendamentos/route.ts
 │  │  ├─ agendamentos/[id]/route.ts
-│  │  ├─ calendario/[token]/route.ts       # feed webcal://
 │  │  ├─ ics/[id]/route.ts
 │  │  ├─ auth/[...nextauth]/route.ts
 │  │  ├─ oauth/google/callback/route.ts
@@ -45,7 +44,7 @@ site-andressa/
 │  └─ agendamento/               # Stepper, DayPicker, TimeSlotGrid, FormDados
 ├─ lib/
 │  ├─ db/{schema.ts,index.ts,migrations/}
-│  ├─ calendar/{google.ts,ics.ts,caldav.ts,freebusy.ts}
+│  ├─ calendar/{google.ts,ics.ts,freebusy.ts}
 │  ├─ availability/{engine.ts,rules.ts}
 │  ├─ email/{client.ts,templates/}
 │  ├─ crypto.ts                  # AES-256-GCM, hash de token
