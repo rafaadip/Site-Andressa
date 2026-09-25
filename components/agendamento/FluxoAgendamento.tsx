@@ -22,6 +22,7 @@ import type {
 import { campos, schemaDadosPaciente, errosPorCampo } from '@/lib/validation/agendamento';
 import { dataPorExtenso, fusoDoPaciente, somarDias } from '@/lib/datetime-cliente';
 import { linkWhatsApp, MENSAGEM_AGENDAMENTO } from '@/lib/contato';
+import { rolarParaVista } from '@/lib/scroll-para-vista';
 import { SeletorModalidade } from './SeletorModalidade';
 import { SeletorHorario, type EstadoDisp } from './SeletorHorario';
 import { FormularioDados, DADOS_VAZIOS, ORDEM_CAMPOS, type Dados } from './FormularioDados';
@@ -121,6 +122,19 @@ export function FluxoAgendamento({ tipos, hoje, fuso, horizonteDias }: Props) {
     setEtapa(n);
   }
 
+  // ── UX-01/UX-06: erro/aviso nascendo sob a BarraAcoes (sticky bottom) ───
+  // O primeiro `id` encontrado recebe o foco (roving group) e é trazido à
+  // tela; sem isso, quem toca "Continuar" sem escolher nada não vê nada
+  // acontecer, porque o que sobrar de tela some atrás da barra fixa.
+  function focarGrupo(...ids: string[]) {
+    requestAnimationFrame(() => {
+      const grupo = ids.map((id) => document.getElementById(id)).find((el) => el !== null) ?? null;
+      if (!grupo) return;
+      rolarParaVista(grupo);
+      grupo.focus({ preventScroll: true });
+    });
+  }
+
   // ── Disponibilidade ───────────────────────────────────────────────────
   const carregar = useCallback(async (slugTipo: string, inicio: string) => {
     abortRef.current?.abort();
@@ -148,7 +162,11 @@ export function FluxoAgendamento({ tipos, hoje, fuso, horizonteDias }: Props) {
 
   // ── Etapa 1 ───────────────────────────────────────────────────────────
   function continuarModalidade() {
-    if (!tipo) { setErros({ tipo: 'Escolha uma modalidade para continuar.' }); return; }
+    if (!tipo) {
+      setErros({ tipo: 'Escolha uma modalidade para continuar.' });
+      focarGrupo('grupo-modalidade');
+      return;
+    }
     setErros({});
     setAlerta(null);
     const t = tipos.find((x) => x.slug === tipo);
@@ -166,7 +184,12 @@ export function FluxoAgendamento({ tipos, hoje, fuso, horizonteDias }: Props) {
   }
 
   function continuarHorario() {
-    if (!slot) { setErros({ slot: 'Escolha um horário para continuar.' }); return; }
+    if (!slot) {
+      setErros({ slot: 'Escolha um horário para continuar.' });
+      // Se já há dia escolhido, o grupo relevante é o de horários; senão, o de dias.
+      focarGrupo('grupo-horarios', 'grupo-dias');
+      return;
+    }
     setErros({});
     setAlerta(null);
     // A chave de idempotência acompanha o HORÁRIO: trocou o horário, é outro pedido.
@@ -299,7 +322,14 @@ export function FluxoAgendamento({ tipos, hoje, fuso, horizonteDias }: Props) {
         </div>
       )}
 
-      <div key={etapa} className={direcao === 'frente' ? 'entrar-frente' : 'entrar-tras'}>
+      <div
+        key={etapa}
+        // UX-01: espaço extra no celular antes da BarraAcoes (sticky bottom)
+        // — sem ele, o último cartão/horário nasce exatamente sob a barra,
+        // sem nenhuma pista de que dá para rolar mais. Some no tablet/desktop,
+        // onde a barra volta ao fluxo normal (BarraAcoes é `md:static`).
+        className={`${direcao === 'frente' ? 'entrar-frente' : 'entrar-tras'} ${etapa <= 2 ? 'pb-16 md:pb-0' : ''}`}
+      >
         {etapa === 1 && (
           <>
             <h2 ref={tituloRef} tabIndex={-1} className="display text-h3 text-texto mb-6 outline-none">{TITULOS[1]}</h2>

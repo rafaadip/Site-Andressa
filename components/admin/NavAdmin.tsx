@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CalendarDays, Clock, Plug, Settings, ShieldCheck } from 'lucide-react';
@@ -14,6 +15,37 @@ const ITENS = [
 
 function ativo(pathname: string, href: string) {
   return href === '/admin' ? pathname === '/admin' || pathname.startsWith('/admin/consulta') : pathname.startsWith(href);
+}
+
+/**
+ * UX-02: numa tela cujo conteúdo termina perto da altura da barra fixa
+ * (ex.: `/admin/consulta/[id]` com o alerta "Conecte sua agenda" no topo),
+ * a tela "parece terminar" ali e some um botão de ação inteiro atrás dela,
+ * sem nenhuma pista de que dá para rolar mais. Leve: só listeners passivos
+ * de scroll/resize + um ResizeObserver no <body> (conteúdo que muda de
+ * altura sem disparar resize da janela, como um formulário que expande).
+ */
+function useHaConteudoAbaixoDaBarra() {
+  const [ha, setHa] = useState(false);
+
+  useEffect(() => {
+    function medir() {
+      const restante = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+      setHa(restante > 4);
+    }
+    medir();
+    window.addEventListener('scroll', medir, { passive: true });
+    window.addEventListener('resize', medir);
+    const obs = new ResizeObserver(medir);
+    obs.observe(document.body);
+    return () => {
+      window.removeEventListener('scroll', medir);
+      window.removeEventListener('resize', medir);
+      obs.disconnect();
+    };
+  }, []);
+
+  return ha;
 }
 
 /** Desktop: navegação no cabeçalho. */
@@ -48,8 +80,16 @@ export function NavAdminTopo() {
  */
 export function NavAdminRodape() {
   const pathname = usePathname();
+  const haConteudoAbaixo = useHaConteudoAbaixoDaBarra();
   return (
       <nav aria-label="Painel (celular)" className="fixed inset-x-0 bottom-0 z-40 border-t border-borda bg-fundo/95 pb-[var(--safe-bottom)] backdrop-blur-md md:hidden">
+        {/* Sombra "há mais abaixo": só um <span> absoluto (não fixed) dentro
+            do <nav>, que já é o próprio bloco de contenção — nunca fixed
+            dentro de elemento com backdrop-filter (regra nº 15). */}
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute inset-x-0 -top-6 h-6 bg-gradient-to-t from-fundo to-transparent transition-opacity duration-200 ${haConteudoAbaixo ? 'opacity-100' : 'opacity-0'}`}
+        />
         <ul className="grid grid-cols-5">
           {ITENS.map(({ href, rotulo, Icone }) => (
             <li key={href}>

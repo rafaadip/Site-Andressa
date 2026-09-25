@@ -1,7 +1,9 @@
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { mascararTelefone } from '@/lib/telefone';
 import { sugerirEmail } from '@/lib/validation/agendamento';
 import { CONSENTIMENTO } from '@/lib/content/site';
+import { rolarParaVista } from '@/lib/scroll-para-vista';
 import { Campo, CampoTexto } from './Campo';
 
 export type Dados = {
@@ -31,6 +33,15 @@ export function FormularioDados({ dados, erros, aoMudar, aoSair }: Props) {
   const sugestao = erros.email ? null : sugerirEmail(dados.email);
   const temMotivo = dados.motivo.trim().length > 0;
 
+  // UX-06: a sugestão pode nascer atrás da BarraAcoes (sticky bottom) — só
+  // rola quando ela APARECE (não a cada tecla, enquanto ela já está visível).
+  const sugestaoRef = useRef<HTMLParagraphElement>(null);
+  const sugestaoAnterior = useRef<string | null>(null);
+  useEffect(() => {
+    if (sugestao && !sugestaoAnterior.current) rolarParaVista(sugestaoRef.current, { block: 'nearest' });
+    sugestaoAnterior.current = sugestao;
+  }, [sugestao]);
+
   return (
     <div className="space-y-6">
       <p className="text-sm text-texto-2"><span aria-hidden className="text-danger">*</span> Campos obrigatórios</p>
@@ -59,7 +70,7 @@ export function FormularioDados({ dados, erros, aoMudar, aoSair }: Props) {
         onChange={(e) => aoMudar('email', e.target.value)}
         onBlur={() => aoSair('email')}
         extra={sugestao && (
-          <p className="mt-2 text-sm text-texto-2" role="status">
+          <p ref={sugestaoRef} className="mt-2 text-sm text-texto-2" role="status">
             Você quis dizer <strong className="font-medium text-texto">{sugestao}</strong>?{' '}
             <button
               type="button"

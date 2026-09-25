@@ -26,6 +26,8 @@ export function SeletorModalidade({ tipos, selecionado, aoSelecionar, erro }: Pr
   return (
     <div>
       <div
+        id="grupo-modalidade"
+        tabIndex={-1}
         role="radiogroup"
         aria-label="Modalidade da consulta"
         aria-describedby={erro ? 'erro-modalidade' : undefined}
