@@ -20,10 +20,11 @@ const RECENTE_MIN = 180;
  * lembrete (o do dia novo). Só o id travaria para sempre no primeiro.
  * Conta só o que entrou de fato na fila — rodar de novo não infla a métrica.
  */
-async function enfileirarTodos(tipo: 'lembrete_d1' | 'lembrete_h2', alvos: { id: string; inicio: Date }[]) {
+async function enfileirarTodos(tipo: 'lembrete_d1' | 'lembrete_h2', alvos: { id: string; inicio: Date }[], agora: Date) {
   let novos = 0;
   for (const a of alvos) {
-    if (await enfileirar(db(), { tipo, chave: `${a.id}:${a.inicio.toISOString()}`, appointmentId: a.id })) novos++;
+    // Vence em `agora`: o processarFila({ agora }) logo abaixo já leva.
+    if (await enfileirar(db(), { tipo, chave: `${a.id}:${a.inicio.toISOString()}`, appointmentId: a.id, vencimento: agora })) novos++;
   }
   return novos;
 }
@@ -39,7 +40,7 @@ export async function lembretesD1(agora = new Date()) {
     isNull(appointment.reminderD1At), isNull(appointment.anonymizedAt),
     lt(appointment.createdAt, somarMinutos(agora, -RECENTE_MIN)),
   ));
-  const enfileirados = await enfileirarTodos('lembrete_d1', alvos);
+  const enfileirados = await enfileirarTodos('lembrete_d1', alvos, agora);
   return { enfileirados, envio: await processarFila({ agora, limite: 100 }) };
 }
 
@@ -55,6 +56,6 @@ export async function lembretesH2(agora = new Date()) {
     isNull(appointment.reminderH2At), isNull(appointment.anonymizedAt),
     lt(appointment.createdAt, somarMinutos(agora, -RECENTE_MIN)),
   ));
-  const enfileirados = await enfileirarTodos('lembrete_h2', alvos);
+  const enfileirados = await enfileirarTodos('lembrete_h2', alvos, agora);
   return { enfileirados, envio: await processarFila({ agora, limite: 100 }) };
 }

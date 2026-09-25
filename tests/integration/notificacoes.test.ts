@@ -183,6 +183,17 @@ d('e-mails e lembretes (FASE-08)', () => {
       expect(m[1]!.subject).toMatch(/^Lembrete: sua consulta é amanhã/);
     });
 
+    it('o cron envia na MESMA execução o que acabou de enfileirar (D-1 e H-2)', async () => {
+      // Bug: next_at = now() do banco, posterior ao `agora` da aplicação → só saía no cron seguinte.
+      await inserirConsulta(sql(), { inicio: amanhaAs10(), email: 'mesma-d1@exemplo.com', criadaEm: ontem() });
+      expect((await lembretesD1()).envio.sent).toBe(1);
+      // Inserida DEPOIS do D-1: perto da meia-noite, "daqui a 2 h" já é amanhã.
+      await inserirConsulta(sql(), { inicio: new Date(Date.now() + 2 * 3_600_000), email: 'mesma-h2@exemplo.com', criadaEm: ontem() });
+      expect((await lembretesH2()).envio.sent).toBe(1);
+      expect(resend.para('mesma-d1@exemplo.com')).toHaveLength(1);
+      expect(resend.para('mesma-h2@exemplo.com')).toHaveLength(1);
+    });
+
     it('a métrica conta só o que entrou na fila: cron repetido com envio falhando não "enfileira" de novo', async () => {
       await inserirConsulta(sql(), { inicio: amanhaAs10(), email: 'metrica@exemplo.com', criadaEm: ontem() });
       resend.falharCom = 503;
