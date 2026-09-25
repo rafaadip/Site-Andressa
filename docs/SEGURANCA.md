@@ -29,7 +29,7 @@
 | SEC-17 | Info | HTML do paciente na descrição do evento Google | ✅ Corrigido | integração |
 | SEC-18 | Info | Limite por e-mail funciona como oráculo | ⚠️ Aceito (§3) | — |
 | SEC-19 | Info | Honeypot identificável (422 em `campos.site`) | ⚠️ Aceito (§3) | — |
-| SEC-20 | Info | Hardening: URL do site no build, `bloquear` não atômico, painel sem schema, Postgres de dev exposto, `lhci` flutuante, `hashIp`, PKCE | ✅ 5 de 7 corrigidos; 2 aceitos (§3) | integração/unitário |
+| SEC-20 | Info | Hardening: URL do site no build, `bloquear` não atômico, painel sem schema, Postgres de dev exposto, `lhci` flutuante, CSP no 404 fora do matcher, `hashIp`, PKCE | ✅ 5 de 8 corrigidos; 3 aceitos (§3) | integração/unitário |
 | PT-01 | Baixa | Limite por IP contornável trocando `X-Forwarded-For` (fora da Vercel) | ⚠️ Aceito (= SEC-08) | — |
 | PT-02 | Baixa | Limite por e-mail contornável com `+tag`, pontos e `googlemail` | ✅ Corrigido (e-mail canônico) | `tests/integration/regressao-pentest.test.ts` |
 | PT-03 | Baixa | Ano 9999 → 500 (timestamp fora da faixa do Postgres) | ✅ Corrigido (alcance de 366 dias) | idem |
@@ -102,6 +102,7 @@ confirmadas (§6). **SCA:** 0 vulnerabilidades (produção e desenvolvimento).
 | **SEC-12** — token em `/consulta/<token>` e e-mail em `/admin/privacidade?email=` | O link por e-mail é o mecanismo de gestão sem login; a busca por titular é rara e só no navegador dela | `no-store`, `no-referrer`, `noindex`; a query sai dos nossos logs. Restringir quem acessa os logs da Vercel e manter retenção curta |
 | **SEC-18** — oráculo do limite por e-mail | Só confirma algo a quem já sabe o e-mail; a mensagem ajuda o paciente legítimo | Double opt-in (SEC-02) resolve os dois |
 | **SEC-19** — honeypot identificável | Responder 201 falso enganaria um humano cujo navegador preenchesse o campo | Revisitar junto com o desafio anti-robô |
+| **SEC-20.2** — sem CSP no HTML de 404 de `/api/*` e de arquivos estáticos | O matcher do `proxy.ts` exclui essas rotas de propósito (custo por requisição); o 404 não tem nenhum ponto de injeção | Se um 404 passar a refletir entrada, incluir no matcher |
 | **SEC-20.7** — `hashIp` = SHA-256(sal\|ip) | HMAC com a mesma chave não muda o cenário "sal vazado"; o hash expira da relevância em 1 h | Tratado como dado pessoal no RIPD |
 | **SEC-20.8** — OAuth sem PKCE | Cliente confidencial (segredo no servidor), `state` de 256 bits | Recomendado pela BCP OAuth 2.1; revisitar numa troca de biblioteca |
 | **PT-04** — `TRACE` → 500 | O `Request` do Node (undici) recusa o método antes do `proxy.ts`; não há eco (sem XST) nem stack, e nada vai ao Sentry | Na Vercel a borda responde antes. E2E garante: sem eco, sem stack |
