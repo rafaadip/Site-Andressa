@@ -65,18 +65,29 @@ async function completarPelaUi(page: Page) {
   await page.getByRole('button', { name: /Continuar/ }).click();
   await expect(page.getByRole('radiogroup', { name: 'Dia da consulta' })).toBeVisible();
 
-  // Último horário do dia (não o primeiro): agendamento.spec.ts disputa o
-  // primeiro repetidamente; pegar o último reduz a chance de colisão.
+  // Um dia do meio da janela e o último horário dele: os outros specs, em
+  // paralelo, disputam os primeiros horários e o fim da janela.
+  await page.getByRole('radiogroup', { name: 'Dia da consulta' }).getByRole('radio', { disabled: false }).nth(2).click();
   const slots = page.locator('[aria-labelledby="rotulo-horarios"] [role="radio"]');
-  await slots.last().click();
-  await page.getByRole('button', { name: /Continuar/ }).click();
+  const confirmada = page.getByRole('heading', { name: /Consulta confirmada/ });
+  const tomado = page.getByRole('alert').filter({ hasText: 'acabou de ser reservado' });
 
-  await page.getByRole('textbox', { name: /Nome completo/ }).fill('Marina Teste');
-  await page.getByRole('textbox', { name: /Celular/ }).fill('11912345678');
-  await page.getByRole('textbox', { name: 'E-mail', exact: true }).fill(`ux.${randomUUID().slice(0, 8)}@exemplo.com`);
-  await page.getByRole('checkbox', { name: /Autorizo o uso do meu nome/ }).check();
-  await page.getByRole('button', { name: 'Confirmar agendamento' }).click();
-  await expect(page.getByRole('heading', { name: /Consulta confirmada/ })).toBeVisible();
+  // Se outro teste levar o horário no meio do caminho (409), a tela volta à
+  // etapa 2 COM os dados — e a pessoa escolhe outro, como faria de verdade.
+  for (let tentativa = 0; ; tentativa++) {
+    await slots.last().click();
+    await page.getByRole('button', { name: /Continuar/ }).click();
+    if (tentativa === 0) {
+      await page.getByRole('textbox', { name: /Nome completo/ }).fill('Marina Teste');
+      await page.getByRole('textbox', { name: /Celular/ }).fill('11912345678');
+      await page.getByRole('textbox', { name: 'E-mail', exact: true }).fill(`ux.${randomUUID().slice(0, 8)}@exemplo.com`);
+      await page.getByRole('checkbox', { name: /Autorizo o uso do meu nome/ }).check();
+    }
+    await page.getByRole('button', { name: 'Confirmar agendamento' }).click();
+    await expect(confirmada.or(tomado)).toBeVisible();
+    if (await confirmada.isVisible()) return;
+    expect(tentativa, 'horário tomado 3 vezes seguidas').toBeLessThan(2);
+  }
 }
 
 test.describe('sem banco necessário', () => {

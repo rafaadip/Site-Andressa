@@ -154,15 +154,28 @@ test.describe('celular (375px)', () => {
   });
 
   test('outra pessoa leva o horário no meio do caminho: volta à etapa 2 COM os dados', async ({ page, request }) => {
+    // O horário que a PÁGINA mostra (1º do 1º dia com vaga), lido da resposta
+    // que ela recebeu — não "o 1º livre agora": com testes em paralelo, os
+    // dois podiam divergir e a outra pessoa reservava outro horário.
+    const disponibilidade = page.waitForResponse((r) => r.url().includes('/api/disponibilidade'));
     await irParaHorarios(page);
+    const dias = (await (await disponibilidade).json()).dias as { slots: { inicio: string }[] }[];
+    const escolhido = dias.find((d) => d.slots.length)!.slots[0]!.inicio;
     const slot = page.locator('[aria-labelledby="rotulo-horarios"] [role="radio"]').first();
     await slot.click();
     await page.getByRole('button', { name: /Continuar/ }).click();
     await preencher(page, { nome: 'Carla Dias' });
 
-    // enquanto ela preenche, alguém agenda o mesmo horário pela API
-    const escolhido = await slotLivre(request);
-    await agendarPelaApi(request, escolhido);
+    // Enquanto ela preenche, alguém agenda o mesmo horário pela API. 409 =
+    // outro teste em paralelo chegou antes: o horário está tomado do mesmo jeito.
+    const outra = await request.post('/api/agendamentos', {
+      headers: { 'Idempotency-Key': randomUUID(), 'x-forwarded-for': ipAleatorio() },
+      data: {
+        tipo: 'consulta-presencial', inicio: escolhido, site: '',
+        paciente: { nome: 'Outra Pessoa', telefone: '11987654321', email: email(), consentimentoDados: true },
+      },
+    });
+    expect([201, 409]).toContain(outra.status());
 
     await page.getByRole('button', { name: 'Confirmar agendamento' }).click();
     await expect(page.getByRole('alert').filter({ hasText: 'acabou de ser reservado' })).toBeVisible();

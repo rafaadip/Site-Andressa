@@ -142,8 +142,8 @@ confirmadas (§6). **SCA:** 0 vulnerabilidades (produção e desenvolvimento).
   CI com versão exata.
 - **Dependabot** (`.github/dependabot.yml`): npm e Actions semanais, patch e
   minor agrupados, major individual. **Major só entra com o CI verde no
-  próprio PR** — o TypeScript 7 foi mesclado com o CI vermelho e quebrou a
-  `main`. Versões sabidamente incompatíveis ficam em `ignore`, com o motivo.
+  próprio PR** — o TypeScript 7 e o ESLint 10 foram mesclados com o CI
+  vermelho e quebraram a `main` (revertidos no PR #12). Versões sabidamente incompatíveis ficam em `ignore`, com o motivo.
 
 ## 6. Verificado e correto (não reanalisar sem mudança no código)
 
