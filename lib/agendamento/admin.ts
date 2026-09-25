@@ -12,7 +12,7 @@ import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, lt, sql } from 
 import { randomBytes } from 'node:crypto';
 import { db, schema } from '../db';
 import { dataLocal, fimDoDiaLocal, horaLocalParaUtc, somarDiasLocal, somarMinutos, formatarParaPaciente } from '../datetime';
-import { codigoPg, PG_EXCLUSION_VIOLATION, SlotIndisponivelError } from '../db/reservas';
+import { chaveDosLimites, codigoPg, PG_EXCLUSION_VIOLATION, SlotIndisponivelError } from '../db/reservas';
 import { hashToken } from '../seguranca';
 import { enfileirar } from '../notificacoes/fila';
 import { conexaoAtiva, ultimaConexao } from '../calendar/conexao';
@@ -199,16 +199,24 @@ export async function bloquear(p: {
   inicio: Date; fim: Date; nota?: string | null; decisoes?: Record<string, Decisao>; motivoAoPaciente?: string | null;
 }, agora = new Date()): Promise<{ cancelados: string[] }> {
   if (!(p.fim > p.inicio)) throw new OperacaoInvalidaError('O fim precisa ser depois do início.');
-  const afetados = await afetadosPor(p.inicio, p.fim);
-  const semDecisao = afetados.filter((a) => !p.decisoes?.[a.id]);
-  if (semDecisao.length > 0) {
-    throw new OperacaoInvalidaError(`Decida o que fazer com ${semDecisao.length === 1 ? 'a consulta' : `as ${semDecisao.length} consultas`} deste período.`);
-  }
   const pid = await practitionerId();
-  await db().insert(availabilityException).values({
-    practitionerId: pid, startsAt: p.inicio, endsAt: p.fim, kind: 'block', note: p.nota?.trim().slice(0, 120) || null,
+  // Sob o MESMO lock das criações pelo site: uma consulta criada entre
+  // "quem é afetado" e o INSERT do bloqueio ficava dentro dele sem decisão.
+  // Agora ou ela entra antes (e aparece aqui, pedindo decisão), ou depois
+  // (e a criação vê o bloqueio e recusa) — SEC-20.
+  const afetados = await db().transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${chaveDosLimites(pid).toString()}::bigint)`);
+    const lista = await afetadosPor(p.inicio, p.fim);
+    const semDecisao = lista.filter((a) => !p.decisoes?.[a.id]);
+    if (semDecisao.length > 0) {
+      throw new OperacaoInvalidaError(`Decida o que fazer com ${semDecisao.length === 1 ? 'a consulta' : `as ${semDecisao.length} consultas`} deste período.`);
+    }
+    await tx.insert(availabilityException).values({
+      practitionerId: pid, startsAt: p.inicio, endsAt: p.fim, kind: 'block', note: p.nota?.trim().slice(0, 120) || null,
+    });
+    await tx.insert(auditLog).values({ actor: 'practitioner', action: 'availability.blocked', meta: { afetados: lista.length } });
+    return lista;
   });
-  await db().insert(auditLog).values({ actor: 'practitioner', action: 'availability.blocked', meta: { afetados: afetados.length } });
 
   const cancelados: string[] = [];
   for (const a of afetados) {

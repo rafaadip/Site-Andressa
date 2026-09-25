@@ -387,6 +387,12 @@ export async function criarAgendamento(
       // Ordem fixa dos locks (limites → slot): nunca forma ciclo.
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${chaveDosLimites(pid).toString()}::bigint)`);
       await conferirLimites(tx, { pid, ipHash, email: paciente.email, agora });
+      // Bloqueio que a médica acabou de criar (a oferta foi calculada antes
+      // dele): sob o mesmo lock de bloquear(), um dos dois vê o outro.
+      const [bloqueio] = await tx.select({ id: availabilityException.id }).from(availabilityException).where(and(
+        eq(availabilityException.practitionerId, pid), eq(availabilityException.kind, 'block'),
+        lt(availabilityException.startsAt, fimClinico), gt(availabilityException.endsAt, inicioClinico))).limit(1);
+      if (bloqueio) throw new SlotIndisponivelError();
       // Enfileira concorrentes do MESMO horário (ADR-004): 7s → 116ms.
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${chaveDoSlot(pid, inicioBloqueio).toString()}::bigint)`);
 

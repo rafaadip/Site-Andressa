@@ -16,7 +16,8 @@ import { receberDaAgenda } from '@/lib/calendar/receber';
 import { sincronizarAgendamento } from '@/lib/calendar/sincronizar';
 import { idEventoGoogle } from '@/lib/calendar/google';
 import { encerrarSessoes, sessaoValidaNoServidor } from '@/lib/auth/admin';
-import { anonimizarTitular, marcarFalta } from '@/lib/agendamento/admin';
+import { chaveDosLimites } from '@/lib/db/reservas';
+import { anonimizarTitular, bloquear, marcarFalta, OperacaoInvalidaError } from '@/lib/agendamento/admin';
 import { revogarMotivoPorToken } from '@/lib/agendamento/servico';
 import { reconciliar } from '@/lib/calendar/sincronizar';
 import { efeitosDe } from '@/lib/agendamento/efeitos';
@@ -231,5 +232,59 @@ d('SEC-06: eliminação, retenção e revogação chegam à agenda do Google', (
     await sql()`UPDATE appointment SET sync_state = 'pending' WHERE id = ${c.id}`;
     await sincronizarAgendamento(c.id);
     expect(evento(c.id).description).not.toMatch(/[<>]/);
+  });
+});
+
+d('SEC-20: bloqueio e agendamento simultâneos — nunca consulta dentro do bloqueio sem decisão', () => {
+  const sql = () => sqlCliente();
+  beforeEach(async () => { await limparBanco(sql()); });
+  afterAll(async () => { await limparBanco(sql()); });
+
+  it('bloqueio criado com a reserva já em voo: a reserva vê o bloqueio e recusa', async () => {
+    const pid = await practitionerId();
+    const de = somarDiasLocal(dataLocal(new Date()), 3);
+    const r = await disponibilidade({ tipo: 'consulta-presencial', de, ate: somarDiasLocal(de, 6) });
+    const slot = r.dias.flatMap((x) => x.slots)[0]!;
+    const inicio = new Date(slot.inicio);
+
+    // A médica "bloqueando": segura o lock dos limites numa conexão própria.
+    const medica = await sql().reserve();
+    await medica`BEGIN`;
+    await medica`SELECT pg_advisory_xact_lock(${chaveDosLimites(pid).toString()}::bigint)`;
+    const reserva = criarAgendamento({
+      tipo: 'consulta-presencial', inicio: slot.inicio,
+      paciente: { nome: 'Ana Souza', telefone: '+5511912345678', email: 'voo@exemplo.com', motivo: '', consentimentoDados: true, consentimentoSaude: false },
+    }, { ip: '198.18.2.1', idempotencyKey: randomUUID() });
+    const resultado = reserva.then(() => 'criada', (e: unknown) => e);
+    // Espera a reserva passar da oferta e parar no lock.
+    for (let i = 0; i < 200; i++) {
+      const [{ n }] = await sql()`SELECT count(*)::int AS n FROM pg_locks WHERE locktype = 'advisory' AND NOT granted` as unknown as [{ n: number }];
+      if (n > 0) break;
+      await new Promise((ok) => setTimeout(ok, 25));
+    }
+    await medica`INSERT INTO availability_exception (practitioner_id, starts_at, ends_at, kind)
+      VALUES (${pid}, ${inicio.toISOString()}, ${new Date(inicio.getTime() + 60 * 60_000).toISOString()}, 'block')`;
+    await medica`COMMIT`;
+    medica.release();
+    expect(await resultado).toBeInstanceOf(SlotIndisponivelError);
+  });
+
+  it('em cada corrida, só um dos dois vence', async () => {
+    const de = somarDiasLocal(dataLocal(new Date()), 3);
+    const r = await disponibilidade({ tipo: 'consulta-presencial', de, ate: somarDiasLocal(de, 13) });
+    const slots = r.dias.flatMap((x) => x.slots).slice(0, 8);
+    for (const [i, slot] of slots.entries()) {
+      const inicio = new Date(slot.inicio);
+      const [ag, bl] = await Promise.allSettled([
+        criarAgendamento({
+          tipo: 'consulta-presencial', inicio: slot.inicio,
+          paciente: { nome: 'Ana Souza', telefone: '+5511912345678', email: `b${i}@exemplo.com`, motivo: '', consentimentoDados: true, consentimentoSaude: false },
+        }, { ip: `198.18.1.${i}`, idempotencyKey: randomUUID() }),
+        bloquear({ inicio, fim: new Date(inicio.getTime() + 40 * 60_000) }),
+      ]);
+      expect([ag.status, bl.status].sort()).toEqual(['fulfilled', 'rejected']);
+      if (bl.status === 'rejected') expect(bl.reason).toBeInstanceOf(OperacaoInvalidaError);
+      if (ag.status === 'rejected') expect(ag.reason).toBeInstanceOf(SlotIndisponivelError);
+    }
   });
 });
