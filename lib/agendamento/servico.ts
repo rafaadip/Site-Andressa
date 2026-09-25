@@ -13,7 +13,8 @@ import { Interval } from 'luxon';
 import { db, schema } from '../db';
 import { calcularDisponibilidade, type Excecao, type Politicas, type RegraSemanal } from '../availability/engine';
 import {
-  TZ_CLINICA, dataLocal, formatarParaPaciente, horaLocalParaUtc, somarMinutos, DataInvalidaError,
+  TZ_CLINICA, dataLocal, diasNoIntervalo, fimDoDiaLocal, formatarParaPaciente, horaLocalParaUtc, somarMinutos,
+  DataInvalidaError,
 } from '../datetime';
 import { chaveDoSlot, chaveDosLimites, codigoPg, reservarSlot, SlotIndisponivelError } from '../db/reservas';
 import { buscarOcupadosExternos } from '../calendar/freebusy';
@@ -161,13 +162,17 @@ async function tipoPorSlug(pid: string, slug: string, soAtivo = true) {
 /** Validação de data 'YYYY-MM-DD', do tamanho da janela e do alcance. */
 function janelaValida(de: string, ate: string, agora: Date): { inicio: Date; fim: Date } {
   const inicio = horaLocalParaUtc(de, '00:00');
-  const fim = somarMinutos(horaLocalParaUtc(ate, '00:00'), 24 * 60);
-  const dias = (fim.getTime() - inicio.getTime()) / 86_400_000;
-  if (dias < 1 || dias > LIMITES.janelaMaximaDias) {
-    throw new DataInvalidaError(`janela de ${dias} dias (máx. ${LIMITES.janelaMaximaDias})`);
-  }
+  // Fim do dia LOCAL (dia de 23/25 h se o horário de verão voltar).
+  const fim = fimDoDiaLocal(ate);
+  // Alcance ANTES de contar os dias: contar até o ano 9999 é um laço de
+  // milhões de iterações.
   if (!dentroDoAlcance(inicio, agora) || !dentroDoAlcance(fim, agora)) {
     throw new DataInvalidaError(`fora do alcance de ${LIMITES.alcanceMaximoDias} dias`);
+  }
+  // Dias do calendário, não horas/24: um dia de 23 h não é "0,958 dia".
+  const dias = diasNoIntervalo(de, ate).length;
+  if (dias < 1 || dias > LIMITES.janelaMaximaDias) {
+    throw new DataInvalidaError(`janela de ${dias} dias (máx. ${LIMITES.janelaMaximaDias})`);
   }
   return { inicio, fim };
 }
