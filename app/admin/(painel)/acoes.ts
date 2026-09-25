@@ -7,6 +7,7 @@
  * O Next confere a Origem do POST (proteção CSRF) antes de executar.
  */
 import { after } from 'next/server';
+import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
@@ -107,13 +108,6 @@ export async function acaoRestoDeHoje(): Promise<Estado> {
   return { ok: 'Pronto: o resto de hoje está bloqueado.' };
 }
 
-function periodo(fd: FormData) {
-  return periodoDoFormulario({
-    de: texto(fd, 'de'), ate: texto(fd, 'ate'), hi: texto(fd, 'hi'), hf: texto(fd, 'hf'),
-    diaInteiro: fd.get('diaInteiro') === 'on',
-  });
-}
-
 export async function acaoBloquear(_: Estado, fd: FormData): Promise<Estado> {
   try {
     await exigirAdminAcao();
@@ -138,7 +132,13 @@ export async function acaoBloquear(_: Estado, fd: FormData): Promise<Estado> {
 export async function acaoExtra(_: Estado, fd: FormData): Promise<Estado> {
   try {
     await exigirAdminAcao();
-    const { inicio, fim } = periodo(fd);
+    // O formulário manda UM dia com início e fim. Uma ação forjada com
+    // meses de "extra" custava ~1 s de CPU em cada consulta pública de
+    // horários, e "dia inteiro" ofertava 03:00 (SEC-20).
+    const hi = texto(fd, 'hi');
+    const hf = texto(fd, 'hf');
+    if (!hi || !hf) throw new OperacaoInvalidaError('Informe o horário de início e de fim.');
+    const { inicio, fim } = periodoDoFormulario({ de: texto(fd, 'de'), hi, hf });
     await adicionarExtra(inicio, fim, texto(fd, 'nota') || null);
   } catch (e) {
     return { erro: mensagem(e) };
@@ -153,11 +153,19 @@ export async function acaoRemoverExcecao(fd: FormData): Promise<void> {
   revalidatePath('/admin/disponibilidade');
 }
 
+/** O JSON vem do cliente: forma e modalidade conferidas antes do domínio. */
+const FAIXAS = z.array(z.object({
+  inicio: z.string().max(5),
+  fim: z.string().max(5),
+  modalidade: z.enum(['in_person', 'telehealth', 'ambas']),
+})).max(12) satisfies z.ZodType<Faixa[]>;
+
 export async function acaoSalvarDia(_: Estado, fd: FormData): Promise<Estado> {
   try {
     await exigirAdminAcao();
-    const faixas = JSON.parse(texto(fd, 'faixas') || '[]') as Faixa[];
-    await salvarDia(inteiro(fd, 'dia'), faixas);
+    const faixas = FAIXAS.safeParse(JSON.parse(texto(fd, 'faixas') || '[]'));
+    if (!faixas.success) return { erro: 'Faixas inválidas.' };
+    await salvarDia(inteiro(fd, 'dia'), faixas.data);
   } catch (e) {
     return { erro: e instanceof SyntaxError ? 'Faixas inválidas.' : mensagem(e) };
   }

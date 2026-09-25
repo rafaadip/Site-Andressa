@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { exigirAdmin } from '@/lib/auth/admin';
 import { listarTiposAdmin } from '@/lib/agendamento/admin';
 import { profissional } from '@/lib/agendamento/servico';
 import { FormPoliticas } from '@/components/admin/FormPoliticas';
@@ -7,6 +8,9 @@ import { FormTipo } from '@/components/admin/FormTipo';
 export const metadata: Metadata = { title: 'Ajustes' };
 
 export default async function Configuracoes() {
+  // Defesa em profundidade: o layout pode não reexecutar numa navegação
+  // parcial; a página confere a sessão por conta própria (SEC-15).
+  await exigirAdmin();
   const [tipos, prof] = await Promise.all([listarTiposAdmin(), profissional()]);
   return (
     <div className="mx-auto max-w-[40rem]">

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { exigirAdmin } from '@/lib/auth/admin';
 import Link from 'next/link';
 import { CalendarPlus } from 'lucide-react';
 import { agenda, type ItemAgenda } from '@/lib/agendamento/admin';
@@ -20,6 +21,9 @@ function agrupar(itens: ItemAgenda[]) {
 }
 
 export default async function Agenda({ searchParams }: { searchParams: Promise<{ feito?: string }> }) {
+  // Defesa em profundidade: o layout pode não reexecutar numa navegação
+  // parcial; a página confere a sessão por conta própria (SEC-15).
+  await exigirAdmin();
   const { feito } = await searchParams;
   const agora = new Date();
   const hoje = dataLocal(agora);

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { exigirAdmin } from '@/lib/auth/admin';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { afetadosPor, periodoDoFormulario, restoDeHoje } from '@/lib/agendamento/admin';
@@ -12,6 +13,9 @@ const CAMPO = 'mt-1 block min-h-12 w-full rounded-md border border-borda-campo b
 type Busca = { resto?: string; de?: string; ate?: string; hi?: string; hf?: string; diaInteiro?: string; nota?: string };
 
 export default async function Bloquear({ searchParams }: { searchParams: Promise<Busca> }) {
+  // Defesa em profundidade: o layout pode não reexecutar numa navegação
+  // parcial; a página confere a sessão por conta própria (SEC-15).
+  await exigirAdmin();
   const b = await searchParams;
   const hoje = dataLocal(new Date());
 

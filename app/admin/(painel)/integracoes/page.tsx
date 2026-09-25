@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { exigirAdmin } from '@/lib/auth/admin';
 import { CalendarCheck, Mail } from 'lucide-react';
 import { estadoPainel } from '@/lib/agendamento/admin';
 import { formatarCurto } from '@/lib/datetime';
@@ -25,6 +26,9 @@ function Estado({ ok, children }: { ok: boolean; children: React.ReactNode }) {
 }
 
 export default async function Integracoes({ searchParams }: { searchParams: Promise<{ conectado?: string; erro?: string }> }) {
+  // Defesa em profundidade: o layout pode não reexecutar numa navegação
+  // parcial; a página confere a sessão por conta própria (SEC-15).
+  await exigirAdmin();
   const { conectado, erro } = await searchParams;
   const e = await estadoPainel();
   const conectar = <a href="/api/oauth/google/start?proposito=agenda" className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-espresso-900 bg-espresso-900 px-6 font-medium text-ivory-100 md:w-auto">{e.google === 'revogado' ? 'Reconectar agora' : 'Conectar Google Agenda'}</a>;

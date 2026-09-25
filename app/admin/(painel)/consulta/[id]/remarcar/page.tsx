@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { exigirAdmin } from '@/lib/auth/admin';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -13,6 +14,9 @@ const JANELA = 14;
 export default async function Remarcar({ params, searchParams }: {
   params: Promise<{ id: string }>; searchParams: Promise<{ de?: string }>;
 }) {
+  // Defesa em profundidade: o layout pode não reexecutar numa navegação
+  // parcial; a página confere a sessão por conta própria (SEC-15).
+  await exigirAdmin();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const c = await consultaPorId(id);

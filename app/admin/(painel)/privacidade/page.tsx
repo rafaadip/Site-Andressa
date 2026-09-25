@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { exigirAdmin } from '@/lib/auth/admin';
 import { Download } from 'lucide-react';
 import { consultasDoTitular } from '@/lib/agendamento/admin';
 import { formatarCurto } from '@/lib/datetime';
@@ -13,6 +14,9 @@ const STATUS: Record<string, string> = { confirmed: 'confirmada', cancelled: 'ca
  * (exportação JSON e CSV) e eliminação (anonimização).
  */
 export default async function Privacidade({ searchParams }: { searchParams: Promise<{ email?: string }> }) {
+  // Defesa em profundidade: o layout pode não reexecutar numa navegação
+  // parcial; a página confere a sessão por conta própria (SEC-15).
+  await exigirAdmin();
   const email = ((await searchParams).email ?? '').trim().toLowerCase().slice(0, 254);
   const linhas = email ? await consultasDoTitular(email) : [];
   const ativas = linhas.filter((l) => !l.ag.anonymizedAt);

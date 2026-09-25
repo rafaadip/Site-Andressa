@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { exigirAdmin } from '@/lib/auth/admin';
 import Link from 'next/link';
 import { Ban, Plus, Trash2 } from 'lucide-react';
 import { listarExcecoes, listarRegras, type Faixa, type Regra } from '@/lib/agendamento/admin';
@@ -28,6 +29,9 @@ function faixasDoDia(regras: Regra[], dia: number): Faixa[] {
 }
 
 export default async function Disponibilidade({ searchParams }: { searchParams: Promise<{ feito?: string }> }) {
+  // Defesa em profundidade: o layout pode não reexecutar numa navegação
+  // parcial; a página confere a sessão por conta própria (SEC-15).
+  await exigirAdmin();
   const { feito } = await searchParams;
   const [regras, excecoes] = await Promise.all([listarRegras(), listarExcecoes()]);
   const hoje = dataLocal(new Date());
