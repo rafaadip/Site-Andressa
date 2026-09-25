@@ -8,17 +8,17 @@
 
 | Camada | Onde | Contra o quê | Quantos |
 |---|---|---|---|
-| Unitários de `lib/` | `tests/unit/` | Funções puras (motor, fuso, `.ics`, validação, PII, TLS, observabilidade) | ⟨UNIT⟩ |
-| Componentes React | `tests/componentes/` | jsdom + Testing Library: papel, nome acessível, estado `aria-*` | ⟨COMP⟩ |
-| Integração | `tests/integration/` | **Postgres real** (constraint, locks, migrations pelo journal); Google e Resend falsos em memória | ⟨INTEG⟩ |
-| Funcionais de API | `tests/integration/api-*.test.ts` | Route handlers chamados com `Request` real: status, cabeçalhos, corpo de erro | ⟨API⟩ |
+| Unitários de `lib/` | `tests/unit/` | Funções puras (motor, fuso, `.ics`, validação, PII, TLS, observabilidade) | 234 |
+| Componentes React | `tests/componentes/` | jsdom + Testing Library: papel, nome acessível, estado `aria-*` | 220 |
+| Integração | `tests/integration/` | **Postgres real** (constraint, locks, migrations pelo journal); Google e Resend falsos em memória | 126 |
+| Funcionais de API | `tests/integration/api-*.test.ts` | Route handlers chamados com `Request` real: status, cabeçalhos, corpo de erro | 68 |
 | E2E | `tests/e2e/` | Build de produção (`next start`), Chromium, axe WCAG 2.2 AA, teclado, fuso de Manaus, 9 aparelhos | 123 |
 | Não funcionais | `tests/nao-funcional/` | Build de produção: carga e resiliência com orçamentos | 20 orçamentos |
 | Lighthouse CI | `.github/workflows/ci.yml` | Performance, acessibilidade, SEO | no pipeline |
 
-Total automatizado com Vitest: **⟨TOTAL⟩ testes**. Cobertura de `lib/`:
-⟨COBERTURA⟩ das linhas (limites no `vitest.config.mts`: 85 % global, 90 % no
-motor e no calendário).
+Total automatizado com Vitest: **648 testes**, mais 123 E2E. Cobertura das
+linhas: **96,4 % em `lib/`** e **92 % em `components/`** (95,3 % no total;
+limites no `vitest.config.mts`: 85 % global, 90 % no motor e no calendário).
 
 ## 2. Aparelhos (E2E, `tests/e2e/dispositivos.spec.ts`)
 
@@ -115,7 +115,13 @@ componente; dividir por etapa é o próximo refactor.
 
 ## 5.1 Bugs encontrados pelos testes novos
 
-⟨BUGS⟩
+| Bug | Onde | Correção |
+|---|---|---|
+| Seta para trás com o foco no próprio grupo de rádio (depois de um erro de validação) caía na **penúltima** opção | `components/agendamento/navegacao-radio.ts` | Sem opção focada: seta para a frente vai à primeira, para trás à última (WAI-ARIA APG) |
+| "Consulta não encontrada" saía com o código `TIPO_INEXISTENTE` | `lib/api/respostas.ts` | Código próprio `NAO_ENCONTRADO` |
+
+Os demais testes novos (componentes do painel, rotas, `lib/`) passaram sem
+achar bug de produção.
 
 ## 6. Como rodar
 

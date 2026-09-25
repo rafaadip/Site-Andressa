@@ -17,6 +17,8 @@ npm run check:contrast   # contraste WCAG dos tokens
 npm run db:generate      # gera migration a partir de lib/db/schema.ts
 ```
 
+Componentes: `tests/componentes/*.test.tsx`, com `// @vitest-environment jsdom`
+na 1ª linha e Testing Library (papel e nome acessível, nunca classe CSS).
 Testes de integração e E2E de agendamento precisam de `DATABASE_URL_TEST`;
 sem ela, pulam sozinhos. O setup migra e semeia o banco de teste sozinho.
 Google e Resend são simulados em memória (`tests/setup/servicos-falsos.ts`);
@@ -96,8 +98,11 @@ Rodar o site local: copie `.env.example` para `.env.local` e preencha
 
 ## Estado
 
-Todas as fases de código (01–13) implementadas; 14 é roadmap. Testes:
-211 unitários + integração, 80 E2E, Lighthouse CI no pipeline.
+Todas as fases de código (01–13) implementadas; 14 é roadmap. Testes: 648
+no Vitest (234 unitários, 220 de componentes em jsdom, 126 de integração, 68
+funcionais de API), 123 E2E (inclui 9 aparelhos), carga, resiliência e
+Lighthouse CI. Cobertura: 96 % de `lib/`, 92 % de `components/`. Segurança
+em `docs/SEGURANCA.md`; QA em `docs/QA.md`.
 
 | Fase | Onde |
 |---|---|

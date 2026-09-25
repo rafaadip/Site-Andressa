@@ -7,8 +7,10 @@ minimalista, em conformidade com LGPD e com as normas de publicidade médica.
 **Este é o documento de entrada.** Comece por aqui. Para colocar no ar e
 operar: **[OPERACAO](OPERACAO.md)**.
 
-> **Estado (25/09/2026):** fases 01–13 implementadas e testadas (211 testes
-> unitários + integração, 80 E2E, Lighthouse CI). O que falta para o go-live
+> **Estado (25/09/2026):** fases 01–13 implementadas e testadas (648 testes
+> no Vitest — unitários, componentes, integração e API —, 123 E2E em 9
+> aparelhos, carga, resiliência, Lighthouse CI) e auditadas
+> ([SEGURANCA](SEGURANCA.md), [QA](QA.md)). O que falta para o go-live
 > não é código — ver §9 e [OPERACAO §5](OPERACAO.md).
 
 ---
