@@ -205,6 +205,13 @@ test.describe('segurança e operação (FASE-13)', () => {
     expect([...new Set(externos)]).toEqual([]);
   });
 
+  test('métodos de diagnóstico (TRACE) são recusados com 405, sem erro 500 (pentest PT-04)', async ({ request }) => {
+    for (const caminho of ['/', '/agendar', '/admin/entrar']) {
+      const r = await request.fetch(caminho, { method: 'TRACE' });
+      expect(r.status()).toBe(405);
+    }
+  });
+
   test('health check responde sem dado pessoal', async ({ request }) => {
     const r = await request.get('/api/health');
     expect(r.status()).toBe(200);

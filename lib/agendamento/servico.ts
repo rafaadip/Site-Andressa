@@ -71,6 +71,12 @@ export const LIMITES = {
   futurasPorEmail: 3,
   /** Janela máxima de uma consulta de disponibilidade. */
   janelaMaximaDias: 31,
+  /**
+   * Nenhuma consulta de datas além disto (em dias a partir de hoje). O
+   * horizonte do painel vai até 180; datas absurdas (ano 9999) estouravam
+   * o intervalo de timestamp do Postgres e viravam 500 (pentest PT-03).
+   */
+  alcanceMaximoDias: 366,
 } as const;
 
 /** Grade de alinhamento dos slots (min). */
@@ -146,16 +152,44 @@ async function tipoPorSlug(pid: string, slug: string, soAtivo = true) {
   return t;
 }
 
-/** Validação de data 'YYYY-MM-DD' e da janela pedida. */
-function janelaValida(de: string, ate: string): { inicio: Date; fim: Date } {
+/** Validação de data 'YYYY-MM-DD', do tamanho da janela e do alcance. */
+function janelaValida(de: string, ate: string, agora: Date): { inicio: Date; fim: Date } {
   const inicio = horaLocalParaUtc(de, '00:00');
   const fim = somarMinutos(horaLocalParaUtc(ate, '00:00'), 24 * 60);
   const dias = (fim.getTime() - inicio.getTime()) / 86_400_000;
   if (dias < 1 || dias > LIMITES.janelaMaximaDias) {
     throw new DataInvalidaError(`janela de ${dias} dias (máx. ${LIMITES.janelaMaximaDias})`);
   }
+  if (!dentroDoAlcance(inicio, agora) || !dentroDoAlcance(fim, agora)) {
+    throw new DataInvalidaError(`fora do alcance de ${LIMITES.alcanceMaximoDias} dias`);
+  }
   return { inicio, fim };
 }
+
+/** De ontem até `alcanceMaximoDias` à frente. */
+function dentroDoAlcance(instante: Date, agora: Date): boolean {
+  return instante >= somarMinutos(agora, -2 * 24 * 60)
+    && instante <= somarMinutos(agora, (LIMITES.alcanceMaximoDias + 1) * 24 * 60);
+}
+
+/**
+ * E-mail canônico, SÓ para contar consultas por pessoa (o e-mail gravado
+ * não muda): minúsculas, sem `+sufixo` e, no Gmail, sem pontos — senão
+ * `ana+1@`, `a.na@` e `ana@gmail.com` burlavam o limite (pentest PT-02).
+ */
+export function emailCanonico(email: string): string {
+  const [local = '', dominio = ''] = email.trim().toLowerCase().split('@');
+  const semSufixo = local.split('+')[0]!;
+  const gmail = dominio === 'gmail.com' || dominio === 'googlemail.com';
+  return `${gmail ? semSufixo.replace(/\./g, '') : semSufixo}@${gmail ? 'gmail.com' : dominio}`;
+}
+
+/** A mesma canonicalização em SQL, sobre a coluna. */
+const emailCanonicoSql = sql`(
+  CASE WHEN split_part(lower(${appointment.patientEmail}), '@', 2) IN ('gmail.com', 'googlemail.com')
+       THEN replace(split_part(split_part(lower(${appointment.patientEmail}), '@', 1), '+', 1), '.', '') || '@gmail.com'
+       ELSE split_part(split_part(lower(${appointment.patientEmail}), '@', 1), '+', 1) || '@' || split_part(lower(${appointment.patientEmail}), '@', 2)
+  END)`;
 
 export async function disponibilidade(p: {
   tipo: string; de: string; ate: string; agora?: Date;
@@ -170,7 +204,7 @@ export async function disponibilidade(p: {
   const prof = await profissional();
   const pid = prof.id;
   const t = await tipoPorSlug(pid, p.tipo, !p.ignorarAgendamento);
-  const { inicio, fim } = janelaValida(p.de, p.ate);
+  const { inicio, fim } = janelaValida(p.de, p.ate, agora);
 
   const [regras, excecoes, ocupados, externos] = await Promise.all([
     db().select().from(availabilityRule).where(eq(availabilityRule.practitionerId, pid)),
@@ -301,7 +335,7 @@ export async function criarAgendamento(
     throw new LimiteExcedidoError('Muitos agendamentos em pouco tempo. Aguarde alguns minutos ou fale pelo WhatsApp.');
   }
   const [futuras] = await db().select({ n: count() }).from(appointment).where(and(
-    eq(appointment.patientEmail, paciente.email),
+    sql`${emailCanonicoSql} = ${emailCanonico(paciente.email)}`,
     eq(appointment.status, 'confirmed'),
     gt(appointment.visitStartsAt, agora)));
   if ((futuras?.n ?? 0) >= LIMITES.futurasPorEmail) {
@@ -313,6 +347,8 @@ export async function criarAgendamento(
   //    ao vivo? (impede reservar fora do expediente com um POST à mão, e
   //    pega o plantão que ela acabou de marcar no celular)
   const inicioClinico = new Date(entrada.inicio);
+  // Fora do alcance não é "ofertado" — e nem chega ao banco (PT-03).
+  if (!dentroDoAlcance(inicioClinico, agora)) throw new SlotIndisponivelError();
   const data = dataLocal(inicioClinico);
   const disp = await disponibilidade({ tipo: t.slug, de: data, ate: data, agora, aoVivo: true });
   const ofertado = disp.dias.some((d) => d.slots.some((s) => s.inicio === inicioClinico.toISOString()));

@@ -14,8 +14,14 @@ import { urlSite } from '@/lib/seo';
 
 const PUBLICAS_DO_ADMIN = ['/admin/entrar'];
 
+/** Métodos de diagnóstico não existem aqui (pentest PT-04: TRACE dava 500). */
+const METODOS_RECUSADOS = new Set(['TRACE', 'TRACK', 'CONNECT']);
+
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  if (METODOS_RECUSADOS.has(req.method.toUpperCase())) {
+    return new NextResponse(null, { status: 405, headers: { Allow: 'GET, HEAD, POST' } });
+  }
 
   if (pathname === '/admin' || pathname.startsWith('/admin/')) {
     const publica = PUBLICAS_DO_ADMIN.some((p) => pathname === p || pathname.startsWith(`${p}/`));
