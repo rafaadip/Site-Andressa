@@ -27,7 +27,7 @@ describe('traduzirErro()', () => {
   it.each([
     [new SlotIndisponivelError(), 409, 'SLOT_INDISPONIVEL'],
     [new TipoInexistenteError(), 404, 'TIPO_INEXISTENTE'],
-    [new AgendamentoInexistenteError(), 404, 'TIPO_INEXISTENTE'],
+    [new AgendamentoInexistenteError(), 404, 'NAO_ENCONTRADO'],
     [new IdempotenciaConflitanteError(), 422, 'IDEMPOTENCIA'],
     [new PrazoCancelamentoError(24), 409, 'LIMITE'],
     [new DataInvalidaError('fora do alcance'), 422, 'VALIDACAO'],

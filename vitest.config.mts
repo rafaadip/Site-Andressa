@@ -23,7 +23,7 @@ export default defineConfig({
       ...(process.env.DATABASE_URL_TEST ? { DATABASE_URL: process.env.DATABASE_URL_TEST } : {}),
     },
     coverage: {
-      include: ['lib/**/*.ts'],
+      include: ['lib/**/*.ts', 'components/**/*.tsx'],
       thresholds: {
         lines: 85, functions: 80,
         // FASE-12 §8: o núcleo (motor e calendário) com ≥ 90 %.

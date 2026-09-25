@@ -19,8 +19,10 @@ export function traduzirErro(e: unknown): Response {
     return erro(409, { erro: 'SLOT_INDISPONIVEL', mensagem: e.message });
   if (e instanceof LimiteExcedidoError)
     return erro(429, { erro: 'LIMITE', mensagem: e.message }, { 'Retry-After': '600' });
-  if (e instanceof TipoInexistenteError || e instanceof AgendamentoInexistenteError)
+  if (e instanceof TipoInexistenteError)
     return erro(404, { erro: 'TIPO_INEXISTENTE', mensagem: e.message });
+  if (e instanceof AgendamentoInexistenteError)
+    return erro(404, { erro: 'NAO_ENCONTRADO', mensagem: e.message });
   if (e instanceof IdempotenciaConflitanteError)
     return erro(422, { erro: 'IDEMPOTENCIA', mensagem: e.message });
   if (e instanceof PrazoCancelamentoError)

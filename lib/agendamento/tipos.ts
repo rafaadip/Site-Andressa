@@ -42,7 +42,7 @@ export type AgendamentoConfirmado = {
 };
 
 export type ErroApi = {
-  erro: 'VALIDACAO' | 'SLOT_INDISPONIVEL' | 'LIMITE' | 'TIPO_INEXISTENTE'
+  erro: 'VALIDACAO' | 'SLOT_INDISPONIVEL' | 'LIMITE' | 'TIPO_INEXISTENTE' | 'NAO_ENCONTRADO'
       | 'IDEMPOTENCIA' | 'INDISPONIVEL' | 'INTERNO';
   mensagem: string;
   campos?: Record<string, string>;
