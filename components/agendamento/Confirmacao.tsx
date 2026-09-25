@@ -66,7 +66,7 @@ export const Confirmacao = forwardRef<HTMLHeadingElement, Props>(function Confir
             value={ag.urlGestao}
             aria-label="Link da sua consulta"
             onFocus={(e) => e.currentTarget.select()}
-            className="min-h-12 min-w-0 flex-1 truncate rounded-md border border-borda-campo bg-elevado px-3 text-sm text-texto"
+            className="min-h-12 min-w-0 flex-1 truncate rounded-md border border-borda-campo bg-elevado px-3 text-base text-texto"
           />
           <button
             type="button"

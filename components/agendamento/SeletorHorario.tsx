@@ -74,6 +74,8 @@ export function SeletorHorario(p: Props) {
         </div>
       ) : (
         <div
+          id="grupo-dias"
+          tabIndex={-1}
           role="radiogroup"
           aria-label="Dia da consulta"
           onKeyDown={navegarRadio}
@@ -139,6 +141,8 @@ export function SeletorHorario(p: Props) {
               {dataPorExtenso(diaAtual.data, diaAtual.diaSemana)}
             </h3>
             <div
+              id="grupo-horarios"
+              tabIndex={-1}
               role="radiogroup"
               aria-labelledby="rotulo-horarios"
               aria-describedby={p.erro ? 'erro-horario' : undefined}

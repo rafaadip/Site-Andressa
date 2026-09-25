@@ -158,6 +158,14 @@
   /* Header sticky cobre o alvo ao navegar por âncora/Tab (WCAG 2.2 §2.4.11). */
   :where(h1, h2, h3, section, [id]) { scroll-margin-top: 5.5rem; }
 
+  /* BarraAcoes (agendamento) e NavAdminRodape (painel) são sticky/fixed no
+     rodapé do celular: sem isto, `scrollIntoView`/foco programático (ou por
+     Tab) considera um elemento "visível" mesmo quando ele nasce atrás delas
+     (UX-01/UX-02/UX-06). 6rem cobre a altura das duas com folga. */
+  @media (max-width: 767px) {
+    :root { scroll-padding-bottom: calc(6rem + var(--safe-bottom)); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     *, *::before, *::after {
