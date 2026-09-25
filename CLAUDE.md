@@ -11,6 +11,8 @@ npm run dev              # desenvolvimento
 npm run verify           # typecheck + lint + contraste + conformidade + testes
 npm run test             # vitest (unitários + integração)
 npm run test:e2e         # Playwright contra o build de produção (rode `npm run build` antes)
+npm run test:carga       # não funcional: p95 e corrida no mesmo horário (contra o build)
+npm run test:resiliencia # não funcional: banco recusando/pendurado (contra o build)
 npm run check:contrast   # contraste WCAG dos tokens
 npm run db:generate      # gera migration a partir de lib/db/schema.ts
 ```
@@ -28,7 +30,7 @@ createdb -h 127.0.0.1 -p 55432 -U postgres andressa
 
 export DATABASE_URL="postgresql://postgres@127.0.0.1:55432/andressa"
 npm run db:migrate       # SEMPRE pelo journal — nunca `psql -f` numa migration
-npm run db:seed          # horários FICTÍCIOS de desenvolvimento
+npm run db:seed          # horários FICTÍCIOS — só em banco local
 export DATABASE_URL_TEST="$DATABASE_URL"
 ```
 
@@ -85,6 +87,12 @@ Rodar o site local: copie `.env.example` para `.env.local` e preencha
     altura zero.
 16. **PII nunca em log.** Use `log` de `lib/log.ts` (filtra por chave e por
     padrão); nunca `console.log` de objeto de paciente.
+17. **Limite anti-abuso só vale contado sob lock.** Criação pelo site e
+    `bloquear()` tomam `chaveDosLimites()` antes do lock do slot (ordem fixa).
+    Contagem fora da transação é só caminho rápido. Ver `docs/SEGURANCA.md`.
+18. **O evento do Google espelha a consulta.** Quem apaga dado (revogação,
+    retenção, eliminação) marca `sync_state='pending'` em toda linha com
+    `google_event_id` — senão o dado sobrevive na agenda da médica.
 
 ## Estado
 

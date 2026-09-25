@@ -36,9 +36,9 @@ Região da função: `gru1` (São Paulo, em `vercel.json`) — ao lado do banco.
    DATABASE_URL_UNPOOLED="…" npm run db:migrate
    ```
    O comando falha se a constraint `appointment_no_overlap` não existir no fim.
-4. Dados iniciais: `NODE_ENV=production npm run db:seed` cria só o profissional
-   e as modalidades — **não toca nos horários** (em dev ele semeia horários
-   fictícios). Em seguida, configure a semana padrão real no painel
+4. Dados iniciais: `npm run db:seed` cria só o profissional e as modalidades —
+   com banco **remoto** ele **nunca toca nos horários** (horário fictício só em
+   banco local, ou com `SEED_CONFIRMO_FICTICIO=sim`). Em seguida, configure a semana padrão real no painel
    (`/admin/disponibilidade`). Rodar de novo é seguro: não apaga o que a
    médica configurou.
 
@@ -69,18 +69,28 @@ Região da função: `gru1` (São Paulo, em `vercel.json`) — ao lado do banco.
 
 Ver `.env.example` — cada uma tem o comando para gerar. Obrigatórias em
 produção: `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `TOKEN_SALT`,
-`NEXT_PUBLIC_SITE_URL`, `AUTH_SECRET`, `ADMIN_EMAIL`, `GOOGLE_*`,
-`ENCRYPTION_KEY`, `CRON_SECRET`, `RESEND_*`, `EMAIL_*`.
+`NEXT_PUBLIC_SITE_URL` (`https://` — o build de produção falha sem isso),
+`AUTH_SECRET`, `ADMIN_EMAIL`, `GOOGLE_*`, `ENCRYPTION_KEY`, `CRON_SECRET`,
+`RESEND_*`, `EMAIL_*`. Recomendada: `DATABASE_CA_CERT` (verifica o
+certificado do banco).
 
 | Variável | ⚠️ |
 |---|---|
 | `TOKEN_SALT` | **Nunca trocar** depois do go-live: todos os links de consulta param de abrir |
 | `ENCRYPTION_KEY` | Trocar exige reconectar a agenda (o token cifrado deixa de abrir) |
-| `AUTH_SECRET` | Trocar derruba a sessão do painel (útil em incidente) |
+| `AUTH_SECRET` | Trocar derruba a sessão do painel (útil em incidente). Para sair de um aparelho perdido basta "Sair" em qualquer outro: revoga todas as sessões |
 | `ADMIN_EMAIL` | Em **preview**, use uma conta de teste: fora da produção o sistema recusa conectar a agenda real |
 | `AGENDAMENTO_SEM_GOOGLE` | Deixe **vazio** em produção depois de conectar a agenda |
 
-### 2.5 Conectar a agenda
+### 2.5 Firewall da Vercel (antes de divulgar)
+
+Firewall → Custom Rules, com ação *Rate limit* por IP (ver
+`docs/SEGURANCA.md §4`): `POST /api/agendamentos` 10/min,
+`GET /api/disponibilidade` 60/min, `GET /api/health` 30/min. O site já tem
+limites próprios (5 por IP/hora, 3 futuras por e-mail, 30 por hora no total);
+o WAF corta a rajada antes de chegar à função.
+
+### 2.6 Conectar a agenda
 
 1. `https://…/admin` → Entrar com Google (a conta do `ADMIN_EMAIL`).
 2. Integrações → **Conectar Google Agenda** → aceitar os dois escopos.
@@ -96,7 +106,7 @@ produção: `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `TOKEN_SALT`,
 | `/api/cron/lembretes-h2` | de hora em hora | Lembrete ~2 h antes |
 | `/api/cron/lembretes-d1` | `0 21 * * *` | Lembrete da véspera — **21:00 UTC = 18:00 em Brasília** |
 | `/api/cron/renovar-canal` | `0 4 * * *` | Renova o canal push (expira em ~30 dias) |
-| `/api/cron/retencao` | `0 5 * * *` | LGPD: motivo 90 dias, contato 5 anos |
+| `/api/cron/retencao` | `0 5 * * *` | LGPD: motivo e recado 90 dias, contato 5 anos (o evento do Google é redigido na reconciliação seguinte) |
 
 Todas exigem `Authorization: Bearer $CRON_SECRET` (a Vercel envia sozinha).
 Sem `CRON_SECRET`, respondem 401 — nunca ficam abertas.
@@ -129,6 +139,9 @@ Não há cron de "reservas expiradas": o fluxo grava a consulta já
 - [ ] Revisão jurídica da política, dos termos e do [RIPD](RIPD.md)
 - [ ] Endereço definido **ou** ciência do modo sem endereço ([FASE-11](fases/FASE-11-seo-performance.md))
 - [ ] Backup: PITR ativo e uma restauração testada
+- [ ] Banco com **Enforce SSL** e `DATABASE_CA_CERT`; WAF da Vercel (§2.5)
+- [ ] Verificação em duas etapas forte na conta Google da médica
+- [ ] `npm audit --omit=dev` limpo e CI verde no commit do deploy
 
 **No dia**
 - [ ] Agendar de ponta a ponta com dados reais, no celular
@@ -150,7 +163,10 @@ Não há cron de "reservas expiradas": o fluxo grava a consulta já
 | Horários 1 h deslocados | Alguém escreveu offset fixo | `lib/datetime.ts` é o único lugar de fuso; o ESLint bloqueia o resto |
 | Overbooking | `\d appointment` no banco | Recriar `appointment_no_overlap` por migration (nunca `psql -f`) |
 | Cancelamento não some do iPhone | `ics_uid` / `ics_sequence` da consulta | UID não pode mudar; SEQUENCE precisa subir |
-| Suspeita de acesso indevido ao painel | `audit_log` (`admin.login*`) | Girar `AUTH_SECRET`; revisar `ADMIN_EMAIL` |
+| Suspeita de acesso indevido ao painel | `audit_log` (`admin.login*`) | "Sair" (revoga todas as sessões); girar `AUTH_SECRET`; revisar `ADMIN_EMAIL` |
+| Rajada de agendamentos falsos | Log `agendamento.limite-global`; painel | Ligar/apertar o WAF (§2.5); cancelar pelo painel; ver `docs/SEGURANCA.md` (SEC-02) |
+| Build de produção falha na config | `NEXT_PUBLIC_SITE_URL` | Precisa ser `https://` |
+| "Banco remoto exige TLS" no log | `DATABASE_URL` com `sslmode=disable/prefer` | Trocar por `sslmode=require` |
 
 ## 7. Desenvolvimento local
 
