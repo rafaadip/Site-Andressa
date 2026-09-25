@@ -122,4 +122,18 @@ export function somarMinutos(instante: Date, minutos: number): Date {
   return DateTime.fromJSDate(instante).plus({ minutes: minutos }).toJSDate();
 }
 
+/**
+ * Arredonda PARA CIMA ao próximo múltiplo de `grade` minutos do relógio da
+ * clínica: 14:07 com grade 5 → 14:10; 14:10 fica 14:10. Segundos contam
+ * (14:10:30 → 14:15). É o relógio de PAREDE que se alinha, não o UTC — em
+ * fuso com offset quebrado (+05:45) o slot ainda cai em :00, :05…
+ */
+export function alinharAGrade(instante: Date, grade: number, zona: string = TZ_CLINICA): Date {
+  const g = Math.max(1, Math.floor(grade));
+  let dt = DateTime.fromJSDate(instante).setZone(zona);
+  if (dt.second || dt.millisecond) dt = dt.startOf('minute').plus({ minutes: 1 });
+  const resto = (dt.hour * 60 + dt.minute) % g;
+  return (resto ? dt.plus({ minutes: g - resto }) : dt).toJSDate();
+}
+
 export { DateTime, Interval };

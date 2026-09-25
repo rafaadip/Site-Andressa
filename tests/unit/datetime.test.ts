@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   horaLocalParaUtc, dataLocal, horaLocal, diaDaSemana,
-  diasNoIntervalo, emUtcCompacto, emLocalCompacto, DataInvalidaError,
+  diasNoIntervalo, emUtcCompacto, emLocalCompacto, DataInvalidaError, alinharAGrade,
 } from '@/lib/datetime';
 
 describe('horaLocalParaUtc', () => {
@@ -70,5 +70,28 @@ describe('formatos do RFC 5545', () => {
   });
   it('emLocalCompacto usa a hora de parede, sem sufixo', () => {
     expect(emLocalCompacto(new Date('2026-09-15T17:00:00Z'))).toBe('20260915T140000');
+  });
+});
+
+describe('alinharAGrade', () => {
+  const local = (hora: string) => horaLocalParaUtc('2026-10-06', hora);
+
+  it('arredonda PARA CIMA ao próximo múltiplo da grade no relógio da clínica', () => {
+    expect(horaLocal(alinharAGrade(local('14:07'), 5))).toBe('14:10');
+    expect(horaLocal(alinharAGrade(local('14:07'), 15))).toBe('14:15');
+    expect(horaLocal(alinharAGrade(local('14:58'), 15))).toBe('15:00');
+  });
+
+  it('já alinhado fica onde está; segundos contam como minuto começado', () => {
+    expect(alinharAGrade(local('14:10'), 5).toISOString()).toBe(local('14:10').toISOString());
+    const quebrado = new Date(local('14:10').getTime() + 30_000);
+    expect(horaLocal(alinharAGrade(quebrado, 5))).toBe('14:15');
+  });
+
+  it('alinha a hora de PAREDE, não o UTC (offset de 45 min em Katmandu)', () => {
+    // 14:07 em Katmandu = 08:22Z. Grade de 60 na parede → 15:00 local;
+    // alinhar o UTC daria 09:00Z = 14:45 local.
+    const k = horaLocalParaUtc('2026-10-06', '14:07', 'Asia/Kathmandu');
+    expect(horaLocal(alinharAGrade(k, 60, 'Asia/Kathmandu'), 'Asia/Kathmandu')).toBe('15:00');
   });
 });

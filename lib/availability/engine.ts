@@ -14,7 +14,7 @@
  */
 import { Interval } from 'luxon';
 import {
-  TZ_CLINICA, diasNoIntervalo, horaLocalParaUtc, horaLocal, dataLocal,
+  TZ_CLINICA, alinharAGrade, diasNoIntervalo, horaLocalParaUtc, horaLocal, dataLocal,
   diaDaSemana, somarMinutos,
 } from '../datetime';
 import type { Modalidade } from '../config';
@@ -142,7 +142,15 @@ export function expandirRegras(
   return normalizar(janelas);
 }
 
-/** Passo 5 — fatia janelas em slots do tamanho do tipo de consulta. */
+/**
+ * Passo 5 — fatia janelas em slots do tamanho do tipo de consulta.
+ *
+ * O horário CLÍNICO (o que o paciente vê) cai sempre na grade do relógio
+ * da clínica: janela livre a partir de 14:07 (compromisso até 14:07) gera
+ * 14:10, 15:00… — nunca 14:07, 14:57. Depois de cada slot, o próximo é o
+ * primeiro ponto da grade em que o bloqueio anterior (com buffers) já
+ * terminou.
+ */
 export function fatiar(
   janelas: Interval[],
   tipo: TipoConsulta,
@@ -151,24 +159,26 @@ export function fatiar(
 ): Slot[] {
   // O intervalo BLOQUEADO inclui os buffers; o horário CLÍNICO é derivado.
   const bloqueioMin = tipo.bufferAntesMin + tipo.duracaoMin + tipo.bufferDepoisMin;
+  const passoMin = Math.max(grade, bloqueioMin);
   const slots: Slot[] = [];
 
   for (const janela of janelas) {
-    let cursor = janela.start!.toJSDate();
+    // O buffer ANTES também precisa caber na janela: alinha o início clínico
+    // a partir de (início da janela + buffer antes).
+    let inicioClinico = alinharAGrade(somarMinutos(janela.start!.toJSDate(), tipo.bufferAntesMin), grade, zona);
 
     while (true) {
-      const fimBloqueio = somarMinutos(cursor, bloqueioMin);
+      const fimBloqueio = somarMinutos(inicioClinico, tipo.duracaoMin + tipo.bufferDepoisMin);
       // Descarta slot cujo FIM ultrapassa a janela.
       if (fimBloqueio > janela.end!.toJSDate()) break;
 
-      const inicioClinico = somarMinutos(cursor, tipo.bufferAntesMin);
       slots.push({
         inicio: inicioClinico,
         fim: somarMinutos(inicioClinico, tipo.duracaoMin),
         rotulo: horaLocal(inicioClinico, zona),
       });
 
-      cursor = somarMinutos(cursor, Math.max(grade, bloqueioMin));
+      inicioClinico = alinharAGrade(somarMinutos(inicioClinico, passoMin), grade, zona);
     }
   }
   return slots;
