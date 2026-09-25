@@ -5,7 +5,7 @@
  *    página e ação do painel confere a sessão de novo (lib/auth/admin.ts).
  * 2. CSP com nonce novo por requisição (lib/csp.ts). O Next lê o nonce do
  *    cabeçalho e o aplica aos próprios scripts — por isso as páginas são
- *    renderizadas dinamicamente (docs/adr/ADR-006-painel-e-seguranca.md).
+ *    renderizadas dinamicamente (docs/adr/ADR-006-integracoes-sem-sdk-e-painel.md).
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { lerSessao, nomeCookieSessao } from '@/lib/auth/sessao';

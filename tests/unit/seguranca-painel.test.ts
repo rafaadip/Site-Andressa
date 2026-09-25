@@ -132,3 +132,12 @@ describe('remoção de dado pessoal (log/Sentry)', () => {
     expect(r).toEqual({ agendamento: 'id-1', paciente: '[removido]', patient_note: '[removido]', dados: { email: '[removido]', ok: 1 } });
   });
 });
+
+describe('IP do cliente (limite por hora e prova de consentimento)', () => {
+  it('usa o primeiro x-forwarded-for (a Vercel sobrescreve o cabeçalho), depois x-real-ip', async () => {
+    const { ipDaRequisicao } = await import('@/lib/seguranca');
+    expect(ipDaRequisicao(new Headers({ 'x-forwarded-for': '203.0.113.9, 10.0.0.1' }))).toBe('203.0.113.9');
+    expect(ipDaRequisicao(new Headers({ 'x-real-ip': ' 198.51.100.7 ' }))).toBe('198.51.100.7');
+    expect(ipDaRequisicao(new Headers())).toBe('0.0.0.0');
+  });
+});

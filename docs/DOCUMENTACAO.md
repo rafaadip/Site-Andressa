@@ -1,10 +1,15 @@
 # Site Dra. Andressa Chaves Correia — Documentação
 
-Site profissional com **agendamento online sincronizado com Google Agenda e Apple
-Calendar**. Premium, minimalista, em conformidade com LGPD e com as normas de
-publicidade médica.
+Site profissional com **agendamento online sincronizado com o Google Agenda** (o
+paciente leva a consulta para Apple, Google ou Outlook pelo `.ics`). Premium,
+minimalista, em conformidade com LGPD e com as normas de publicidade médica.
 
-**Este é o documento de entrada.** Comece por aqui.
+**Este é o documento de entrada.** Comece por aqui. Para colocar no ar e
+operar: **[OPERACAO](OPERACAO.md)**.
+
+> **Estado (25/09/2026):** fases 01–13 implementadas e testadas (211 testes
+> unitários + integração, 80 E2E, Lighthouse CI). O que falta para o go-live
+> não é código — ver §9 e [OPERACAO §5](OPERACAO.md).
 
 ---
 
@@ -15,6 +20,10 @@ publicidade médica.
 |---|---|
 | [00-ARQUITETURA](00-ARQUITETURA.md) | Requisitos, decisão central de calendário, stack, modelo de dados, fluxos, segurança |
 | [01-MOBILE-FIRST](01-MOBILE-FIRST.md) | **Padrão obrigatório.** O uso primário é celular e tablet — breakpoints, toque, tablet, áreas seguras, checklist |
+| [OPERACAO](OPERACAO.md) | Implantação, variáveis, crons, monitoramento, go-live e runbook |
+| [RIPD](RIPD.md) | Relatório de impacto à proteção de dados (LGPD) — para assinatura |
+| [Guia do Perfil da Empresa](GUIA-PERFIL-EMPRESA-GOOGLE.md) | Para a médica: SEO local sem ferir o CFM |
+| [Roteiro de teste manual](ROTEIRO-TESTE-MANUAL.md) | O que só dá para testar em aparelho real, antes do go-live |
 
 ### Decisões (ADR)
 | ADR | Assunto | Em uma frase |
@@ -24,6 +33,7 @@ publicidade médica.
 | [003](adr/ADR-003-ics-para-o-paciente.md) | `.ics` para o paciente | Agenda da médica só no Google; `.ics` fica porque é formato universal, não Apple |
 | [004](adr/ADR-004-antioverbooking.md) | `EXCLUDE USING gist` | O banco impede overbooking, não a aplicação |
 | [005](adr/ADR-005-analytics-sem-cookies.md) | Analytics sem cookies | Sem cookie não essencial → sem banner |
+| [006](adr/ADR-006-integracoes-sem-sdk-e-painel.md) | Integrações sem SDK, sessão própria, CSP com nonce | Menos dependência, mais controle sobre o que sai do servidor |
 
 ### Fases
 | # | Fase | Dias | Depende de |
@@ -146,20 +156,24 @@ que barra essas palavras em qualquer outro arquivo. Em julho de 2027, preencher
 
 | Camada | Escolha |
 |---|---|
-| Framework | Next.js 15 (App Router) + TypeScript estrito |
-| Estilo | Tailwind CSS v4 + tokens CSS |
-| Componentes | shadcn/ui (base Radix) |
-| Animação | Motion |
-| Fontes | Playfair Display + Jost, self-hosted via `next/font` |
+| Framework | Next.js **16** (App Router, `proxy.ts`) + TypeScript estrito |
+| Estilo | Tailwind CSS v4 + tokens CSS (sem biblioteca de componentes) |
+| Animação | CSS (`transform`/`opacity`), respeitando `prefers-reduced-motion` |
+| Fontes | Playfair Display + Jost + Cormorant, self-hosted via `next/font` (subconjunto `latin`) |
 | Banco | PostgreSQL (Supabase, `sa-east-1`) + Drizzle |
-| Auth (admin) | Auth.js v5 + Google, allowlist de uma conta |
-| Calendário | Google Calendar API v3 (médica) · `.ics` RFC 5545 (paciente) |
-| E-mail | Resend + React Email |
+| Auth (admin) | Login Google (OIDC) + sessão HMAC própria, allowlist de uma conta |
+| Calendário | Google Calendar API v3 via `fetch` (médica) · `.ics` RFC 5545 (paciente) |
+| E-mail | Resend via API REST, HTML em tabela + texto puro |
 | Datas | Luxon — **só** em `lib/datetime.ts` |
-| Analytics | Plausible/Umami (sem cookies) |
-| Erros | Sentry, com PII filtrada |
-| Testes | Vitest · Playwright · axe-core |
-| Deploy | Vercel + GitHub Actions |
+| Segurança | CSP com nonce por requisição, HSTS, cabeçalhos restritivos |
+| Analytics | Plausible opcional (sem cookies) |
+| Erros | Sentry opcional, via envelope HTTP, com PII filtrada |
+| Testes | Vitest · Playwright · axe-core · Lighthouse CI |
+| Deploy | Vercel (`gru1`, crons) + GitHub Actions |
+
+As diferenças em relação ao plano original (Auth.js, React Email, `googleapis`,
+SDK do Sentry, shadcn/ui, Motion) estão justificadas no
+[ADR-006](adr/ADR-006-integracoes-sem-sdk-e-painel.md).
 
 ---
 
@@ -240,23 +254,24 @@ Se você só ler uma seção, leia esta.
 
 ```bash
 git clone <repo> && cd site-andressa
-cp .env.example .env.local     # preencher — ver FASE-02 §3
-npm install
+cp .env.example .env.local     # DATABASE_URL, TOKEN_SALT, NEXT_PUBLIC_SITE_URL
+npm ci
 docker compose up -d postgres
 npm run db:migrate
-npm run db:seed
+npm run db:seed                # horários FICTÍCIOS (em produção não toca nos horários)
 npm run dev
 ```
 
 | Comando | O quê |
 |---|---|
 | `npm run dev` | Desenvolvimento |
+| `npm run verify` | typecheck + lint + contraste + conformidade CFM/LGPD + unitários + integração |
 | `npm run build` | Build de produção |
-| `npm run test` | Unitários (Vitest) |
-| `npm run test:e2e` | E2E (Playwright) |
-| `npm run db:migrate` | Aplica migrations |
+| `npm run test:e2e` | E2E (Playwright) contra o build |
+| `npm run db:migrate` | Aplica migrations pelo journal e confere a trava anti-overbooking |
 | `npm run db:studio` | Drizzle Studio |
-| `npm run check:contrast` | Verifica contraste dos tokens |
+| `npm run check:contrast` | Contraste dos tokens + sincronia de `lib/marca.ts` |
+| `npm run check:conformidade` | Termos vedados pelo CFM, CRM à mão, hex cru |
 
 ---
 
@@ -297,14 +312,17 @@ Pontos que exigem confirmação antes de codificar:
       **Custo enquanto durar:** o pacote local do Google ("nutrólogo perto de mim")
       fica praticamente fora de alcance — ver
       [FASE-11](fases/FASE-11-seo-performance.md)
-- [ ] **Horários reais de atendimento** — alimentam `availability_rule`.
-      Hoje o seed usa horários **fictícios** (seg–sex 9–12 e 14–18; tele ter/qui
-      18:30–20:30) só para desenvolvimento
-- [ ] **Google Calendar (FASE-05) antes de abrir o agendamento ao público** —
-      sem ele o site não enxerga os plantões dela. Produção sem Google exige
-      `AGENDAMENTO_SEM_GOOGLE=aceito`, decisão consciente
-- [ ] **E-mail de confirmação (FASE-08)** — até lá, o paciente leva o
-      compromisso pelos botões de calendário e pelo link mostrado na tela
-- [ ] **Duração das consultas** — o protótipo assume 40 min
+- [ ] **Horários reais de atendimento** — a médica configura no painel
+      (`/admin/disponibilidade`). O seed de desenvolvimento usa horários
+      **fictícios** (seg–sex 9–12 e 14–18; tele ter/qui 18:30–20:30) e, em
+      produção, não toca nos horários
+- [ ] **Conectar a agenda Google real** no painel (`/admin/integracoes`) antes
+      de abrir o agendamento — a integração (FASE-05) está pronta; falta o
+      consentimento dela. Produção sem agenda exige `AGENDAMENTO_SEM_GOOGLE=aceito`
+- [ ] **DNS do e-mail** (SPF, DKIM, DMARC na Resend) — os e-mails (FASE-08)
+      estão prontos; sem a Resend configurada, o paciente leva o compromisso
+      pelos botões de calendário e pelo link mostrado na tela
+- [ ] **Duração das consultas** — o protótipo assume 40 min (presencial) e
+      30 min (teleconsulta); ajustável no painel (`/admin/configuracoes`)
 - [ ] **Domínio** — `draandressacorreia.com.br` é hipótese
 - [ ] **Revisão jurídica** de publicidade médica antes do go-live

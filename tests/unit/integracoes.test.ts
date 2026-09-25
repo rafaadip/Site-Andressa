@@ -138,3 +138,31 @@ describe('Sentry sem SDK', () => {
     expect(String(init.body)).toContain('[email]');
   });
 });
+
+describe('OAuth — login e revogação', () => {
+  beforeEach(() => { for (const [k, v] of Object.entries(ENV)) vi.stubEnv(k, v); _limparCacheEnv(); });
+  afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); _limparCacheEnv(); });
+
+  it('login pede só openid + email, sem offline, com escolha de conta', async () => {
+    const { ESCOPOS_LOGIN } = await import('@/lib/calendar/google');
+    const u = new URL(urlAutorizacao({ redirectUri: 'https://s/cb', state: 's', escopos: ESCOPOS_LOGIN, offline: false, loginHint: 'dra@x.com' }));
+    expect(u.searchParams.get('scope')).toBe('openid email');
+    expect(u.searchParams.get('access_type')).toBeNull();
+    expect(u.searchParams.get('prompt')).toBe('select_account');
+    expect(u.searchParams.get('login_hint')).toBe('dra@x.com');
+  });
+
+  it('troca de código: sucesso devolve os tokens; erro vira GoogleApiError com o motivo', async () => {
+    const { trocarCodigo } = await import('@/lib/calendar/google');
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ access_token: 'a', expires_in: 1, scope: 'x' }), { status: 200 })));
+    expect((await trocarCodigo('c', 'https://s/cb')).access_token).toBe('a');
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'invalid_request' }), { status: 400 })));
+    await expect(trocarCodigo('c', 'https://s/cb')).rejects.toMatchObject({ status: 400, motivo: 'invalid_request' });
+  });
+
+  it('revogar é melhor esforço: rede fora não derruba a desconexão', async () => {
+    const { revogarToken } = await import('@/lib/calendar/google');
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('rede'); }));
+    await expect(revogarToken('t')).resolves.toBeUndefined();
+  });
+});

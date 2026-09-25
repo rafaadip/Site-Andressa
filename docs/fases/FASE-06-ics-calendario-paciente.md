@@ -13,6 +13,9 @@
 
 ---
 
+> **Estado da implementação (25/09/2026):** implementada — `lib/calendar/ics.ts`, validado contra `ical.js`; o `.ics` vai anexo aos e-mails (REQUEST/CANCEL) e na tela de confirmação.
+
+
 ## 1. Por que o `.ics` continua, mesmo "só com Google"
 
 O `.ics` **não é integração com a Apple** — é um formato aberto (RFC 5545) lido

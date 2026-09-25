@@ -91,6 +91,9 @@ test.describe('celular (375px)', () => {
     const gestao = await page.getByRole('textbox', { name: 'Link da sua consulta' }).inputValue();
     await page.goto(gestao);
     await expect(page.getByRole('heading', { name: 'Consulta confirmada', level: 1 })).toBeVisible();
+
+    // LGPD/ADR-005: agendar do começo ao fim não deixa cookie NENHUM no paciente.
+    expect(await page.context().cookies()).toEqual([]);
   });
 
   test('sem rolagem horizontal e com a ação principal visível em cada etapa', async ({ page }) => {

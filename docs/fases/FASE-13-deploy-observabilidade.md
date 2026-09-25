@@ -5,6 +5,9 @@
 
 ---
 
+> **Estado da implementação (25/09/2026):** implementada — `vercel.json` (região `gru1`, crons em UTC), cabeçalhos e CSP com nonce (`proxy.ts`), `/api/health`, `instrumentation.ts` + Sentry sem SDK, guarda preview ≠ agenda real, CI. O **como** operar está em [OPERACAO](../OPERACAO.md); o checklist do §7 é de go-live (não é código).
+
+
 ## 1. Ambientes
 
 | Ambiente | URL | Banco | Google Calendar |

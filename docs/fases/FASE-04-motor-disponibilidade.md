@@ -7,6 +7,9 @@
 
 ---
 
+> **Estado da implementação (25/09/2026):** implementada — `lib/availability/engine.ts` (100 % das linhas cobertas), políticas (antecedência, horizonte) editáveis no painel.
+
+
 ## 1. Por que esta fase é a mais delicada
 
 Erros aqui não aparecem em teste: aparecem como uma paciente parada na porta de um

@@ -23,7 +23,12 @@ export default defineConfig({
     },
     coverage: {
       include: ['lib/**/*.ts'],
-      thresholds: { lines: 80, functions: 80 },
+      thresholds: {
+        lines: 85, functions: 80,
+        // FASE-12 §8: o núcleo (motor e calendário) com ≥ 90 %.
+        'lib/availability/**': { statements: 90, lines: 90 },
+        'lib/calendar/**': { statements: 90, lines: 90 },
+      },
     },
   },
 });

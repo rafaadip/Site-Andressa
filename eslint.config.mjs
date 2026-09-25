@@ -43,8 +43,21 @@ export default defineConfig([
     },
   },
   {
+    rules: {
+      // FASE-12 §7: DateTime da Luxon (que converte fuso) só em lib/datetime.ts.
+      // `Interval` (aritmética de instantes, sem fuso) pode ser importado.
+      'no-restricted-imports': ['error', {
+        paths: [{
+          name: 'luxon',
+          importNames: ['DateTime', 'Settings', 'Info', 'IANAZone', 'FixedOffsetZone'],
+          message: 'Conversão de fuso só em lib/datetime.ts. Importe as funções de lá.',
+        }],
+      }],
+    },
+  },
+  {
     // datetime.ts é a única exceção: é ele que encapsula a conversão.
     files: ['lib/datetime.ts', 'tests/**/*.ts', 'scripts/**/*.ts'],
-    rules: { 'no-restricted-syntax': 'off' },
+    rules: { 'no-restricted-syntax': 'off', 'no-restricted-imports': 'off' },
   },
 ]);

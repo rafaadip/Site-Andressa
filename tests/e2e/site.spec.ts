@@ -195,6 +195,16 @@ test.describe('segurança e operação (FASE-13)', () => {
     expect(violacoes).toEqual([]);
   });
 
+  test('nenhuma requisição a domínio de terceiro no carregamento (ADR-005)', async ({ page }) => {
+    const externos: string[] = [];
+    page.on('request', (r) => {
+      const u = new URL(r.url());
+      if (!['localhost', '127.0.0.1'].includes(u.hostname) && u.protocol.startsWith('http')) externos.push(u.hostname);
+    });
+    for (const caminho of PAGINAS) { await page.goto(caminho); await page.waitForLoadState('networkidle'); }
+    expect([...new Set(externos)]).toEqual([]);
+  });
+
   test('health check responde sem dado pessoal', async ({ request }) => {
     const r = await request.get('/api/health');
     expect(r.status()).toBe(200);

@@ -11,8 +11,8 @@ import { _limparCacheEnv } from '@/lib/env';
 import { dataLocal } from '@/lib/datetime';
 import { somarDias } from '@/lib/datetime-cliente';
 import { decifrar } from '@/lib/crypto';
-import { _limparTokens } from '@/lib/calendar/conexao';
-import { estadoAgenda } from '@/lib/calendar/freebusy';
+import { _limparTokens, removerConexao } from '@/lib/calendar/conexao';
+import { agendamentoOnlineHabilitado, estadoAgenda } from '@/lib/calendar/freebusy';
 import {
   criarAgendamento, cancelarPorToken, disponibilidade, practitionerId,
 } from '@/lib/agendamento/servico';
@@ -321,6 +321,39 @@ d('agenda do Google (FASE-05)', () => {
       expect((await linha(r.agendamento.id)).sync_state).toBe('pending');
       await processarFila();
       expect(resend.enviados.filter((e) => e.subject.includes('agenda do Google foi desconectada'))).toHaveLength(1);
+    });
+  });
+
+  describe('desconectar e "agendamento online habilitado?"', () => {
+    it('desconectar revoga no Google, para o canal e apaga a credencial — consultas ficam', async () => {
+      vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://draandressacorreia.com.br');
+      try {
+        await renovarCanalSePreciso(pid);
+        const r = await criarESincronizar();
+        await removerConexao(pid);
+        expect(google.revogado).toBe(true);
+        expect(google.canais.every((c) => c.parado)).toBe(true);
+        expect(await sql()`SELECT 1 FROM calendar_connection`).toHaveLength(0);
+        expect((await linha(r.agendamento.id)).status).toBe('confirmed');
+      } finally {
+        vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'http://localhost:3100');
+      }
+    });
+
+    it('em produção: conectada ou revogada → sim (revogada degrada); nunca conectada → só com opt-in', async () => {
+      vi.stubEnv('VERCEL_ENV', 'production');
+      try {
+        expect(await agendamentoOnlineHabilitado(pid)).toBe(true);                // conectada
+        await sql()`UPDATE calendar_connection SET revoked_at = now()`;
+        expect(await estadoAgenda(pid)).toBe('revogada');
+        expect(await agendamentoOnlineHabilitado(pid)).toBe(true);                // D+2, com alerta
+        await sql()`DELETE FROM calendar_connection`;
+        expect(await agendamentoOnlineHabilitado(pid)).toBe(false);               // cai no WhatsApp
+        vi.stubEnv('AGENDAMENTO_SEM_GOOGLE', 'aceito');
+        expect(await agendamentoOnlineHabilitado(pid)).toBe(true);                // decisão consciente
+      } finally {
+        vi.stubEnv('VERCEL_ENV', ''); vi.stubEnv('AGENDAMENTO_SEM_GOOGLE', '');
+      }
     });
   });
 
