@@ -56,6 +56,27 @@
   --shadow-sm: 0 1px 2px rgb(36 26 19 / .04);
   --shadow-md: 0 8px 24px -12px rgb(36 26 19 / .12);
   --shadow-lg: 0 24px 60px -30px rgb(36 26 19 / .22);
+
+  /* Breakpoints do projeto: 768 · 1024 · 1440 (docs/01-MOBILE-FIRST.md). */
+  --breakpoint-xl: 90rem;
+}
+
+/*
+ * Utilitários SEMÂNTICOS (bg-fundo, text-texto-2, border-borda…).
+ * `inline` faz o Tailwind referenciar a variável em vez de copiar o valor,
+ * então dentro de `.superficie-escura` as mesmas classes viram a versão
+ * escura sozinhas — sem duplicar componente.
+ */
+@theme inline {
+  --color-fundo:       var(--bg-page);
+  --color-superficie:  var(--bg-surface);
+  --color-elevado:     var(--bg-raised);
+  --color-texto:       var(--text-primary);
+  --color-texto-2:     var(--text-secondary);
+  --color-acento:      var(--text-accent);
+  --color-borda:       var(--border-subtle);
+  --color-borda-campo: var(--border-field);
+  --font-citacao: var(--fonte-citacao), Georgia, serif;
 }
 
 :root {
@@ -90,114 +111,133 @@
   :root { --section-y: 8rem; --container: 1140px; --gutter: 2.5rem; }
 }
 
-/* Superfície escura — o contraponto do carrossel. */
-.superficie-escura {
-  --bg-page:        var(--color-espresso-900);
-  --bg-surface:     var(--color-espresso-800);
-  --bg-raised:      var(--color-espresso-700);
-  --text-primary:   var(--color-ivory-100);
-  --text-secondary: var(--color-cream-muted);
-  --text-accent:    var(--color-gold-200);
-  --border-subtle:  rgb(235 217 188 / .14);
-  --border-field:   rgb(235 217 188 / .34);
-  --focus-ring:     var(--color-gold-200);
-  background: var(--bg-page);
-  color: var(--text-primary);
-}
+/*
+ * ⚠️ TUDO abaixo fica dentro de @layer.
+ * No Tailwind v4 os utilitários vivem em `@layer utilities`, e CSS FORA de
+ * camada vence qualquer camada. Um reset solto (`* { margin: 0 }`) apagava
+ * todos os mt-*, pt-*, px-* do site — bug real, visto no screenshot de 375px.
+ * Ordem de precedência: base < components < utilities.
+ */
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+@layer base {
+  /* O preflight do Tailwind já zera margin/padding e aplica border-box. */
 
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 
-body {
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  line-height: 1.65;
-  color: var(--text-primary);
-  background: var(--bg-page);   /* explícito: nunca transparente */
-  -webkit-font-smoothing: antialiased;
-}
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: 1.65;
+    color: var(--text-primary);
+    background: var(--bg-page);   /* explícito: nunca transparente */
+    -webkit-font-smoothing: antialiased;
+  }
 
-img, picture, svg, video { display: block; max-width: 100%; }
+  /* Corpo da página nunca rola na horizontal. Tabelas e blocos de código
+     ganham o próprio contêiner com overflow-x. */
+  html, body { overflow-x: clip; }
 
-/* Corpo da página nunca rola na horizontal. Tabelas e blocos de código
-   ganham o próprio contêiner com overflow-x. */
-html, body { overflow-x: clip; }
+  /* Alvo de toque mínimo — 44px é o piso (Apple HIG); WCAG 2.2 pede 24.
+     Em camada base: um `min-h-16` explícito continua podendo AUMENTAR. */
+  :where(button, a[href], input, select, textarea, summary, [role="radio"], [role="button"]) {
+    touch-action: manipulation;
+  }
+  :where(button, input, select, [role="radio"], [role="button"]) { min-height: 44px; }
 
-/* Alvo de toque mínimo — 44px é o piso (Apple HIG); WCAG 2.2 pede 24. */
-:where(button, a[href], input, select, textarea, [role="radio"], [role="button"]) {
-  min-height: 44px;
-  touch-action: manipulation;
-}
-:where(input, textarea, select) {
-  font-size: 1rem;   /* ≥16px: abaixo disso o iOS dá ZOOM ao focar */
-}
+  :where(input, textarea, select) {
+    font-size: 1rem;   /* ≥16px: abaixo disso o iOS dá ZOOM ao focar */
+  }
 
-/* Foco visível — nunca `outline: none` sem substituto equivalente. */
-:where(a, button, input, textarea, select, [tabindex]):focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 3px;
-  border-radius: var(--radius-sm);
-}
+  /* Foco visível — nunca `outline: none` sem substituto equivalente. */
+  :where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 3px;
+    border-radius: var(--radius-sm);
+  }
 
-/* Header sticky cobre o campo focado ao navegar por Tab (WCAG 2.2 §2.4.11). */
-:where(h1, h2, h3, section, [id]) { scroll-margin-top: 5.5rem; }
+  /* Header sticky cobre o alvo ao navegar por âncora/Tab (WCAG 2.2 §2.4.11). */
+  :where(h1, h2, h3, section, [id]) { scroll-margin-top: 5.5rem; }
 
-/* Realce de ponteiro só onde há ponteiro fino. */
-@media (hover: hover) and (pointer: fine) {
-  .realce-hover:hover { transform: translateY(-2px); }
-}
-
-.display { font-family: var(--font-display); font-weight: 600; line-height: 1.12; }
-
-.eyebrow {
-  font-size: var(--text-eyebrow);
-  letter-spacing: .22em;
-  text-transform: uppercase;
-  font-weight: 500;
-  color: var(--text-accent);
-}
-
-/* Horários, datas e telefones: sem isso a grade "dança" ao trocar de dia. */
-.tabular { font-variant-numeric: tabular-nums; }
-
-.wrap {
-  width: 100%;
-  max-width: var(--container);
-  margin-inline: auto;
-  padding-inline: var(--gutter);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after {
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: .01ms !important;
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+    }
   }
 }
 
-/* Pular para o conteúdo — WCAG 2.4.1. Visível só ao receber foco. */
-.pular-para-conteudo {
-  position: absolute;
-  left: -9999px;
-  top: 0;
-  z-index: 100;
-  padding: .75rem 1.25rem;
-  background: var(--color-espresso-900);
-  color: var(--color-ivory-50);
-  border-radius: 0 0 var(--radius-sm) 0;
-}
-.pular-para-conteudo:focus {
-  left: 0;
-}
+@layer components {
+  /* Superfície escura — o contraponto do carrossel. As utilities semânticas
+     (bg-fundo, text-texto…) viram a versão escura sozinhas aqui dentro. */
+  .superficie-escura {
+    --bg-page:        var(--color-espresso-900);
+    --bg-surface:     var(--color-espresso-800);
+    --bg-raised:      var(--color-espresso-700);
+    --text-primary:   var(--color-ivory-100);
+    --text-secondary: var(--color-cream-muted);
+    --text-accent:    var(--color-gold-200);
+    --border-subtle:  rgb(235 217 188 / .14);
+    --border-field:   rgb(235 217 188 / .34);
+    --focus-ring:     var(--color-gold-200);
+    background: var(--bg-page);
+    color: var(--text-primary);
+  }
 
-.rodape-legal {
-  background: var(--color-espresso-900);
-  color: var(--color-cream-muted);
-  padding-block: 2.5rem;
-  padding-bottom: calc(2.5rem + var(--safe-bottom));
-  font-size: var(--text-sm);
+  .display { font-family: var(--font-display); font-weight: 600; line-height: 1.12; }
+
+  .eyebrow {
+    display: block;
+    font-size: var(--text-eyebrow);
+    line-height: 1.5;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--text-accent);
+  }
+
+  /* Horários, datas e telefones: sem isso a grade "dança" ao trocar de dia. */
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  .wrap {
+    width: 100%;
+    max-width: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* Pular para o conteúdo — WCAG 2.4.1. Visível só ao receber foco. */
+  .pular-para-conteudo {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+    padding: .75rem 1.25rem;
+    background: var(--color-espresso-900);
+    color: var(--color-ivory-50);
+    border-radius: 0 0 var(--radius-sm) 0;
+  }
+  .pular-para-conteudo:focus { left: 0; }
+
+  /* Texto corrido das páginas legais e institucionais. */
+  .prosa { max-width: 68ch; color: var(--text-secondary); font-weight: 300; }
+  .prosa > * + * { margin-top: 1rem; }
+  .prosa h2 {
+    margin-top: 2.75rem; font-family: var(--font-display); font-weight: 600;
+    font-size: var(--text-h3); line-height: 1.25; color: var(--text-primary);
+  }
+  .prosa h3 { margin-top: 1.75rem; font-weight: 500; color: var(--text-primary); }
+  .prosa strong { font-weight: 500; color: var(--text-primary); }
+  .prosa ul { padding-left: 1.25rem; list-style: disc; }
+  .prosa li + li { margin-top: .4rem; }
+  .prosa li::marker { color: var(--color-gold-500); }
+  .prosa a { color: var(--text-accent); text-decoration: underline; text-underline-offset: 4px; }
+  .prosa .tabela { overflow-x: auto; }
+  .prosa table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+  .prosa th, .prosa td {
+    text-align: left; padding: .6rem .75rem;
+    border-bottom: 1px solid var(--border-subtle); vertical-align: top;
+  }
+  .prosa th { font-weight: 500; color: var(--text-primary); }
 }
-.rodape-legal strong { color: var(--color-ivory-100); font-weight: 500; }
-.rodape-legal p + p { margin-top: .75rem; }

@@ -73,12 +73,12 @@ export function localConsulta(modalidade: Modalidade): string {
   }
   const e = PROFISSIONAL.endereco;
   if (!e) {
-    return `Consultório em ${PROFISSIONAL.cidade}/${PROFISSIONAL.uf}`
-      + ' — endereço enviado na confirmação';
+    return `Consultório em ${PROFISSIONAL.cidade} – ${PROFISSIONAL.uf}`
+      + ' (endereço enviado na confirmação)';
   }
   const compl = e.complemento ? `, ${e.complemento}` : '';
   return `${e.logradouro}, ${e.numero}${compl} — ${e.bairro},`
-    + ` ${PROFISSIONAL.cidade}/${PROFISSIONAL.uf}`;
+    + ` ${PROFISSIONAL.cidade} – ${PROFISSIONAL.uf}`;
 }
 
 /** `true` quando há endereço publicável (destrava mapa e JSON-LD completo). */

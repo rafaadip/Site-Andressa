@@ -8,7 +8,8 @@ Plano completo em `docs/` — comece por `docs/DOCUMENTACAO.md`.
 ```bash
 npm run dev              # desenvolvimento
 npm run verify           # typecheck + lint + contraste + conformidade + testes
-npm run test             # vitest
+npm run test             # vitest (unitários + integração)
+npm run test:e2e         # Playwright contra o build de produção (rode `npm run build` antes)
 npm run check:contrast   # contraste WCAG dos tokens
 npm run db:generate      # gera migration a partir de lib/db/schema.ts
 ```
@@ -46,13 +47,19 @@ export DATABASE_URL_TEST="postgresql://postgres@127.0.0.1:55432/andressa"
    alvos ≥ 44 px, campos com `font-size` ≥ 16 px (senão o iOS dá zoom).
    Ver `docs/01-MOBILE-FIRST.md`.
 8. **Isto não é prontuário.** Sem evolução clínica, exame ou prescrição.
+9. **CSS próprio sempre dentro de `@layer base` ou `@layer components`.** No
+   Tailwind v4, CSS fora de camada vence os utilitários — um reset solto
+   chegou a apagar todos os `mt-*`/`pt-*` do site.
+10. **Texto do site em `lib/content/site.ts`**, não no JSX. Passa pelo
+    `check:conformidade`.
 
 ## Estado
 
 | Fase | Situação |
 |---|---|
-| 01 Design System | tokens, contraste verificado, reset mobile-first |
+| 01 Design System | tokens, contraste verificado, reset mobile-first, CSS em `@layer` |
 | 02 Fundação | Next 16, TS estrito, Drizzle, migrations, CI local |
 | 04 Motor de disponibilidade | `lib/availability/engine.ts` — completo e testado |
 | 06 `.ics` | `lib/calendar/ics.ts` — completo e testado |
-| 03, 05, 07–14 | pendentes |
+| 03 Site institucional | home, /sobre, /agendar (provisória), privacidade, termos, sitemap, JSON-LD — 49 testes E2E |
+| 05, 07–14 | pendentes |

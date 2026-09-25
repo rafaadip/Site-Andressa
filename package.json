@@ -19,10 +19,12 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "verify": "npm run typecheck && npm run lint && npm run check:contrast && npm run check:conformidade && npm run test"
+    "verify": "npm run typecheck && npm run lint && npm run check:contrast && npm run check:conformidade && npm run test",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
+    "lucide-react": "^1.48.0",
     "luxon": "^3.7.2",
     "next": "16.3.4",
     "postgres": "^3.4.7",
@@ -31,6 +33,8 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/luxon": "^3.7.1",
     "@types/node": "^22",
