@@ -65,7 +65,7 @@ jobs:
       - name: E2E (build de produção)
         run: npm run test:e2e
       - name: Lighthouse mobile (4G simulado) com orçamento
-        run: npx -y @lhci/cli@0.15.x autorun
+        run: npx -y @lhci/cli@0.15.1 autorun
       - if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

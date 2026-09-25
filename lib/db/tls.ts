@@ -23,13 +23,18 @@ function hostDa(url: string): string | undefined {
   return /^postgres(?:ql)?:\/\/(?:[^@/]*@)?(\[[^\]]+\]|[^:/?#]+)/i.exec(url)?.[1];
 }
 
+/** Banco nesta máquina (dev, testes)? */
+export function bancoLocal(url: string): boolean {
+  const host = hostDa(url);
+  return !host || HOST_LOCAL.test(host);
+}
+
 /** `undefined` = deixar o `sslmode` da URL decidir (a chave `ssl` nem vai ao driver). */
 export function tlsDoBanco(url: string, env: Partial<Record<string, string>> = process.env): OpcaoTls | undefined {
   // Na Vercel o PEM costuma chegar numa linha só, com "\n" literais.
   const ca = env.DATABASE_CA_CERT?.replace(/\\n/g, '\n').trim();
   if (ca) return { ca, rejectUnauthorized: true };
-  const host = hostDa(url);
-  if (!host || HOST_LOCAL.test(host)) return undefined;
+  if (bancoLocal(url)) return undefined;
   const modo = /[?&]sslmode=([^&#]+)/.exec(url)?.[1];
   if (modo === 'disable' || modo === 'allow' || modo === 'prefer') throw new TlsObrigatorioError();
   // `require`, `verify-ca`/`verify-full` (o driver verifica com as CAs do sistema) ou nada.

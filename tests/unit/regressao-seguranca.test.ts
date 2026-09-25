@@ -5,6 +5,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { _limparTetoSentry, reportarAoSentry } from '@/lib/observabilidade';
 import { tlsDoBanco, TlsObrigatorioError } from '@/lib/db/tls';
+import { semearHorariosFicticios } from '@/scripts/seed';
 import { errosPorCampo, MSG, schemaDadosPaciente } from '@/lib/validation/agendamento';
 import { escapar, gerarIcs, parametro } from '@/lib/calendar/ics';
 
@@ -150,5 +151,19 @@ describe('SEC-03: TLS do banco', () => {
     'postgresql://postgres@127.0.0.1:55432/x', 'postgresql://localhost/x', 'postgresql://u@[::1]:5432/x',
   ])('host local (%s): vale a URL', (u) => {
     expect(tlsDoBanco(u, {})).toBeUndefined();
+  });
+});
+
+describe('SEC-13: seed não apaga a semana real', () => {
+  const remoto = 'postgresql://u:s@db.exemplo.supabase.co:5432/postgres?sslmode=require';
+  it('banco remoto, sem confirmação: não semeia horários (nem apaga), qualquer NODE_ENV', () => {
+    expect(semearHorariosFicticios(remoto, { NODE_ENV: 'development' })).toBe(false);
+    expect(semearHorariosFicticios(remoto, {})).toBe(false);
+  });
+  it('banco local fora da produção: semeia (dev e testes)', () => {
+    expect(semearHorariosFicticios('postgresql://postgres@127.0.0.1:55432/andressa', { NODE_ENV: 'development' })).toBe(true);
+  });
+  it('confirmação explícita vale em qualquer banco', () => {
+    expect(semearHorariosFicticios(remoto, { SEED_CONFIRMO_FICTICIO: 'sim' })).toBe(true);
   });
 });

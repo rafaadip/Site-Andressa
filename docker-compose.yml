@@ -7,7 +7,8 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: andressa
     ports:
-      - "5432:5432"
+      # Só nesta máquina: a senha é "postgres" (SEC-20).
+      - "127.0.0.1:5432:5432"
     volumes:
       - pg-andressa:/var/lib/postgresql/data
 
