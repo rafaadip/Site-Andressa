@@ -307,10 +307,12 @@ export type ResultadoCriacao = { agendamento: AgendamentoConfirmado; repetido: b
 /**
  * Cria um agendamento confirmado.
  *
- * Ordem (docs/00-ARQUITETURA.md §8.2):
- *   idempotência → limites → o horário é REALMENTE ofertado (FreeBusy ao
- *   vivo)? → transação { advisory lock → recheck → INSERT (exclusion
- *   constraint) → auditoria → fila de e-mails }
+ * Ordem (docs/00-ARQUITETURA.md §8.2, ADR-004):
+ *   idempotência → limites (caminho rápido) → o horário é REALMENTE
+ *   ofertado (filtro de graça, depois FreeBusy ao vivo)? → transação {
+ *   lock dos limites → limites e bloqueio recontados → lock do slot →
+ *   recheck da idempotência → INSERT (exclusion constraint) → auditoria →
+ *   fila de e-mails }
  *
  * A sincronização com o Google fica `pending`: se a integração falhar ou
  * ainda não existir, a consulta continua marcada (ADR-002).
@@ -350,23 +352,9 @@ export async function criarAgendamento(
   const ipHash = hashIp(ctx.ip);
   await conferirLimites(db(), { pid, ipHash, email: paciente.email, agora });
 
-  // 3. O horário pedido é um dos OFERTADOS agora — contra a agenda real,
-  //    ao vivo? (impede reservar fora do expediente com um POST à mão, e
-  //    pega o plantão que ela acabou de marcar no celular)
+  // 3. O horário pedido é um dos OFERTADOS agora, contra a agenda real.
   const inicioClinico = new Date(entrada.inicio);
-  // Fora do alcance não é "ofertado" — e nem chega ao banco (PT-03).
-  if (!dentroDoAlcance(inicioClinico, agora)) throw new SlotIndisponivelError();
-  const data = dataLocal(inicioClinico);
-  const ofertadoEm = (r: RespostaDisponibilidade) =>
-    r.dias.some((d) => d.slots.some((s) => s.inicio === inicioClinico.toISOString()));
-  // Antes do FreeBusy ao vivo, o filtro de graça: um POST para as 03:00 não
-  // pode custar uma chamada ao Google com o token da médica (SEC-04).
-  if (!ofertadoEm(await disponibilidade({ tipo: t.slug, de: data, ate: data, agora, semAgendaExterna: true }))) {
-    throw new SlotIndisponivelError();
-  }
-  if (!ofertadoEm(await disponibilidade({ tipo: t.slug, de: data, ate: data, agora, aoVivo: true }))) {
-    throw new SlotIndisponivelError();
-  }
+  await conferirOfertado(t.slug, inicioClinico, agora);
 
   // 4. Intervalo bloqueado = buffer antes + consulta + buffer depois.
   const fimClinico = somarMinutos(inicioClinico, t.durationMin);
@@ -387,12 +375,7 @@ export async function criarAgendamento(
       // Ordem fixa dos locks (limites → slot): nunca forma ciclo.
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${chaveDosLimites(pid).toString()}::bigint)`);
       await conferirLimites(tx, { pid, ipHash, email: paciente.email, agora });
-      // Bloqueio que a médica acabou de criar (a oferta foi calculada antes
-      // dele): sob o mesmo lock de bloquear(), um dos dois vê o outro.
-      const [bloqueio] = await tx.select({ id: availabilityException.id }).from(availabilityException).where(and(
-        eq(availabilityException.practitionerId, pid), eq(availabilityException.kind, 'block'),
-        lt(availabilityException.startsAt, fimClinico), gt(availabilityException.endsAt, inicioClinico))).limit(1);
-      if (bloqueio) throw new SlotIndisponivelError();
+      await conferirSemBloqueio(tx, pid, inicioClinico, fimClinico);
       // Enfileira concorrentes do MESMO horário (ADR-004): 7s → 116ms.
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${chaveDoSlot(pid, inicioBloqueio).toString()}::bigint)`);
 
@@ -407,27 +390,12 @@ export async function criarAgendamento(
       if (ja) { existente = ja; return ja; }
 
       const [linha] = await tx.insert(appointment).values({
-        id,
-        practitionerId: pid,
-        typeId: t.id,
-        startsAt: inicioBloqueio,
-        endsAt: fimBloqueio,
-        visitStartsAt: inicioClinico,
-        visitEndsAt: fimClinico,
-        status: 'confirmed',
-        patientName: paciente.nome,
-        patientEmail: paciente.email,
-        patientPhone: paciente.telefone,
-        patientNote: paciente.motivo || null,
-        consentLgpdAt: agora,
-        consentHealthAt: paciente.motivo ? agora : null,
-        consentIpHash: ipHash,
-        consentVersion: VERSAO_CONSENTIMENTO,
+        id, practitionerId: pid, typeId: t.id,
+        startsAt: inicioBloqueio, endsAt: fimBloqueio, visitStartsAt: inicioClinico, visitEndsAt: fimClinico,
+        ...camposDoPaciente(paciente, agora, ipHash),
         manageTokenHash: hashToken(token),   // só o hash vai para o banco
-        icsUid: novoUid(),
-        icsSequence: 0,
-        idempotencyKey: ctx.idempotencyKey,
-        syncState: 'pending',
+        icsUid: novoUid(), icsSequence: 0, idempotencyKey: ctx.idempotencyKey,
+        status: 'confirmed', syncState: 'pending',
       }).returning();
       if (!linha) throw new Error('INSERT não retornou linha');
 
@@ -449,6 +417,51 @@ export async function criarAgendamento(
 
   if (existente) return devolverExistente(existente);
   return { agendamento: paraConfirmado(criado, t.label, modalidade, token, prof.cancelDeadlineHours), repetido: false };
+}
+
+/**
+ * O horário pedido é um dos OFERTADOS agora? Impede reservar fora do
+ * expediente com um POST à mão e pega o plantão que ela acabou de marcar no
+ * celular. Primeiro o filtro de graça (sem Google): um POST para as 03:00
+ * não pode custar uma chamada ao FreeBusy com o token da médica (SEC-04).
+ * Fora do alcance nem chega ao banco (PT-03).
+ */
+async function conferirOfertado(tipo: string, inicio: Date, agora: Date): Promise<void> {
+  if (!dentroDoAlcance(inicio, agora)) throw new SlotIndisponivelError();
+  const data = dataLocal(inicio);
+  const ofertadoEm = (r: RespostaDisponibilidade) =>
+    r.dias.some((d) => d.slots.some((s) => s.inicio === inicio.toISOString()));
+  for (const fonte of [{ semAgendaExterna: true }, { aoVivo: true }]) {
+    if (!ofertadoEm(await disponibilidade({ tipo, de: data, ate: data, agora, ...fonte }))) {
+      throw new SlotIndisponivelError();
+    }
+  }
+}
+
+/**
+ * Bloqueio que a médica acabou de criar (a oferta foi calculada antes dele).
+ * Roda sob o lock dos limites, o mesmo de `bloquear()`: um dos dois sempre
+ * vê o outro (SEC-20).
+ */
+async function conferirSemBloqueio(ex: Executor, pid: string, inicio: Date, fim: Date): Promise<void> {
+  const [bloqueio] = await ex.select({ id: availabilityException.id }).from(availabilityException).where(and(
+    eq(availabilityException.practitionerId, pid), eq(availabilityException.kind, 'block'),
+    lt(availabilityException.startsAt, fim), gt(availabilityException.endsAt, inicio))).limit(1);
+  if (bloqueio) throw new SlotIndisponivelError();
+}
+
+/** Dados do paciente e registro do consentimento (LGPD) para o INSERT. */
+function camposDoPaciente(paciente: CriarAgendamento['paciente'], agora: Date, ipHash: string) {
+  return {
+    patientName: paciente.nome,
+    patientEmail: paciente.email,
+    patientPhone: paciente.telefone,
+    patientNote: paciente.motivo || null,
+    consentLgpdAt: agora,
+    consentHealthAt: paciente.motivo ? agora : null,
+    consentIpHash: ipHash,
+    consentVersion: VERSAO_CONSENTIMENTO,
+  };
 }
 
 /**

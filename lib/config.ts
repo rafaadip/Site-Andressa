@@ -81,7 +81,3 @@ export function localConsulta(modalidade: Modalidade): string {
     + ` ${PROFISSIONAL.cidade} – ${PROFISSIONAL.uf}`;
 }
 
-/** `true` quando há endereço publicável (destrava mapa e JSON-LD completo). */
-export function temEnderecoPublico(): boolean {
-  return PROFISSIONAL.endereco !== null;
-}
