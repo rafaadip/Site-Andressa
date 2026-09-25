@@ -120,16 +120,9 @@ describe('navegarRadio', () => {
     }).not.toThrow();
   });
 
-  // BUG: quando o próprio grupo está com foco (não uma opção — é o que
-  // `focarGrupo()` faz em FluxoAgendamento.tsx ao validar sem seleção),
-  // `radios.indexOf(document.activeElement)` devolve -1. Para ArrowRight
-  // isso cai certinho na primeira opção ((-1+1) % n === 0), mas para
-  // ArrowLeft a conta ((-1-1+n) % n) aterrissa na PENÚLTIMA opção em vez da
-  // ÚLTIMA — o padrão usual de "nada selecionado, seta para trás → vai para
-  // o fim" (components/agendamento/navegacao-radio.ts:21). Reproduzir:
-  // focar o `role="radiogroup"` (não um `role="radio"` dentro dele) e
-  // apertar ArrowLeft/ArrowUp.
-  it.fails('BUG: ArrowLeft com o grupo (não uma opção) focado deveria ir para a última opção', () => {
+  // Foco no próprio grupo (focarGrupo() depois de um erro de validação):
+  // seta para trás vai à ÚLTIMA opção (era a penúltima — bug achado por este teste).
+  it('ArrowLeft com o grupo (não uma opção) focado vai para a última opção', () => {
     render(<GrupoTeste />);
     const grupo = screen.getByRole('radiogroup');
     const opcoes = screen.getAllByRole('radio');
