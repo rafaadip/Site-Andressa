@@ -11,23 +11,48 @@
  *   - foco vai para o 1º link ao abrir e volta ao botão ao fechar
  *   - Tab fica preso dentro do painel (WCAG 2.1.2 exige saída: Esc)
  *   - Esc fecha; rolagem do fundo travada enquanto aberto
+ *
+ * Visual: no topo o cabeçalho se funde ao hero; depois de alguns pixels de
+ * rolagem ganha vidro, fio e sombra (`data-rolou`, estilos em globals.css).
  */
 import Link from 'next/link';
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from 'react';
+import { ArrowRight } from 'lucide-react';
 import { NAVEGACAO } from '@/lib/content/site';
 import { PROFISSIONAL } from '@/lib/config';
 import { Botao } from '@/components/ui/Botao';
 
 export function Cabecalho() {
   const [aberto, setAberto] = useState(false);
+  const [rolou, setRolou] = useState(false);
   const idPainel = useId();
   const botaoRef = useRef<HTMLButtonElement>(null);
   const painelRef = useRef<HTMLDivElement>(null);
+  const progressoRef = useRef<HTMLSpanElement>(null);
 
   const fechar = useCallback((devolverFoco = true) => {
     setAberto(false);
     if (devolverFoco) botaoRef.current?.focus();
+  }, []);
+
+  // Estado "rolou" e progresso de leitura: um listener passivo, lido no
+  // próximo frame. O progresso vai direto no estilo do fio (sem re-render).
+  useEffect(() => {
+    let quadro = 0;
+    const medir = () => {
+      quadro = 0;
+      const y = window.scrollY;
+      setRolou(y > 8);
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      progressoRef.current?.style.setProperty('--progresso', String(max > 0 ? Math.min(1, y / max) : 0));
+    };
+    const aoRolar = () => { if (!quadro) quadro = window.requestAnimationFrame(medir); };
+    aoRolar();   // página recarregada no meio: já nasce no estado certo
+    window.addEventListener('scroll', aoRolar, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', aoRolar);
+      if (quadro) window.cancelAnimationFrame(quadro);
+    };
   }, []);
 
   useEffect(() => {
@@ -70,34 +95,35 @@ export function Cabecalho() {
 
   return (
     <>
-    <header className="sticky top-0 z-50 bg-fundo/95 backdrop-blur-md border-b border-borda">
-      <div className="wrap flex items-center justify-between h-16 lg:h-[4.75rem]">
+    <header className="cabecalho sticky top-0 z-50" data-rolou={rolou && !aberto}>
+      <div className="wrap flex h-[var(--altura-cabecalho)] items-center">
+      <div className="cabecalho-barra flex h-[calc(var(--altura-cabecalho)-.75rem)] flex-1 items-center justify-between">
         <Link
           href="/"
           className="flex flex-col justify-center leading-none"
           aria-label={`${PROFISSIONAL.nomeCurto} — página inicial`}
           onClick={() => aberto && fechar(false)}
         >
-          <span className="font-display font-semibold text-[1.1875rem] lg:text-[1.3125rem] text-texto">
+          <span className="font-display font-[440] tracking-[-.015em] text-[1.25rem] lg:text-[1.375rem] text-texto">
             {PROFISSIONAL.nomeCurto}
           </span>
-          <span className="eyebrow mt-1.5">Médica</span>
+          <span className="eyebrow mt-1.5 text-[0.6875rem]">Médica</span>
         </Link>
 
-        <nav aria-label="Principal" className="hidden lg:flex items-center gap-9">
+        <nav aria-label="Principal" className="hidden lg:flex items-center gap-10">
           <ul className="flex items-center gap-8">
             {NAVEGACAO.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className="inline-flex items-center text-[0.9375rem] text-texto border-b border-transparent hover:border-gold-500 transition-colors"
+                  className="link-nav inline-flex min-h-11 items-center text-[0.9375rem] text-texto-2 transition-colors duration-200 hover:text-texto"
                 >
                   {item.rotulo}
                 </Link>
               </li>
             ))}
           </ul>
-          <Botao href="/agendar" variante="espresso">Agendar consulta</Botao>
+          <Botao href="/agendar" variante="primario">Agendar consulta</Botao>
         </nav>
 
         <button
@@ -109,8 +135,10 @@ export function Cabecalho() {
           aria-label={aberto ? 'Fechar menu' : 'Abrir menu'}
           onClick={() => (aberto ? fechar() : setAberto(true))}
         >
-          {aberto ? <X aria-hidden size={24} strokeWidth={1.5} /> : <Menu aria-hidden size={24} strokeWidth={1.5} />}
+          <span aria-hidden className="icone-menu"><span /><span /></span>
         </button>
+        <span ref={progressoRef} aria-hidden className="progresso-leitura" />
+      </div>
       </div>
     </header>
 
@@ -122,25 +150,32 @@ export function Cabecalho() {
         ref={painelRef}
         id={idPainel}
         hidden={!aberto}
-        className="lg:hidden fixed inset-x-0 top-16 bottom-0 z-40 bg-fundo overflow-y-auto"
+        className="painel-menu lg:hidden fixed inset-x-0 top-[var(--altura-cabecalho)] bottom-0 z-40 border-t border-borda bg-fundo overflow-y-auto"
       >
-        <nav aria-label="Principal (celular)" className="wrap flex flex-col min-h-full pt-6 pb-[calc(1.5rem+var(--safe-bottom))]">
+        <nav aria-label="Principal (celular)" className="wrap flex flex-col min-h-full pt-4 pb-[calc(1.5rem+var(--safe-bottom))]">
           <ul className="flex flex-col">
-            {NAVEGACAO.map((item) => (
-              <li key={item.href} className="border-b border-borda">
+            {NAVEGACAO.map((item, i) => (
+              <li key={item.href} className="item-menu border-b border-borda" style={{ '--i': i } as CSSProperties}>
                 <Link
                   href={item.href}
                   onClick={() => fechar(false)}
-                  className="flex items-center min-h-16 font-display text-h3 text-texto"
+                  className="group flex items-center justify-between min-h-18 font-display text-[1.875rem] tracking-[-.01em] text-texto"
                 >
                   {item.rotulo}
+                  <ArrowRight aria-hidden size={22} strokeWidth={1.25} className="text-acento transition-transform duration-300 group-active:translate-x-1" />
                 </Link>
               </li>
             ))}
           </ul>
           {/* Ação primária na faixa inferior: alcance do polegar. */}
-          <div className="mt-auto pt-8">
-            <Botao href="/agendar" larguraTotalMobile onClick={() => fechar(false)}>
+          <div className="item-menu mt-auto pt-10" style={{ '--i': NAVEGACAO.length } as CSSProperties}>
+            <Botao
+              href="/agendar"
+              variante="primario"
+              larguraTotalMobile
+              icone={<ArrowRight aria-hidden size={18} strokeWidth={1.75} />}
+              onClick={() => fechar(false)}
+            >
               Agendar consulta
             </Botao>
           </div>

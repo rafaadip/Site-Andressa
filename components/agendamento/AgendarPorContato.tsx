@@ -11,7 +11,7 @@ import { Botao } from '@/components/ui/Botao';
 export function AgendarPorContato() {
   return (
     <>
-      <p className="text-lead text-texto-2 font-light mb-8">
+      <p className="text-lead text-texto-2 mb-8">
         Agende pelo WhatsApp ou por e-mail — respondemos para combinar o melhor horário.
       </p>
       <div className="flex flex-col gap-3 md:flex-row">

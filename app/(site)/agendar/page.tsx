@@ -54,22 +54,22 @@ export default async function PaginaAgendar() {
     <Secao className="pt-8 md:pt-[var(--section-y)]">
       <div className="mx-auto max-w-[46rem]">
         <header className="mb-8 md:mb-10">
-          <p className="eyebrow">Agendamento</p>
-          <h1 className="display text-h2 text-texto mt-3">Agende sua consulta</h1>
+          <p className="eyebrow eyebrow-fio">Agendamento</p>
+          <h1 className="titulo-display text-h2 text-texto mt-4">Agende sua consulta</h1>
           {online && (
-            <p className="mt-3 text-texto-2 font-light">
+            <p className="mt-4 text-texto-2">
               Três passos, sem cadastro. A consulta vai direto para o calendário do seu celular.
             </p>
           )}
         </header>
 
-        <div className="md:rounded-lg md:border md:border-borda md:bg-elevado md:p-10 md:shadow-md md:border-t-4 md:border-t-gold-500">
+        <div className="md:rounded-[1.75rem] md:border md:border-borda md:bg-elevado md:p-10 md:shadow-md">
           {online
             ? <FluxoAgendamento tipos={tipos} hoje={dataLocal(new Date())} fuso={TZ_CLINICA} horizonteDias={horizonteDias} />
             : <AgendarPorContato />}
         </div>
 
-        <aside className="mt-10 flex gap-4 rounded-lg border border-borda bg-superficie p-5">
+        <aside className="mt-10 flex gap-4 rounded-[1.25rem] border border-borda bg-superficie p-5 md:p-6">
           <TriangleAlert aria-hidden size={22} strokeWidth={1.75} className="mt-0.5 shrink-0 text-danger" />
           <p className="text-sm text-texto-2">
             <strong className="font-medium text-texto">{URGENCIA.titulo}</strong>{' '}

@@ -1,17 +1,19 @@
 import Link from 'next/link';
 import type { ComponentProps, ReactNode } from 'react';
 
-type Variante = 'ouro' | 'espresso' | 'fantasma' | 'contorno';
+type Variante = 'primario' | 'destaque' | 'fantasma' | 'contorno' | 'vidro';
 
 const VARIANTES: Record<Variante, string> = {
-  // tinta sobre ouro: 7,08:1
-  ouro: 'bg-gold-400 text-ink border-gold-400 hover:bg-gold-200 hover:border-gold-200',
-  // marfim sobre espresso: 14,9:1
-  espresso: 'bg-espresso-900 text-ivory-100 border-espresso-900 hover:bg-espresso-700 hover:border-espresso-700',
+  // marfim sobre espresso: 14,9:1 — ação principal, com reflexo no hover
+  primario: 'botao-brilho bg-espresso-900 text-ivory-100 border-espresso-900 hover:bg-espresso-700 hover:border-espresso-700 hover:shadow-md',
+  // tinta sobre ouro claro: 7,08:1
+  destaque: 'bg-gold-400 text-ink border-gold-400 hover:bg-gold-200 hover:border-gold-200',
   // sobre superfície escura
   fantasma: 'bg-transparent text-texto border-borda-campo hover:border-gold-200 hover:text-gold-200',
   // sobre superfície clara
-  contorno: 'bg-transparent text-texto border-borda-campo hover:border-ink',
+  contorno: 'bg-transparent text-texto border-borda-campo hover:border-ink hover:bg-elevado',
+  // vidro sobre marfim/aurora (tinta sobre quase-marfim)
+  vidro: 'vidro text-texto hover:bg-elevado',
 };
 
 type Props = {
@@ -26,20 +28,19 @@ type Props = {
 } & Omit<ComponentProps<typeof Link>, 'href' | 'className' | 'children'>;
 
 export function Botao({
-  href, variante = 'ouro', larguraTotalMobile = false, nativo = false, icone, children, ...resto
+  href, variante = 'primario', larguraTotalMobile = false, nativo = false, icone, children, ...resto
 }: Props) {
   // Rota interna → <Link>. Qualquer outra coisa (https, mailto, tel) → <a> nativo.
   const interno = href.startsWith('/') || href.startsWith('#');
   const novaAba = /^https?:/.test(href) && !nativo;
   const classes = [
-    'inline-flex items-center justify-center gap-2.5',
+    'botao inline-flex items-center justify-center gap-2.5',
     'min-h-12 px-7 rounded-full border',
-    'font-medium tracking-[.03em] text-[0.96875rem] leading-tight text-center',
-    'transition-[background-color,border-color,color,transform] duration-200',
-    'active:scale-[.98]',
+    'font-medium tracking-[.02em] text-[0.96875rem] leading-tight text-center',
     larguraTotalMobile ? 'w-full md:w-auto' : '',
     VARIANTES[variante],
   ].join(' ');
+  const conteudo = <>{children}{icone && <span className="botao-icone">{icone}</span>}</>;
 
   if (!interno || nativo) {
     return (
@@ -48,9 +49,9 @@ export function Botao({
         className={classes}
         {...(novaAba ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
       >
-        {children}{icone}
+        {conteudo}
       </a>
     );
   }
-  return <Link href={href} className={classes} {...resto}>{children}{icone}</Link>;
+  return <Link href={href} className={classes} {...resto}>{conteudo}</Link>;
 }

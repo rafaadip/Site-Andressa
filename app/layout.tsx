@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import Script from 'next/script';
 import { PROFISSIONAL } from '@/lib/config';
 import { MARCA } from '@/lib/marca';
-import { fonteDisplay, fonteSans, fonteCitacao } from '@/lib/fonts';
+import { fonteDisplay, fonteSans } from '@/lib/fonts';
 import { urlSite } from '@/lib/seo';
 import './globals.css';
 
@@ -49,7 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang="pt-BR"
-      className={`${fonteDisplay.variable} ${fonteSans.variable} ${fonteCitacao.variable}`}
+      className={`${fonteDisplay.variable} ${fonteSans.variable}`}
     >
       <body>
         <a href="#conteudo" className="pular-para-conteudo">Pular para o conteúdo</a>

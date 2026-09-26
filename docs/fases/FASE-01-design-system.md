@@ -13,6 +13,23 @@
 
 > **Estado da implementação (25/09/2026):** implementada — tokens em `app/globals.css` (contraste verificado por `npm run check:contrast`), espelho para e-mail/OG em `lib/marca.ts` conferido valor a valor.
 
+> **Redesenho visual (26/09/2026) — vale sobre o que está abaixo.**
+> - **Paleta mantida**: marfim, espresso e ouro do carrossel, com os mesmos tokens
+>   (`gold-*`, `espresso-*`). O redesenho mudou layout, tipografia e movimento, não as cores.
+> - **Tipografia**: Fraunces (variável, com tamanho óptico) nos títulos e na citação,
+>   DM Sans no texto e na interface. Títulos públicos usam `.titulo-display` (peso
+>   360); `.display` (peso 500) fica para o painel e as etapas do agendamento.
+> - **Movimento** (§6 atualizado): entrada do hero por máscara (transform +
+>   clip-path, nunca opacidade no texto), revelação ao rolar só para o que nasce
+>   abaixo da dobra (`components/site/Revelar.tsx`, esconder é instantâneo),
+>   holofote nos cartões (`Holofote.tsx`), cabeçalho em vidro flutuante com
+>   progresso de leitura, parallax leve (CSS com `animation-timeline`, onde há
+>   suporte). Curvas: `--ease-saida` (.23,1,.32,1), `--ease-suave` (.16,1,.3,1),
+>   `--ease-gaveta` (.32,.72,0,1). Tudo some com `prefers-reduced-motion: reduce`.
+> - **Vidro** (`.vidro`, `.vidro-escuro`): cabeçalho, selos do retrato, faixa de
+>   credenciais, painel de agendamento e barra fixa do celular. O texto por cima
+>   mantém o contraste da superfície de base.
+
 
 ## 1. Leitura da marca
 

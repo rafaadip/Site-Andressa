@@ -18,8 +18,8 @@ export default async function TermosDeUso() {
   return (
     <Secao>
       <article className="prosa mx-auto">
-        <p className="eyebrow">Termos</p>
-        <h1 className="display text-h2 text-texto mt-3">Termos de uso</h1>
+        <p className="eyebrow eyebrow-fio">Termos</p>
+        <h1 className="titulo-display text-h2 text-texto mt-4">Termos de uso</h1>
         <p className="text-sm">Última atualização: {ATUALIZADO_EM}</p>
 
         <h2>Sobre este site</h2>

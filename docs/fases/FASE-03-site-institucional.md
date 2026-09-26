@@ -10,6 +10,8 @@
 
 ---
 
+> **Redesenho visual (26/09/2026):** hero claro com retrato, selos e aurora; credenciais em painel de vidro; tipografia Fraunces + DM Sans; paleta marfim/espresso/ouro mantida — ver o bloco no topo da [FASE-01](FASE-01-design-system.md).
+>
 > **Estado da implementação (25/09/2026):** implementada — home, /sobre, /agendar, privacidade, termos, sitemap, robots, JSON-LD e imagem OpenGraph. Corrigido em 25/09: o menu do celular abria com altura zero (painel `fixed` dentro de header com `backdrop-filter`).
 
 

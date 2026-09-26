@@ -21,8 +21,8 @@ export default function PoliticaPrivacidade() {
   return (
     <Secao>
       <article className="prosa mx-auto">
-        <p className="eyebrow">Privacidade</p>
-        <h1 className="display text-h2 text-texto mt-3">Política de privacidade</h1>
+        <p className="eyebrow eyebrow-fio">Privacidade</p>
+        <h1 className="titulo-display text-h2 text-texto mt-4">Política de privacidade</h1>
         <p className="text-sm">Última atualização: {ATUALIZADO_EM}</p>
 
         <p>

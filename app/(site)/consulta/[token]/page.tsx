@@ -35,8 +35,8 @@ export default async function PaginaConsulta({ params }: { params: Promise<{ tok
   return (
     <Secao className="pt-8 md:pt-[var(--section-y)]">
       <div className="mx-auto max-w-[40rem]">
-        <p className="eyebrow">Sua consulta</p>
-        <h1 className="display text-h2 text-texto mt-3">
+        <p className="eyebrow eyebrow-fio">Sua consulta</p>
+        <h1 className="titulo-display text-h2 text-texto mt-4">
           {cancelada ? 'Consulta cancelada' : 'Consulta confirmada'}
         </h1>
 

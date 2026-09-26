@@ -34,7 +34,7 @@ export function BotaoAcao({ onClick, children, tipo = 'button', ocupado, secunda
     // No celular o "Voltar" vira só ícone: o botão principal precisa da
     // largura ("Confirmar agendamento" quebrava em duas linhas em 375px).
     ? 'shrink-0 max-md:w-12 max-md:px-0 border-borda-campo bg-transparent text-texto hover:border-ink'
-    : `flex-1 md:flex-none md:px-9 border-gold-400 bg-gold-400 text-ink hover:bg-gold-200 hover:border-gold-200 ${pendente ? 'opacity-60' : ''}`;
+    : `flex-1 md:flex-none md:px-9 border-espresso-900 bg-espresso-900 text-ivory-100 hover:bg-espresso-700 hover:border-espresso-700 ${pendente ? 'opacity-50' : ''}`;
   return (
     <button
       type={tipo}

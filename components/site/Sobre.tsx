@@ -6,39 +6,45 @@ import { Secao } from '@/components/ui/Secao';
 
 /**
  * Sem foto aqui de propósito: o retrato já está no hero, e repeti-lo
- * trocaria respiro por redundância. A tipografia faz o trabalho.
+ * trocaria respiro por redundância. A tipografia faz o trabalho — nome em
+ * serifa grande, citação em Fraunces itálico e a trajetória como linha do tempo.
  */
 export function Sobre() {
   return (
     <Secao id="sobre">
-      <div className="grid gap-14 lg:grid-cols-[1.15fr_.85fr] lg:gap-20">
+      <div className="grid gap-14 lg:grid-cols-[1.2fr_.8fr] lg:gap-24">
         <div>
-          <p className="eyebrow">Sobre a doutora</p>
-          <h2 className="display text-h2 text-texto mt-3">{PROFISSIONAL.nome}</h2>
-          <p className="mt-2 mb-7 text-acento font-medium">{tituloPublico()}</p>
+          <div data-revelar="titulo">
+            <p className="eyebrow eyebrow-fio">Sobre a doutora</p>
+            <h2 className="titulo-display titulo-mascara text-h2 text-texto mt-4">{PROFISSIONAL.nome}</h2>
+            <p className="titulo-lead mt-3 font-medium text-acento">{tituloPublico()}</p>
+          </div>
 
-          <div className="space-y-4 text-texto-2 font-light max-w-[62ch]">
+          <div data-revelar className="texto-leitura mt-8 space-y-4 max-w-[60ch]">
             {SOBRE.paragrafos.map((p) => <p key={p.slice(0, 24)}>{p}</p>)}
           </div>
 
-          <blockquote className="mt-9 border-l-2 border-gold-500 pl-5 font-citacao text-[1.5rem] md:text-[1.625rem] leading-snug text-texto max-w-[34ch]">
+          <blockquote
+            data-revelar
+            className="mt-10 border-l border-gold-500 pl-6 font-citacao italic font-light text-[1.4375rem] leading-[1.35] text-texto max-w-[32ch] md:text-[1.625rem] lg:mt-12 lg:text-[1.875rem]"
+          >
             “{SOBRE.citacao}”
           </blockquote>
         </div>
 
-        <div>
+        <div data-revelar className="lg:pt-2">
           <h3 className="eyebrow">Trajetória</h3>
-          <ol className="mt-5 border-t border-borda">
+          <ol className="linha-tempo mt-4">
             {TRAJETORIA.map((t) => (
-              <li key={t.onde} className="py-4 border-b border-borda">
+              <li key={t.onde} className="py-4">
                 <p className="font-medium text-texto">{t.onde}</p>
-                <p className="text-sm text-texto-2 tabular">{t.papel} · {t.quando}</p>
+                <p className="mt-0.5 text-sm text-texto-2 tabular">{t.papel} · {t.quando}</p>
               </li>
             ))}
           </ol>
           <Link
             href="/sobre"
-            className="mt-6 inline-flex min-h-11 items-center gap-2 font-medium text-acento border-b border-transparent hover:border-current"
+            className="link-fio mt-6 inline-flex min-h-11 items-center gap-2 font-medium text-acento"
           >
             Trajetória completa <ArrowRight aria-hidden size={16} strokeWidth={1.75} />
           </Link>

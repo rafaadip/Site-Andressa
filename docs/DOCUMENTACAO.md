@@ -201,8 +201,13 @@ O ouro da marca (`#B8874E`) **reprova para texto pequeno** em fundo claro. Onde 
 aparece como rótulo, o token correto é `gold-700` — visualmente quase idêntico,
 acessível. Este é o tipo de detalhe que separa "parece premium" de "é premium".
 
-**Tipografia:** Playfair Display (display) + Jost (corpo) + Cormorant Garamond
-Italic (uma citação por página).
+**Tipografia** (redesenho de 26/09/2026): Fraunces (títulos e citação; variável,
+com tamanho óptico) + DM Sans (texto e interface).
+
+**Movimento:** entrada do hero só com máscara (transform + clip-path — o texto
+nunca fica translúcido), revelação suave ao rolar (`components/site/Revelar.tsx`),
+holofote nos cartões (`Holofote.tsx`), cabeçalho em vidro flutuante com
+progresso de leitura. Tudo desligado com `prefers-reduced-motion: reduce`.
 
 **Sem modo escuro**, por decisão de marca: o sistema já opera em duas superfícies
 (marfim e espresso), que é o contraste que a identidade pede.
