@@ -29,17 +29,32 @@ type CabecalhoProps = {
   lead?: string;
   centralizado?: boolean;
   nivel?: 'h1' | 'h2';
+  /** A partir de 1024px, o lead vai para a coluna ao lado do título. */
+  lado?: boolean;
+  /** Entra com a revelação ao rolar (desligue quando o pai já revela). */
+  revelar?: boolean;
 };
 
 export function CabecalhoSecao({
-  eyebrow, titulo, lead, centralizado, nivel = 'h2',
+  eyebrow, titulo, lead, centralizado, nivel = 'h2', lado, revelar = true,
 }: CabecalhoProps) {
   const Titulo = nivel;
+  const alinhamento = centralizado
+    ? 'mx-auto max-w-[42rem] text-center'
+    : lado
+      ? 'lg:grid lg:grid-cols-[1.15fr_.85fr] lg:items-end lg:gap-16'
+      : 'max-w-[42rem]';
   return (
-    <header className={`max-w-[40rem] mb-10 lg:mb-14 ${centralizado ? 'mx-auto text-center' : ''}`}>
-      <p className="eyebrow">{eyebrow}</p>
-      <Titulo className="display text-h2 text-texto mt-3 mb-4 text-balance">{titulo}</Titulo>
-      {lead && <p className="text-lead text-texto-2 font-light">{lead}</p>}
+    <header data-revelar={revelar ? 'titulo' : undefined} className={`mb-10 lg:mb-16 ${alinhamento}`}>
+      <div>
+        <p className={`eyebrow ${centralizado ? '' : 'eyebrow-fio'}`}>{eyebrow}</p>
+        <Titulo className="titulo-display titulo-mascara text-h2 text-texto mt-4">{titulo}</Titulo>
+      </div>
+      {lead && (
+        <p className={`titulo-lead text-lead text-texto-2 text-pretty ${lado ? 'mt-5 lg:mt-0 lg:pb-1.5' : 'mt-5'} ${centralizado ? 'mx-auto max-w-[36rem]' : 'max-w-[40rem]'}`}>
+          {lead}
+        </p>
+      )}
     </header>
   );
 }

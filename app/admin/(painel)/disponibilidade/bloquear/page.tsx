@@ -50,11 +50,11 @@ export default async function Bloquear({ searchParams }: { searchParams: Promise
             <label className="text-sm text-texto-2">Até as<input type="time" name="hf" step={300} defaultValue={b.hf} className={`${CAMPO} tabular`} /></label>
           </div>
           <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-texto">
-            <input type="checkbox" name="diaInteiro" defaultChecked={b.diaInteiro === 'on'} className="size-6 accent-espresso-900" />Dia(s) inteiro(s)
+            <input type="checkbox" name="diaInteiro" defaultChecked={b.diaInteiro === 'on'} className="size-6 accent-floresta-900" />Dia(s) inteiro(s)
           </label>
           <label className="block text-sm text-texto-2">Nota (só você vê)<input type="text" name="nota" maxLength={120} placeholder="Ex.: plantão, congresso, férias" defaultValue={b.nota} className={CAMPO} /></label>
           {erro && <p role="alert" className="text-sm text-danger">{erro}</p>}
-          <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-espresso-900 bg-espresso-900 px-6 font-medium text-ivory-100 md:w-auto">Continuar</button>
+          <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-floresta-900 bg-floresta-900 px-6 font-medium text-ivory-100 md:w-auto">Continuar</button>
         </form>
       )}
 

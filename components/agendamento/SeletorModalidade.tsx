@@ -48,11 +48,11 @@ export function SeletorModalidade({ tipos, selecionado, aoSelecionar, erro }: Pr
               className={`relative flex min-h-24 flex-col items-start gap-1 rounded-lg border p-5 text-left
                           transition-colors duration-200
                           ${ativo
-                            ? 'border-espresso-900 bg-superficie ring-1 ring-espresso-900'
+                            ? 'border-floresta-900 bg-superficie ring-1 ring-floresta-900'
                             : 'border-borda-campo bg-elevado hover:border-ink'}`}
             >
               <span className="flex w-full items-center gap-3">
-                <span aria-hidden className={`grid size-10 place-items-center rounded-full ${ativo ? 'bg-espresso-900 text-ivory-100' : 'bg-sand-200 text-gold-700'}`}>
+                <span aria-hidden className={`grid size-10 place-items-center rounded-full ${ativo ? 'bg-floresta-900 text-ivory-100' : 'bg-sand-200 text-oliva-700'}`}>
                   {ativo ? <Check size={20} strokeWidth={2} /> : <Icone size={20} strokeWidth={1.5} />}
                 </span>
                 <span className="font-medium text-[1.0625rem] text-texto">{t.label}</span>

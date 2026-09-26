@@ -31,7 +31,7 @@ export default async function Privacidade({ searchParams }: { searchParams: Prom
           <input type="email" name="email" defaultValue={email} required autoComplete="off"
             className="mt-1 block min-h-12 w-full rounded-md border border-borda-campo bg-elevado px-3 text-base text-texto" />
         </label>
-        <button type="submit" className="inline-flex min-h-12 items-center justify-center rounded-full border border-espresso-900 bg-espresso-900 px-6 font-medium text-ivory-100">Buscar</button>
+        <button type="submit" className="inline-flex min-h-12 items-center justify-center rounded-full border border-floresta-900 bg-floresta-900 px-6 font-medium text-ivory-100">Buscar</button>
       </form>
 
       {email && (

@@ -27,7 +27,7 @@ export function FormRemarcar({ id, dias }: { id: string; dias: DiaParaRemarcar[]
                 <label key={s.inicio} className="relative">
                   <input type="radio" name="inicio" value={s.inicio} required className="peer absolute inset-0 opacity-0" />
                   <span className="flex min-h-12 items-center justify-center rounded-md border border-borda-campo bg-elevado tabular text-texto
-                                   peer-checked:border-espresso-900 peer-checked:bg-espresso-900 peer-checked:text-ivory-100
+                                   peer-checked:border-floresta-900 peer-checked:bg-floresta-900 peer-checked:text-ivory-100
                                    peer-focus-visible:outline peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--focus-ring)]">
                     {s.rotulo}
                   </span>

@@ -35,7 +35,7 @@ export default async function Entrar({ searchParams }: { searchParams: Promise<{
           // <a> nativo: é navegação para o Google, não rota interna.
           <a
             href="/api/oauth/google/start?proposito=login"
-            className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-espresso-900 bg-espresso-900 px-6 font-medium text-ivory-100 hover:bg-espresso-700"
+            className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-floresta-900 bg-floresta-900 px-6 font-medium text-ivory-100 hover:bg-floresta-700"
           >
             <LogIn aria-hidden size={18} /> Entrar com Google
           </a>

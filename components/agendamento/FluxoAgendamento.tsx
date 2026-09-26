@@ -296,7 +296,7 @@ export function FluxoAgendamento({ tipos, hoje, fuso, horizonteDias }: Props) {
             const feita = n < etapa;
             return (
               <li key={nome} aria-current={atual ? 'step' : undefined} className="min-w-0">
-                <span aria-hidden className={`block h-1 rounded-full ${atual || feita ? 'bg-gold-500' : 'bg-sand-200'}`} />
+                <span aria-hidden className={`block h-1 rounded-full ${atual || feita ? 'bg-oliva-500' : 'bg-sand-200'}`} />
                 <span className={`mt-2 block truncate text-[.8125rem] ${atual ? 'font-medium text-texto' : 'text-texto-2'}`}>
                   <span className="sr-only">{feita ? 'Concluída: ' : atual ? 'Atual: ' : ''}</span>
                   {n}. {nome}
@@ -374,7 +374,7 @@ export function FluxoAgendamento({ tipos, hoje, fuso, horizonteDias }: Props) {
             <h2 ref={tituloRef} tabIndex={-1} className="display text-h3 text-texto mb-5 outline-none">{TITULOS[3]}</h2>
 
             {/* Resumo fixo: o que foi escolhido não é perguntado de novo (WCAG 3.3.7). */}
-            <div className="mb-7 flex items-start justify-between gap-4 rounded-md border border-gold-500/50 bg-superficie p-4">
+            <div className="mb-7 flex items-start justify-between gap-4 rounded-md border border-oliva-500/50 bg-superficie p-4">
               <p className="text-texto">
                 <span className="block font-medium">{tipoAtual.label}</span>
                 <span className="block text-sm text-texto-2 first-letter:uppercase">

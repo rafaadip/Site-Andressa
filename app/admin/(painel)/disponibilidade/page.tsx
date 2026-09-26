@@ -44,7 +44,7 @@ export default async function Disponibilidade({ searchParams }: { searchParams: 
       <section aria-labelledby="titulo-excecoes" className="mt-8">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <h2 id="titulo-excecoes" className="font-medium text-texto">Bloqueios e extras</h2>
-          <Link href="/admin/disponibilidade/bloquear" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-espresso-900 bg-espresso-900 px-6 font-medium text-ivory-100">
+          <Link href="/admin/disponibilidade/bloquear" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-floresta-900 bg-floresta-900 px-6 font-medium text-ivory-100">
             <Ban aria-hidden size={18} />Bloquear período
           </Link>
         </div>

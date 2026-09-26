@@ -18,7 +18,7 @@ export function FormAnonimizar({ email }: { email: string }) {
         do Google. Não dá para desfazer.
       </p>
       <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 text-sm text-texto">
-        <input type="checkbox" name="confirmo" className="mt-0.5 size-6 shrink-0 accent-espresso-900" />
+        <input type="checkbox" name="confirmo" className="mt-0.5 size-6 shrink-0 accent-floresta-900" />
         Confirmo que o titular pediu a eliminação dos dados.
       </label>
       <div className="mt-3"><BotaoEnviar variante="perigo" larguraTotal>Eliminar dados</BotaoEnviar></div>

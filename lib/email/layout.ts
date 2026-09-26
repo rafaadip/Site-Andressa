@@ -47,12 +47,12 @@ function blocoHtml(b: Bloco): string {
     case 'dados':
       return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 24px;border:1px solid ${C['sand-200']};border-radius:12px;background:${C['ivory-100']};">
 ${b.linhas.map(([r, v], i) => `<tr><td style="padding:${i === 0 ? '16px' : '4px'} 20px ${i === b.linhas.length - 1 ? '16px' : '4px'};font-family:${SANS};font-size:16px;line-height:1.5;color:${C.ink};">
-<span style="display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:${C['gold-700']};">${esc(r)}</span>${esc(v)}</td></tr>`).join('\n')}
+<span style="display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:${C['oliva-700']};">${esc(r)}</span>${esc(v)}</td></tr>`).join('\n')}
 </table>`;
     case 'botao': {
-      const fundo = b.secundario ? C['ivory-50'] : C['espresso-900'];
+      const fundo = b.secundario ? C['ivory-50'] : C['floresta-900'];
       const cor = b.secundario ? C.ink : C['ivory-50'];
-      const borda = b.secundario ? C['sand-400'] : C['espresso-900'];
+      const borda = b.secundario ? C['sand-400'] : C['floresta-900'];
       return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;"><tr>
 <td align="center" style="border-radius:999px;background:${fundo};border:1px solid ${borda};">
 <a href="${esc(b.href)}" style="display:block;padding:14px 24px;font-family:${SANS};font-size:16px;font-weight:600;line-height:20px;color:${cor};text-decoration:none;border-radius:999px;">${esc(b.rotulo)}</a>
@@ -81,7 +81,7 @@ export function renderizar(doc: Documento): { assunto: string; html: string; tex
 <body style="margin:0;padding:0;background:${C['ivory-100']};">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(doc.preheader)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C['ivory-100']};"><tr><td align="center" style="padding:24px 16px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:${C['ivory-50']};border-top:4px solid ${C['gold-500']};border-radius:12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:${C['ivory-50']};border-top:4px solid ${C['oliva-500']};border-radius:12px;">
 <tr><td style="padding:32px 24px 20px;">
 ${doc.blocos.map(blocoHtml).join('\n')}
 </td></tr>

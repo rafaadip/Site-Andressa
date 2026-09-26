@@ -12,8 +12,9 @@
  *   - quando escondida fica `inert`, fora da ordem de Tab e do leitor de tela.
  */
 import { useEffect, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, MessageCircle } from 'lucide-react';
 import { Botao } from '@/components/ui/Botao';
+import { linkWhatsApp, MENSAGEM_AGENDAMENTO } from '@/lib/contato';
 
 export function BarraAgendarMobile() {
   const [visivel, setVisivel] = useState(false);
@@ -44,18 +45,28 @@ export function BarraAgendarMobile() {
       data-testid="barra-agendar"
       inert={!visivel}
       aria-hidden={!visivel}
-      className={`md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-borda bg-fundo/95 backdrop-blur-md
-                  px-[var(--gutter)] pt-3 pb-[calc(.75rem+var(--safe-bottom))]
-                  transition-transform duration-300 ease-out
-                  ${visivel ? 'translate-y-0' : 'translate-y-full'}`}
+      className={`barra-agendar vidro md:hidden fixed inset-x-3 bottom-[calc(.75rem+var(--safe-bottom))] z-40
+                  flex items-center gap-1.5 rounded-full p-1.5
+                  ${visivel ? 'translate-y-0' : 'translate-y-[calc(100%+1.5rem+var(--safe-bottom))]'}`}
     >
       <Botao
         href="/agendar"
+        variante="primario"
         larguraTotalMobile
         icone={<ArrowRight aria-hidden size={18} strokeWidth={1.75} />}
       >
         Agendar consulta
       </Botao>
+      {/* Atalho para quem prefere conversar antes — o mesmo canal do "Fale pelo WhatsApp". */}
+      <a
+        href={linkWhatsApp(MENSAGEM_AGENDAMENTO)}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="WhatsApp"
+        className="grid size-12 shrink-0 place-items-center rounded-full border border-borda bg-elevado text-oliva-700 transition-transform duration-150 active:scale-95"
+      >
+        <MessageCircle aria-hidden size={20} strokeWidth={1.6} />
+      </a>
     </div>
   );
 }

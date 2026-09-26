@@ -25,7 +25,7 @@ export function CartaoConsulta({ c }: { c: ItemAgenda }) {
   return (
     <article className="rounded-lg border border-borda bg-elevado p-4 md:p-5">
       <div className="flex items-start gap-4">
-        {/* Fonte do corpo: a Playfair usa algarismos "old-style", ruins de ler de relance. */}
+        {/* Fonte do corpo: algarismos de serifa (old-style) são ruins de ler de relance. */}
         <p className="pt-0.5 text-[1.25rem] font-medium leading-none tabular text-texto">{horaLocal(c.inicio)}</p>
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-medium text-texto">{c.nome}</h3>

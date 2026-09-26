@@ -23,13 +23,17 @@ export function Contato() {
 
   return (
     <Secao id="contato" superficie>
-      <div className="grid gap-12 lg:grid-cols-2 lg:gap-20">
+      <div className="grid gap-12 lg:grid-cols-[1.1fr_.9fr] lg:gap-24">
         <div>
           <CabecalhoSecao eyebrow="Contato" titulo="Fale com o consultório" />
-          <ul className="space-y-6">
+          <ul className="border-t border-borda">
             {itens.map(({ Icone, rotulo, valor, href, externo }) => (
-              <li key={rotulo} className="flex gap-4">
-                <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-full bg-sand-200 text-gold-700">
+              <li key={rotulo} data-revelar className="group flex items-center gap-5 border-b border-borda py-5">
+                <span
+                  aria-hidden
+                  className="grid size-12 shrink-0 place-items-center rounded-full bg-sand-200 text-oliva-700 transition-[background-color,color] duration-500
+                             group-hover:bg-floresta-900 group-hover:text-oliva-200"
+                >
                   <Icone size={20} strokeWidth={1.5} />
                 </span>
                 <div className="min-w-0">
@@ -38,12 +42,12 @@ export function Contato() {
                     <a
                       href={href}
                       {...(externo ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                      className="mt-0.5 inline-flex min-h-11 items-center text-[1.0625rem] text-texto break-all underline decoration-borda-campo underline-offset-4 hover:decoration-current"
+                      className="link-fio inline-flex min-h-11 items-center text-[1.125rem] text-texto break-all"
                     >
                       {valor}
                     </a>
                   ) : (
-                    <p className="mt-1 text-[1.0625rem] text-texto">{valor}</p>
+                    <p className="mt-1 text-[1.0625rem] leading-snug text-texto">{valor}</p>
                   )}
                 </div>
               </li>
@@ -54,14 +58,15 @@ export function Contato() {
         {/* Conteúdo de SEGURANÇA, não rodapé decorativo: ícone + texto, nunca só cor. */}
         <aside
           aria-labelledby="titulo-urgencia"
-          className="self-start rounded-lg border border-borda bg-elevado p-7 lg:mt-16"
+          data-revelar
+          className="self-start rounded-[1.25rem] border border-borda bg-elevado p-7 shadow-sm md:p-8 lg:mt-[7.5rem]"
         >
           <div className="flex gap-4">
             <TriangleAlert aria-hidden size={24} strokeWidth={1.75} className="mt-0.5 shrink-0 text-danger" />
             <div>
               <h3 id="titulo-urgencia" className="font-medium text-texto">{URGENCIA.titulo}</h3>
-              <p className="mt-2 text-texto-2">
-                {URGENCIA.texto} <strong className="text-texto">{URGENCIA.telefone}</strong>.
+              <p className="mt-2 text-texto-2 leading-relaxed">
+                {URGENCIA.texto} <strong className="font-medium text-texto">{URGENCIA.telefone}</strong>.
               </p>
             </div>
           </div>
