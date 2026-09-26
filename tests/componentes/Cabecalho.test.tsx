@@ -110,3 +110,59 @@ describe('<Cabecalho>', () => {
     expect(screen.getByRole('button', { name: 'Abrir menu' })).toBeTruthy();
   });
 });
+
+describe('<Cabecalho> — vidro que acompanha o fundo (Liquid Glass)', () => {
+  /** Seção escura numa faixa da tela. O jsdom não faz layout: o retângulo é
+   * dado à mão (o do cabeçalho fica em 0 — o "meio da pílula" é y = 0). */
+  function secaoEscura(topo: number, base: number) {
+    const el = document.createElement('section');
+    el.className = 'superficie-escura';
+    posicionar(el, topo, base);
+    document.body.appendChild(el);
+    return el;
+  }
+  function posicionar(el: HTMLElement, topo: number, base: number) {
+    el.getBoundingClientRect = () =>
+      ({ top: topo, bottom: base, left: 0, right: 0, width: 0, height: base - topo, x: 0, y: topo, toJSON: () => ({}) });
+  }
+  const proximoQuadro = () => act(async () => {
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+  });
+  const tom = () => screen.getByRole('banner').getAttribute('data-tom');
+
+  afterEach(() => document.querySelectorAll('.superficie-escura').forEach((el) => el.remove()));
+
+  it('sobre página clara, o vidro é claro', async () => {
+    render(<Cabecalho />);
+    await proximoQuadro();
+    expect(tom()).toBe('claro');
+  });
+
+  it('com uma seção escura sob o cabeçalho, o vidro fica escuro', async () => {
+    secaoEscura(-100, 600);
+    render(<Cabecalho />);
+    await proximoQuadro();
+    expect(tom()).toBe('escuro');
+  });
+
+  it('seção escura mais abaixo não muda o tom — até a rolagem levá-la para baixo do cabeçalho', async () => {
+    const secao = secaoEscura(800, 1400);
+    render(<Cabecalho />);
+    await proximoQuadro();
+    expect(tom()).toBe('claro');
+
+    posicionar(secao, -10, 590);
+    act(() => { window.dispatchEvent(new Event('scroll')); });
+    await proximoQuadro();
+    expect(tom()).toBe('escuro');
+  });
+
+  it('menu aberto força o tom claro: o painel claro cobre a página', async () => {
+    const user = userEvent.setup();
+    secaoEscura(-100, 600);
+    render(<Cabecalho />);
+    await proximoQuadro();
+    await user.click(screen.getByRole('button', { name: 'Abrir menu' }));
+    expect(tom()).toBe('claro');
+  });
+});

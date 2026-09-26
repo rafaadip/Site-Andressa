@@ -13,7 +13,11 @@
  *   - Esc fecha; rolagem do fundo travada enquanto aberto
  *
  * Visual: no topo o cabeçalho se funde ao hero; depois de alguns pixels de
- * rolagem ganha vidro, fio e sombra (`data-rolou`, estilos em globals.css).
+ * rolagem vira uma pílula de vidro espesso (`data-rolou`, estilos em
+ * globals.css). Como o Liquid Glass do iOS, o vidro acompanha o que passa
+ * por baixo: com o meio da pílula sobre uma `.superficie-escura`, marca
+ * `data-tom="escuro"` — vidro escuro, texto claro e CTA em ouro. É isso que
+ * mantém a leitura sem precisar de um vidro quase opaco.
  */
 import Link from 'next/link';
 import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from 'react';
@@ -25,7 +29,9 @@ import { Botao } from '@/components/ui/Botao';
 export function Cabecalho() {
   const [aberto, setAberto] = useState(false);
   const [rolou, setRolou] = useState(false);
+  const [tom, setTom] = useState<'claro' | 'escuro'>('claro');
   const idPainel = useId();
+  const cabecalhoRef = useRef<HTMLElement>(null);
   const botaoRef = useRef<HTMLButtonElement>(null);
   const painelRef = useRef<HTMLDivElement>(null);
   const progressoRef = useRef<HTMLSpanElement>(null);
@@ -35,8 +41,9 @@ export function Cabecalho() {
     if (devolverFoco) botaoRef.current?.focus();
   }, []);
 
-  // Estado "rolou" e progresso de leitura: um listener passivo, lido no
-  // próximo frame. O progresso vai direto no estilo do fio (sem re-render).
+  // Estado "rolou", progresso de leitura e tom do vidro: um listener
+  // passivo, lido no próximo frame. O progresso vai direto no estilo do fio
+  // (sem re-render); rolou e tom só re-renderizam quando mudam.
   useEffect(() => {
     let quadro = 0;
     const medir = () => {
@@ -45,12 +52,26 @@ export function Cabecalho() {
       setRolou(y > 8);
       const max = document.documentElement.scrollHeight - window.innerHeight;
       progressoRef.current?.style.setProperty('--progresso', String(max > 0 ? Math.min(1, y / max) : 0));
+
+      // Consulta a cada quadro (não em cache): a navegação entre páginas
+      // troca as seções sem remontar o cabeçalho, e são 1 ou 2 elementos.
+      const cabecalho = cabecalhoRef.current;
+      if (!cabecalho) return;
+      const r = cabecalho.getBoundingClientRect();
+      const meio = r.top + r.height / 2;
+      const escuro = [...document.querySelectorAll('.superficie-escura')].some((el) => {
+        const s = el.getBoundingClientRect();
+        return s.top <= meio && s.bottom >= meio;
+      });
+      setTom(escuro ? 'escuro' : 'claro');
     };
     const aoRolar = () => { if (!quadro) quadro = window.requestAnimationFrame(medir); };
     aoRolar();   // página recarregada no meio: já nasce no estado certo
     window.addEventListener('scroll', aoRolar, { passive: true });
+    window.addEventListener('resize', aoRolar, { passive: true });
     return () => {
       window.removeEventListener('scroll', aoRolar);
+      window.removeEventListener('resize', aoRolar);
       if (quadro) window.cancelAnimationFrame(quadro);
     };
   }, []);
@@ -60,8 +81,14 @@ export function Cabecalho() {
 
     const painel = painelRef.current;
     painel?.querySelector<HTMLElement>('a')?.focus();
-    const overflowAnterior = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    // Trava a rolagem no <html>, não no <body>: com `overflow-x: clip` no
+    // html (globals.css), o overflow do body não passa para a janela — o
+    // body virava contêiner de rolagem, o cabeçalho sticky se prendia a ele
+    // e sumia da tela (junto com o botão de fechar) ao abrir o menu no meio
+    // da página.
+    const raiz = document.documentElement;
+    const overflowAnterior = raiz.style.overflow;
+    raiz.style.overflow = 'hidden';
 
     function aoTeclar(e: KeyboardEvent) {
       if (e.key === 'Escape') { e.preventDefault(); fechar(); return; }
@@ -87,7 +114,7 @@ export function Cabecalho() {
     document.addEventListener('keydown', aoTeclar);
     mq.addEventListener('change', aoMudar);
     return () => {
-      document.body.style.overflow = overflowAnterior;
+      raiz.style.overflow = overflowAnterior;
       document.removeEventListener('keydown', aoTeclar);
       mq.removeEventListener('change', aoMudar);
     };
@@ -95,7 +122,13 @@ export function Cabecalho() {
 
   return (
     <>
-    <header className="cabecalho sticky top-0 z-50" data-rolou={rolou && !aberto}>
+    <header
+      ref={cabecalhoRef}
+      className="cabecalho sticky top-0 z-50"
+      data-rolou={rolou && !aberto}
+      // Menu aberto: o painel (claro) cobre a página — o cabeçalho acompanha.
+      data-tom={aberto ? 'claro' : tom}
+    >
       <div className="wrap flex h-[var(--altura-cabecalho)] items-center">
       <div className="cabecalho-barra flex h-[calc(var(--altura-cabecalho)-.75rem)] flex-1 items-center justify-between">
         <Link
@@ -123,7 +156,8 @@ export function Cabecalho() {
               </li>
             ))}
           </ul>
-          <Botao href="/agendar" variante="primario">Agendar consulta</Botao>
+          {/* Sobre o vidro escuro, o CTA espresso sumiria: vira ouro (7,08:1). */}
+          <Botao href="/agendar" variante={tom === 'escuro' ? 'destaque' : 'primario'}>Agendar consulta</Botao>
         </nav>
 
         <button
@@ -150,7 +184,7 @@ export function Cabecalho() {
         ref={painelRef}
         id={idPainel}
         hidden={!aberto}
-        className="painel-menu lg:hidden fixed inset-x-0 top-[var(--altura-cabecalho)] bottom-0 z-40 border-t border-borda bg-fundo overflow-y-auto"
+        className="painel-menu lg:hidden fixed inset-x-0 top-[var(--altura-cabecalho)] bottom-0 z-40 border-t border-borda overflow-y-auto"
       >
         <nav aria-label="Principal (celular)" className="wrap flex flex-col min-h-full pt-4 pb-[calc(1.5rem+var(--safe-bottom))]">
           <ul className="flex flex-col">

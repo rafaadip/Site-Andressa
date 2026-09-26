@@ -5,13 +5,14 @@ import type { ReactNode } from 'react';
  * na faixa do polegar e visível enquanto a grade de horários rola
  * (docs/01-MOBILE-FIRST.md §5). safe-area-inset-bottom: sem ele, o botão
  * fica sob a barra de gestos do iPhone. No tablet/desktop volta ao fluxo.
+ * Vidro espesso no celular (`.barra-acoes`, globals.css).
  */
 export function BarraAcoes({ children }: { children: ReactNode }) {
   return (
     <div
-      className="sticky bottom-0 z-10 -mx-[var(--gutter)] mt-8 flex gap-3 border-t border-borda
-                 bg-fundo/95 px-[var(--gutter)] pt-3 pb-[calc(.75rem+var(--safe-bottom))] backdrop-blur-md
-                 md:static md:mx-0 md:mt-10 md:border-0 md:bg-transparent md:px-0 md:pb-0 md:pt-0 md:backdrop-blur-none"
+      className="barra-acoes sticky bottom-0 z-10 -mx-[var(--gutter)] mt-8 flex gap-3 border-t border-borda
+                 px-[var(--gutter)] pt-3 pb-[calc(.75rem+var(--safe-bottom))]
+                 md:static md:mx-0 md:mt-10 md:border-0 md:px-0 md:pb-0 md:pt-0"
     >
       {children}
     </div>

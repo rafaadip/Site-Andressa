@@ -12,8 +12,8 @@ const VARIANTES: Record<Variante, string> = {
   fantasma: 'bg-transparent text-texto border-borda-campo hover:border-gold-200 hover:text-gold-200',
   // sobre superfície clara
   contorno: 'bg-transparent text-texto border-borda-campo hover:border-ink hover:bg-elevado',
-  // vidro sobre marfim/aurora (tinta sobre quase-marfim)
-  vidro: 'vidro text-texto hover:bg-elevado',
+  // vidro fino sobre marfim/aurora (tinta sobre vidro: check:contrast)
+  vidro: 'vidro-fino text-texto hover:bg-elevado',
 };
 
 type Props = {

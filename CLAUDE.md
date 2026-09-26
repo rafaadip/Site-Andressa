@@ -59,7 +59,8 @@ Rodar o site local: copie `.env.example` para `.env.local` e preencha
    o build (`npm run check:conformidade`). A pós-graduação em Nutrologia está
    em curso: o site **não pode** dizer "especialista" sem RQE.
 6. **Nenhum hex cru fora de `app/globals.css`.** `npm run check:contrast`
-   valida os pares WCAG lendo o CSS real.
+   valida os pares WCAG lendo o CSS real — inclusive texto sobre vidro, com a
+   opacidade dos tokens `--vidro-*` composta sobre o pior fundo (FASE-01).
 7. **Mobile-first.** O uso primário é celular e tablet: projetar em 375 px,
    alvos ≥ 44 px, campos com `font-size` ≥ 16 px (senão o iOS dá zoom).
    Ver `docs/01-MOBILE-FIRST.md`.
