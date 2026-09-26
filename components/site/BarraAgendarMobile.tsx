@@ -63,7 +63,7 @@ export function BarraAgendarMobile() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="WhatsApp"
-        className="grid size-12 shrink-0 place-items-center rounded-full border border-borda bg-elevado text-oliva-700 transition-transform duration-150 active:scale-95"
+        className="grid size-12 shrink-0 place-items-center rounded-full border border-borda bg-elevado text-gold-700 transition-transform duration-150 active:scale-95"
       >
         <MessageCircle aria-hidden size={20} strokeWidth={1.6} />
       </a>

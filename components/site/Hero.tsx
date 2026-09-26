@@ -8,7 +8,7 @@ import { Botao } from '@/components/ui/Botao';
 
 /**
  * Hero claro, editorial: título grande em serifa com a palavra-chave em
- * itálico oliva, retrato circular com fio oliva que se desenha, dois selos de
+ * itálico ouro, retrato circular com fio ouro que se desenha, dois selos de
  * vidro flutuando sobre ele e uma aurora suave que deriva ao fundo.
  *
  * Mobile-first (docs/fases/FASE-03 §2.1): no celular o texto e os dois CTAs
@@ -78,11 +78,11 @@ export function Hero() {
         </div>
 
         <figure className="paralaxe-retrato relative mx-auto w-[min(74vw,19rem)] md:w-[22rem] lg:w-[min(100%,30rem)]">
-          {/* Fio oliva: um círculo que se desenha em volta do retrato. Decorativo. */}
+          {/* Fio ouro: um círculo que se desenha em volta do retrato. Decorativo. */}
           <svg
             aria-hidden
             viewBox="0 0 100 100"
-            className="retrato-anel pointer-events-none absolute -left-[5%] -top-[5%] size-[110%] overflow-visible text-oliva-500"
+            className="retrato-anel pointer-events-none absolute -left-[5%] -top-[5%] size-[110%] overflow-visible text-gold-500"
           >
             <circle cx="50" cy="50" r="49.6" fill="none" stroke="currentColor" strokeWidth=".25" pathLength={1} />
           </svg>

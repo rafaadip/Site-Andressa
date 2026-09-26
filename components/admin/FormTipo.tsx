@@ -20,7 +20,7 @@ export function FormTipo({ t }: { t: { id: string; label: string; duracao: numbe
         <label className="text-sm text-texto-2">Intervalo depois<input type="number" name="depois" min={0} max={120} defaultValue={t.depois} inputMode="numeric" required className={CAMPO} /></label>
       </div>
       <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-texto">
-        <input type="checkbox" name="ativo" defaultChecked={t.ativo} className="size-6 accent-floresta-900" />Oferecer no site
+        <input type="checkbox" name="ativo" defaultChecked={t.ativo} className="size-6 accent-espresso-900" />Oferecer no site
       </label>
       <BotaoEnviar variante="contorno" larguraTotal>Salvar</BotaoEnviar>
       <Resultado estado={estado} />

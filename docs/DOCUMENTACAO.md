@@ -183,28 +183,26 @@ SDK do Sentry, shadcn/ui, Motion) estão justificadas no
 
 ## 4. Identidade visual
 
-**Redesenho de 26/09/2026 — "Oliva & Areia".** A identidade original (marfim,
-espresso e ouro, derivada do carrossel) foi trocada, a pedido, por uma paleta
-que remete a nutrição e saúde sem o clichê azul/verde-água de clínica: fundo
-osso/areia, verde-floresta profundo nos blocos escuros e oliva como acento.
+Derivada do material existente (carrossel de Nutrologia e retratos), não inventada.
 
-**Paleta** — todos os pares verificados por contraste WCAG (`npm run check:contrast`):
+**Paleta** — todos os pares verificados por contraste WCAG:
 
-| Token | Hex | Uso | Contraste sobre osso |
+| Token | Hex | Uso | Contraste sobre marfim |
 |---|---|---|---|
-| `ivory-50` | `#F7F4EC` | Fundo da página (osso) | — |
-| `ivory-100` | `#EEE8DB` | Superfície (areia clara) | — |
-| `sand-400` | `#938B73` | **Borda de campo** | 3,09 ✅ (UI) |
-| `oliva-500` | `#7B9166` | Fios, ícones | 3,14 ⚠️ *nunca texto pequeno* |
-| `oliva-700` | `#4E6A3D` | **Texto em oliva** (acento) | 5,53 ✅ |
-| `floresta-900` | `#1D2A1F` | Blocos escuros, tinta, botão principal | 13,62 ✅ |
-| `ink-muted` | `#56604F` | Texto secundário | 6,00 ✅ |
+| `ivory-50` | `#FBF8F3` | Fundo da página | — |
+| `ivory-100` | `#F5EFE5` | Superfície | — |
+| `sand-400` | `#A08A68` | **Borda de campo** | 3,13 ✅ (UI) |
+| `gold-500` | `#B8874E` | Fios, ícones, preenchimento | 3,00 ⚠️ *nunca texto pequeno* |
+| `gold-700` | `#8A6230` | **Texto em ouro** | 5,12 ✅ |
+| `espresso-900` | `#241A13` | Blocos escuros, tinta | 16,09 ✅ |
+| `ink-muted` | `#6B5A4B` | Texto secundário | 6,22 ✅ |
 
-O oliva decorativo (`oliva-500`) **reprova para texto pequeno** em fundo claro.
-Onde o acento aparece como rótulo, o token correto é `oliva-700`.
+O ouro da marca (`#B8874E`) **reprova para texto pequeno** em fundo claro. Onde ele
+aparece como rótulo, o token correto é `gold-700` — visualmente quase idêntico,
+acessível. Este é o tipo de detalhe que separa "parece premium" de "é premium".
 
-**Tipografia:** Fraunces (títulos e citação; variável, com tamanho óptico) +
-DM Sans (texto e interface).
+**Tipografia** (redesenho de 26/09/2026): Fraunces (títulos e citação; variável,
+com tamanho óptico) + DM Sans (texto e interface).
 
 **Movimento:** entrada do hero só com máscara (transform + clip-path — o texto
 nunca fica translúcido), revelação suave ao rolar (`components/site/Revelar.tsx`),
@@ -212,7 +210,7 @@ holofote nos cartões (`Holofote.tsx`), cabeçalho em vidro flutuante com
 progresso de leitura. Tudo desligado com `prefers-reduced-motion: reduce`.
 
 **Sem modo escuro**, por decisão de marca: o sistema já opera em duas superfícies
-(osso e verde-floresta), que é o contraste que a identidade pede.
+(marfim e espresso), que é o contraste que a identidade pede.
 
 → [FASE-01](fases/FASE-01-design-system.md)
 

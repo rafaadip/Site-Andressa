@@ -136,7 +136,7 @@ function Consentimento({ id, marcado, erro, aoMudar, destaque, children }: {
   destaque?: boolean; children: React.ReactNode;
 }) {
   return (
-    <div className={destaque ? 'rounded-md border border-oliva-500/50 bg-superficie p-4' : ''}>
+    <div className={destaque ? 'rounded-md border border-gold-500/50 bg-superficie p-4' : ''}>
       {/* O rótulo inteiro é a área de toque — o checkbox sozinho é pequeno. */}
       <label htmlFor={id} className="flex cursor-pointer gap-3.5 text-sm text-texto-2">
         <input
@@ -147,7 +147,7 @@ function Consentimento({ id, marcado, erro, aoMudar, destaque, children }: {
           onChange={(e) => aoMudar(e.target.checked)}
           aria-invalid={Boolean(erro)}
           aria-describedby={erro ? `${id}-erro` : undefined}
-          className="mt-0.5 size-6 min-h-0 shrink-0 cursor-pointer accent-floresta-900"
+          className="mt-0.5 size-6 min-h-0 shrink-0 cursor-pointer accent-espresso-900"
         />
         <span className="leading-relaxed">{children}</span>
       </label>

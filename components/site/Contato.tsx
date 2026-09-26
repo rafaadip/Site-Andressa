@@ -31,8 +31,8 @@ export function Contato() {
               <li key={rotulo} data-revelar className="group flex items-center gap-5 border-b border-borda py-5">
                 <span
                   aria-hidden
-                  className="grid size-12 shrink-0 place-items-center rounded-full bg-sand-200 text-oliva-700 transition-[background-color,color] duration-500
-                             group-hover:bg-floresta-900 group-hover:text-oliva-200"
+                  className="grid size-12 shrink-0 place-items-center rounded-full bg-sand-200 text-gold-700 transition-[background-color,color] duration-500
+                             group-hover:bg-espresso-900 group-hover:text-gold-200"
                 >
                   <Icone size={20} strokeWidth={1.5} />
                 </span>

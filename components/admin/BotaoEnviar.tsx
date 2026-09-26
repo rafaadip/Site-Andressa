@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 type Variante = 'primario' | 'contorno' | 'perigo';
 
 const ESTILO: Record<Variante, string> = {
-  primario: 'border-floresta-900 bg-floresta-900 text-ivory-100 hover:bg-floresta-700',
+  primario: 'border-espresso-900 bg-espresso-900 text-ivory-100 hover:bg-espresso-700',
   contorno: 'border-borda-campo bg-transparent text-texto hover:border-ink',
   perigo: 'border-danger bg-danger text-ivory-50',
 };

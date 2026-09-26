@@ -14,11 +14,8 @@
 > **Estado da implementação (25/09/2026):** implementada — tokens em `app/globals.css` (contraste verificado por `npm run check:contrast`), espelho para e-mail/OG em `lib/marca.ts` conferido valor a valor.
 
 > **Redesenho visual (26/09/2026) — vale sobre o que está abaixo.**
-> - **Paleta "Oliva & Areia"**: osso/areia nos fundos, verde-floresta nos blocos
->   escuros e oliva como acento (escolhida sobre a marfim/espresso/ouro original,
->   que lembrava mais estética/café do que saúde). Os tokens mudaram de nome junto:
->   `gold-*` → `oliva-*`, `espresso-*` → `floresta-*`. A fonte da verdade continua
->   sendo `app/globals.css`, espelhada em `lib/marca.ts`.
+> - **Paleta mantida**: marfim, espresso e ouro do carrossel, com os mesmos tokens
+>   (`gold-*`, `espresso-*`). O redesenho mudou layout, tipografia e movimento, não as cores.
 > - **Tipografia**: Fraunces (variável, com tamanho óptico) nos títulos e na citação,
 >   DM Sans no texto e na interface. Títulos públicos usam `.titulo-display` (peso
 >   360); `.display` (peso 500) fica para o painel e as etapas do agendamento.
@@ -72,33 +69,32 @@ Sombra pesada é a marca registrada de site genérico de clínica — evitar.
 
 ```css
 @theme {
-  /* Marfim/areia — fundos */
-  --color-ivory-50:  #F7F4EC;  /* fundo da página (osso) */
-  --color-ivory-100: #EEE8DB;  /* seção alternada, superfície */
-  --color-sand-200:  #E3DCCB;  /* divisórias decorativas, chips */
-  --color-sand-300:  #CFC7B1;  /* fio decorativo */
-  --color-sand-400:  #938B73;  /* borda de INPUT (ver §2.3) */
+  /* Marfim — fundos */
+  --color-ivory-50:  #FBF8F3;  /* fundo da página */
+  --color-ivory-100: #F5EFE5;  /* seção alternada, cartões */
+  --color-sand-200:  #E9DDCA;  /* divisórias decorativas, chips */
+  --color-sand-300:  #D8C7AC;  /* borda de cartão */
+  --color-sand-400:  #A08A68;  /* borda de INPUT (ver §2.3) */
 
-  /* Oliva — acento */
-  --color-oliva-200: #D3DEBD;  /* acento sobre fundo escuro */
-  --color-oliva-400: #A7B98A;  /* preenchimento de botão claro */
-  --color-oliva-500: #7B9166;  /* fios, ícones — NUNCA texto pequeno em claro */
-  --color-oliva-700: #4E6A3D;  /* TEXTO em oliva sobre osso */
+  /* Ouro — acento */
+  --color-gold-200:  #EBD9BC;  /* acento sobre fundo escuro */
+  --color-gold-400:  #C9A06A;  /* preenchimento de botão */
+  --color-gold-500:  #B8874E;  /* fios, ícones — NUNCA texto pequeno em claro */
+  --color-gold-700:  #8A6230;  /* TEXTO em ouro sobre marfim */
 
-  /* Floresta — tinta e blocos escuros */
-  --color-floresta-700: #394A3B;
-  --color-floresta-800: #283628;
-  --color-floresta-900: #1D2A1F;
+  /* Espresso — tinta e blocos escuros */
+  --color-espresso-700: #463322;
+  --color-espresso-800: #33251A;
+  --color-espresso-900: #241A13;
 
   /* Neutros de texto */
-  --color-ink:        #1D2A1F;
-  --color-ink-muted:  #56604F;
-  --color-ink-subtle: #7D8574;  /* decorativo — nunca texto essencial */
-  --color-cream-muted: #BCC6B0; /* secundário sobre floresta */
+  --color-ink:        #241A13;
+  --color-ink-muted:  #6B5A4B;
+  --color-ink-subtle: #8A7666;  /* decorativo — nunca texto essencial */
 
   /* Semânticos */
   --color-danger:       #A3271F;
-  --color-danger-dark:  #F2B8B5;  /* sobre floresta */
+  --color-danger-dark:  #F2B8B5;  /* sobre espresso */
   --color-success:      #2F6B4F;
   --color-success-dark: #A7D7BE;
 }
@@ -108,46 +104,49 @@ Sombra pesada é a marca registrada de site genérico de clínica — evitar.
 
 Componentes referenciam **só** esta camada. Nenhum hex cru em JSX.
 
-| Token | Claro | Sobre floresta |
+| Token | Claro | Sobre espresso |
 |---|---|---|
-| `--bg-page` | `ivory-50` | `floresta-900` |
-| `--bg-surface` | `ivory-100` | `floresta-800` |
-| `--bg-raised` | `#FFFFFF` | `floresta-700` |
+| `--bg-page` | `ivory-50` | `espresso-900` |
+| `--bg-surface` | `ivory-100` | `espresso-800` |
+| `--bg-raised` | `#FFFFFF` | `espresso-700` |
 | `--text-primary` | `ink` | `ivory-100` |
-| `--text-secondary` | `ink-muted` | `cream-muted` |
-| `--text-accent` | `oliva-700` | `oliva-200` |
-| `--border-subtle` | `sand-200` | `rgb(211 222 189 / .14)` |
-| `--border-field` | `sand-400` | `rgb(211 222 189 / .34)` |
-| `--focus-ring` | `oliva-700` | `oliva-200` |
+| `--text-secondary` | `ink-muted` | `#C4B5A3` |
+| `--text-accent` | `gold-700` | `gold-200` |
+| `--border-subtle` | `sand-200` | `rgb(235 217 188 / .14)` |
+| `--border-field` | `sand-400` | `rgb(235 217 188 / .34)` |
+| `--focus-ring` | `gold-700` | `gold-200` |
 
 ### 2.3 Contraste — verificado, não presumido
 
-Medido em WCAG 2.x sobre `#F7F4EC`:
+Medido em WCAG 2.x sobre `#FBF8F3`:
 
 | Par | Ratio | Texto AA (4,5) | UI/texto grande (3,0) |
 |---|---:|:---:|:---:|
-| `ink` #1D2A1F | **13,62** | ✅ | ✅ |
-| `ink-muted` #56604F | **6,00** | ✅ | ✅ |
-| `oliva-500` #7B9166 | 3,14 | ❌ | ✅ |
-| **`oliva-700` #4E6A3D** | **5,53** | ✅ | ✅ |
-| **`sand-400` #938B73** | 3,09 | ❌ | ✅ |
-| `danger` #A3271F | 6,66 | ✅ | ✅ |
-| `success` #2F6B4F | 5,73 | ✅ | ✅ |
+| `ink` #241A13 | **16,09** | ✅ | ✅ |
+| `ink-muted` #6B5A4B | **6,22** | ✅ | ✅ |
+| `ink-subtle` #8A7666 | 4,08 | ❌ | ✅ |
+| `gold-500` #B8874E | 3,00 | ❌ | ✅ |
+| **`gold-700` #8A6230** | **5,12** | ✅ | ✅ |
+| `sand-300` #D8C7AC | 1,56 | ❌ | ❌ |
+| **`sand-400` #A08A68** | 3,13 | ❌ | ✅ |
+| `danger` #A3271F | 6,91 | ✅ | ✅ |
+| `success` #2F6B4F | 5,94 | ✅ | ✅ |
 
-Sobre `floresta-900` #1D2A1F:
+Sobre `espresso-900` #241A13:
 
 | Par | Ratio |
 |---|---:|
-| `ivory-100` | **12,26** ✅ |
-| `cream-muted` #BCC6B0 (secundário) | **8,44** ✅ |
-| `oliva-200` | **10,66** ✅ |
+| `ivory-100` | **14,90** ✅ |
+| `#C4B5A3` (secundário) | **8,51** ✅ |
+| `gold-400` | **7,08** ✅ |
+| `gold-200` | **12,32** ✅ |
 
 **Três consequências que mudam o código:**
 
-1. **O oliva decorativo (`oliva-500`) reprova para texto pequeno em fundo claro**
-   (3,14 < 4,5). Onde o acento aparece como *eyebrow* (`ATENDIMENTO`, `SOBRE A
-   DOUTORA`), o token correto é `oliva-700` #4E6A3D (5,53). O `oliva-500` continua
-   válido em fios e ícones.
+1. **O ouro da marca (#B8874E) reprova para texto pequeno em fundo claro** (3,00 <
+   4,5). Onde ele hoje é usado como *eyebrow* (`ATENDIMENTO`, `SOBRE A DOUTORA`), o
+   token correto é `gold-700` #8A6230 — visualmente quase idêntico, 5,12 de ratio.
+   O `gold-500` continua válido em fios, ícones e **preenchimento** de botão.
 2. **Borda de input precisa de `sand-400`.** WCAG 2.2 §1.4.11 exige 3:1 para
    contornos de componente. O `rgba(26,34,25,.18)` do protótipo fica em ~1,3 —
    reprova. Bordas *decorativas* (divisórias, cartão) podem seguir claras.
@@ -286,7 +285,7 @@ fallback) — `100vh` no iOS Safari corta o conteúdo quando a barra de endereç
 | Componente | Estados | Nota de acessibilidade |
 |---|---|---|
 | `Button` (gold / espresso / ghost / link) | default, **active**, focus, disabled, loading | Alvo ≥ 44×44; largura total no mobile; `aria-busy` no loading; **nunca** troca de tamanho ao pressionar |
-| `Eyebrow` | — | `oliva-700`; é decorativo → não substitui heading |
+| `Eyebrow` | — | `gold-700`; é decorativo → não substitui heading |
 | `SectionHeading` | — | `<h2>` real; nível nunca pulado |
 | `Card` | default, active, hover | Nenhuma informação só no hover; realce dentro de `@media (hover: hover)` |
 | `DayPicker` | idle, selected, disabled, focus | `role="radiogroup"` + `role="radio"` — **não** `listbox` |
@@ -366,7 +365,7 @@ para a esquerda; voltar, para a direita. Nada entra só porque "fica bonito".
 - Importar por ícone (`lucide-react/icons/...`), nunca o pacote inteiro.
 - Ícone sozinho **sempre** com `aria-label`; ícone ao lado de texto → `aria-hidden`.
 - **Zero emoji** como ícone estrutural.
-- Ícones de seção herdam o tratamento do carrossel: traço em `oliva-500` dentro de
+- Ícones de seção herdam o tratamento do carrossel: traço em `gold-500` dentro de
   círculo `sand-200` de 44 px.
 
 ---
@@ -376,7 +375,7 @@ para a esquerda; voltar, para a direita. Nada entra só porque "fica bonito".
 | Uso | Tratamento |
 |---|---|
 | Retrato do hero | Recorte 3:4, máscara radial suave na base (como no protótipo), AVIF + WebP, `priority` |
-| Retrato "Sobre" | 4:5, canto `--radius-lg`, fio `oliva-500` deslocado 18 px (detalhe do protótipo — mantém) |
+| Retrato "Sobre" | 4:5, canto `--radius-lg`, fio `gold-500` deslocado 18 px (detalhe do protótipo — mantém) |
 | Ambiente | Reservado para v1.1 |
 
 Todas com `width`/`height` explícitos (CLS) e `alt` descritivo do que importa

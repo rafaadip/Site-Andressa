@@ -11,7 +11,7 @@ const ICONES = {
 
 /**
  * Os quatro eixos do carrossel, lidos como uma sequência editorial:
- * número em itálico oliva, ícone em círculo areia e um fio que se
+ * número em itálico ouro, ícone em círculo areia e um fio que se
  * desenha ao entrar na tela. 1 coluna no celular · 2 no tablet · 4 no desktop.
  */
 export function Nutrologia() {
@@ -29,8 +29,8 @@ export function Nutrologia() {
                 </span>
                 <span
                   aria-hidden
-                  className="grid size-11 place-items-center rounded-full bg-sand-200 text-oliva-700 transition-[background-color,color,rotate] duration-500
-                             group-hover:-rotate-6 group-hover:bg-floresta-900 group-hover:text-oliva-200"
+                  className="grid size-11 place-items-center rounded-full bg-sand-200 text-gold-700 transition-[background-color,color,rotate] duration-500
+                             group-hover:-rotate-6 group-hover:bg-espresso-900 group-hover:text-gold-200"
                 >
                   <Icone size={20} strokeWidth={1.5} />
                 </span>

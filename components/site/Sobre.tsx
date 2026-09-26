@@ -26,7 +26,7 @@ export function Sobre() {
 
           <blockquote
             data-revelar
-            className="mt-10 border-l border-oliva-500 pl-6 font-citacao italic font-light text-[1.4375rem] leading-[1.35] text-texto max-w-[32ch] md:text-[1.625rem] lg:mt-12 lg:text-[1.875rem]"
+            className="mt-10 border-l border-gold-500 pl-6 font-citacao italic font-light text-[1.4375rem] leading-[1.35] text-texto max-w-[32ch] md:text-[1.625rem] lg:mt-12 lg:text-[1.875rem]"
           >
             “{SOBRE.citacao}”
           </blockquote>

@@ -23,7 +23,7 @@ export default function PaginaSobre() {
             <svg
               aria-hidden
               viewBox="0 0 100 100"
-              className="retrato-anel pointer-events-none absolute -left-[5%] -top-[5%] size-[110%] overflow-visible text-oliva-500"
+              className="retrato-anel pointer-events-none absolute -left-[5%] -top-[5%] size-[110%] overflow-visible text-gold-500"
             >
               <circle cx="50" cy="50" r="49.6" fill="none" stroke="currentColor" strokeWidth=".3" pathLength={1} />
             </svg>
@@ -45,7 +45,7 @@ export default function PaginaSobre() {
           <div className="texto-leitura space-y-4 max-w-[62ch]">
             {SOBRE.paragrafos.map((p) => <p key={p.slice(0, 24)}>{p}</p>)}
           </div>
-          <blockquote className="mt-10 mb-16 border-l border-oliva-500 pl-6 font-citacao italic font-light text-[1.4375rem] leading-[1.35] text-texto max-w-[32ch] md:text-[1.625rem]">
+          <blockquote className="mt-10 mb-16 border-l border-gold-500 pl-6 font-citacao italic font-light text-[1.4375rem] leading-[1.35] text-texto max-w-[32ch] md:text-[1.625rem]">
             “{SOBRE.citacao}”
           </blockquote>
 

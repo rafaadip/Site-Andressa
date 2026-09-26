@@ -7,18 +7,18 @@
  * ao token de lá — e quebra o build se divergir.
  */
 export const MARCA = {
-  'ivory-50': '#F7F4EC',
-  'ivory-100': '#EEE8DB',
-  'sand-200': '#E3DCCB',
-  'sand-400': '#938B73',
-  'oliva-200': '#D3DEBD',
-  'oliva-400': '#A7B98A',
-  'oliva-500': '#7B9166',
-  'oliva-700': '#4E6A3D',
-  'floresta-900': '#1D2A1F',
-  ink: '#1D2A1F',
-  'ink-muted': '#56604F',
-  'cream-muted': '#BCC6B0',
+  'ivory-50': '#FBF8F3',
+  'ivory-100': '#F5EFE5',
+  'sand-200': '#E9DDCA',
+  'sand-400': '#A08A68',
+  'gold-200': '#EBD9BC',
+  'gold-400': '#C9A06A',
+  'gold-500': '#B8874E',
+  'gold-700': '#8A6230',
+  'espresso-900': '#241A13',
+  ink: '#241A13',
+  'ink-muted': '#6B5A4B',
+  'cream-muted': '#C4B5A3',
   danger: '#A3271F',
 } as const;
 

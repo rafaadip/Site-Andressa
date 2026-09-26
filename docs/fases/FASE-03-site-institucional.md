@@ -10,7 +10,7 @@
 
 ---
 
-> **Redesenho visual (26/09/2026):** hero claro com retrato, selos e aurora; credenciais em painel de vidro; paleta Oliva & Areia e tipografia Fraunces + DM Sans — ver o bloco no topo da [FASE-01](FASE-01-design-system.md).
+> **Redesenho visual (26/09/2026):** hero claro com retrato, selos e aurora; credenciais em painel de vidro; tipografia Fraunces + DM Sans; paleta marfim/espresso/ouro mantida — ver o bloco no topo da [FASE-01](FASE-01-design-system.md).
 >
 > **Estado da implementação (25/09/2026):** implementada — home, /sobre, /agendar, privacidade, termos, sitemap, robots, JSON-LD e imagem OpenGraph. Corrigido em 25/09: o menu do celular abria com altura zero (painel `fixed` dentro de header com `backdrop-filter`).
 
@@ -64,11 +64,11 @@ Navegação: **4 itens no máximo** — `Sobre · Atendimento · Contato` + bot�
 └──────────────────────────────────────────────────────┘
 ```
 
-- Fundo **floresta-900**, texto marfim (14,9:1). O bloco escuro no topo é a
+- Fundo **espresso-900**, texto marfim (14,9:1). O bloco escuro no topo é a
   assinatura visual do carrossel.
 - Monograma em ouro a 7 % de opacidade, sangrando pela borda inferior esquerda.
 - Retrato com máscara radial (herdado do protótipo — funciona bem).
-- H1 ≤ 8 palavras. Uma palavra em itálico `oliva-200`.
+- H1 ≤ 8 palavras. Uma palavra em itálico `gold-200`.
 - **LCP = o retrato.** `priority`, AVIF+WebP, `sizes` correto, dimensões explícitas.
 **Comportamento por faixa:**
 
@@ -85,7 +85,7 @@ H1 — o retrato entra depois. Quem chega pelo Instagram no celular precisa ver
 
 ### 2.2 Credenciais
 
-Grade de 4 itens sobre `ivory-100`, marcador em `oliva-500`.
+Grade de 4 itens sobre `ivory-100`, marcador em `gold-500`.
 **1 coluna no celular · 2 no tablet · 4 no desktop.**
 
 | Item | Texto |
@@ -114,7 +114,7 @@ Conteúdo derivado do currículo:
 > eletrocardiograma, condutas de emergência — moldou uma leitura clínica que hoje
 > aplica ao cuidado longitudinal, em pós-graduação em Nutrologia pela Afya.
 
-Citação em Cormorant itálico, fio `oliva-500` à esquerda:
+Citação em Cormorant itálico, fio `gold-500` à esquerda:
 
 > "Cada paciente chega com uma história. O meu trabalho começa em ouvi-la com
 > atenção."
@@ -125,7 +125,7 @@ SP e no Hospital Geral de Guarulhos.
 
 ### 2.4 Como é a consulta
 
-Três cartões sobre **floresta-900** (contraponto do carrossel).
+Três cartões sobre **espresso-900** (contraponto do carrossel).
 **1 coluna no celular · 2 no tablet (o terceiro ocupa a linha inteira) · 3 no
 desktop.**
 
@@ -148,7 +148,7 @@ sóbria:
 4. **Além da alimentação** — sono, atividade física, estresse, comportamento
 
 Fecho: *"Nutrologia é olhar para o paciente como um todo."* — bloco espresso,
-`oliva-200`.
+`gold-200`.
 
 Ícones Lucide (traço 1,5) em círculo `sand-200` de 44 px, como no carrossel.
 

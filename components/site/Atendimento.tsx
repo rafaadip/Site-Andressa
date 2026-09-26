@@ -6,8 +6,8 @@ import { Secao, CabecalhoSecao } from '@/components/ui/Secao';
 const ICONES = [Stethoscope, Video, RefreshCw] as const;
 
 /**
- * O bloco escuro (verde-floresta) do meio da página — o contraponto —, agora
- * como um painel recuado das bordas, com halo oliva e cartões de vidro
+ * O bloco escuro (espresso) do meio da página — o contraponto —, agora
+ * como um painel recuado das bordas, com halo ouro e cartões de vidro
  * escuro que acendem sob o ponteiro (Holofote.tsx).
  * Sem preço: publicidade médica veda divulgação de valores (FASE-10).
  * Grade: 1 col no celular · 2 no tablet (o 3º ocupa a linha) · 3 no desktop.

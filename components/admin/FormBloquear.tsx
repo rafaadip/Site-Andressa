@@ -32,11 +32,11 @@ export function FormBloquear({ inicio, fim, nota, afetados }: { inicio: string; 
                   <p className="text-sm text-texto-2">{a.tipo}</p>
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
                     <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-borda-campo px-3 text-sm text-texto has-[:checked]:border-danger">
-                      <input type="radio" name={`decisao:${a.id}`} value="cancelar" required className="size-5 accent-floresta-900" />
+                      <input type="radio" name={`decisao:${a.id}`} value="cancelar" required className="size-5 accent-espresso-900" />
                       Cancelar e avisar o paciente
                     </label>
-                    <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-borda-campo px-3 text-sm text-texto has-[:checked]:border-floresta-900">
-                      <input type="radio" name={`decisao:${a.id}`} value="manter" required className="size-5 accent-floresta-900" />
+                    <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-borda-campo px-3 text-sm text-texto has-[:checked]:border-espresso-900">
+                      <input type="radio" name={`decisao:${a.id}`} value="manter" required className="size-5 accent-espresso-900" />
                       Manter (vou atender)
                     </label>
                   </div>

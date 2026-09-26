@@ -22,7 +22,7 @@ export function ComoAgendar() {
           {/* Fio que liga os passos (fora da <ol>: lista só contém <li>). Decorativo. */}
           <span
             aria-hidden
-            className="passos-fio absolute left-6 top-6 bottom-6 w-px origin-top bg-oliva-500/45
+            className="passos-fio absolute left-6 top-6 bottom-6 w-px origin-top bg-gold-500/45
                        md:inset-x-[16.66%] md:bottom-auto md:h-px md:w-auto md:origin-left"
           />
           <ol className="relative grid gap-9 md:grid-cols-3 md:gap-8">
@@ -31,7 +31,7 @@ export function ComoAgendar() {
                 <span
                   aria-hidden
                   style={{ '--i': i } as CSSProperties}
-                  className="passo-numero grid size-12 shrink-0 place-items-center rounded-full bg-floresta-900 font-display text-[1.1875rem] text-ivory-100 tabular
+                  className="passo-numero grid size-12 shrink-0 place-items-center rounded-full bg-espresso-900 font-display text-[1.1875rem] text-ivory-100 tabular
                              shadow-[0_10px_24px_-10px_rgb(29_42_31/.55)]"
                 >
                   {i + 1}

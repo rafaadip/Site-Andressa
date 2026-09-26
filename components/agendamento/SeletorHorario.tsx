@@ -98,14 +98,14 @@ export function SeletorHorario(p: Props) {
                 aria-label={`${dataPorExtenso(d.data, d.diaSemana)}, ${livre ? `${d.slots.length} ${d.slots.length === 1 ? 'horário' : 'horários'}` : 'sem horários'}`}
                 className={`flex h-[5.25rem] w-[4.25rem] shrink-0 snap-start flex-col items-center justify-center gap-0.5 rounded-md border md:w-auto
                             transition-colors duration-150
-                            ${ativo ? 'border-floresta-900 bg-floresta-900 text-ivory-100'
+                            ${ativo ? 'border-espresso-900 bg-espresso-900 text-ivory-100'
                               : livre ? 'border-borda-campo bg-elevado text-texto hover:border-ink'
                                 : 'cursor-not-allowed border-borda bg-transparent text-texto-2 opacity-55'}`}
               >
                 <span aria-hidden className="text-[.75rem] uppercase tracking-[.12em]">{r.semana}</span>
                 <span aria-hidden className="font-display text-[1.375rem] leading-none tabular">{r.numero}</span>
                 <span aria-hidden className="text-[.75rem]">{r.mes}</span>
-                <span aria-hidden className={`mt-0.5 size-1.5 rounded-full ${livre ? (ativo ? 'bg-oliva-200' : 'bg-oliva-500') : 'bg-transparent'}`} />
+                <span aria-hidden className={`mt-0.5 size-1.5 rounded-full ${livre ? (ativo ? 'bg-gold-200' : 'bg-gold-500') : 'bg-transparent'}`} />
               </button>
             );
           })}
@@ -161,7 +161,7 @@ export function SeletorHorario(p: Props) {
                     onClick={() => p.aoEscolherSlot(s)}
                     className={`flex min-h-12 flex-col items-center justify-center rounded-md border px-2 py-1.5 tabular
                                 transition-colors duration-150
-                                ${ativo ? 'border-floresta-900 bg-floresta-900 text-ivory-100'
+                                ${ativo ? 'border-espresso-900 bg-espresso-900 text-ivory-100'
                                   : 'border-borda-campo bg-elevado text-texto hover:border-ink'}`}
                   >
                     <span className="text-[1.0625rem] font-medium">{s.rotulo}</span>

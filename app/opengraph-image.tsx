@@ -28,15 +28,15 @@ export default async function ImagemOg() {
 
   return new ImageResponse(
     (
-      <div style={{ display: 'flex', width: '100%', height: '100%', background: C['floresta-900'], padding: '64px 72px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', width: '100%', height: '100%', background: C['espresso-900'], padding: '64px 72px', alignItems: 'center' }}>
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, paddingRight: 48 }}>
-          <div style={{ display: 'flex', fontFamily: 'DM Sans', fontSize: 22, letterSpacing: 5, color: C['oliva-200'], textTransform: 'uppercase' }}>
+          <div style={{ display: 'flex', fontFamily: 'DM Sans', fontSize: 22, letterSpacing: 5, color: C['gold-200'], textTransform: 'uppercase' }}>
             {`${PROFISSIONAL.cidade} – ${PROFISSIONAL.uf}`}
           </div>
           <div style={{ display: 'flex', fontFamily: 'Fraunces', fontSize: 66, lineHeight: 1.08, letterSpacing: -1, color: C['ivory-100'], marginTop: 24 }}>
             {PROFISSIONAL.nome}
           </div>
-          <div style={{ display: 'flex', width: 96, height: 3, background: C['oliva-500'], marginTop: 32 }} />
+          <div style={{ display: 'flex', width: 96, height: 3, background: C['gold-500'], marginTop: 32 }} />
           <div style={{ display: 'flex', fontFamily: 'DM Sans', fontSize: 30, color: C['cream-muted'], marginTop: 28 }}>
             {tituloPublico()}
           </div>
@@ -45,7 +45,7 @@ export default async function ImagemOg() {
           </div>
         </div>
         <div style={{ display: 'flex', position: 'relative', width: 420, height: 420 }}>
-          <div style={{ position: 'absolute', left: 14, top: 14, width: 420, height: 420, borderRadius: 210, border: `2px solid ${C['oliva-500']}` }} />
+          <div style={{ position: 'absolute', left: 14, top: 14, width: 420, height: 420, borderRadius: 210, border: `2px solid ${C['gold-500']}` }} />
           <img src={`data:image/png;base64,${retrato.toString('base64')}`} width={420} height={420} alt="" style={{ borderRadius: 210 }} />
         </div>
       </div>

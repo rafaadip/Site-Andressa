@@ -4,7 +4,7 @@ import { URGENCIA } from '@/lib/content/site';
 
 /**
  * Nome + título + CRM em TODA página pública — exigência do CFM.
- * Visual: folha verde-floresta de cantos arredondados que sobe sobre a última
+ * Visual: folha espresso de cantos arredondados que sobe sobre a última
  * seção, com a assinatura gigante (só visual, fora da árvore de
  * acessibilidade) sangrando na base.
  */

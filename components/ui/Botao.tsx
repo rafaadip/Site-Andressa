@@ -4,12 +4,12 @@ import type { ComponentProps, ReactNode } from 'react';
 type Variante = 'primario' | 'destaque' | 'fantasma' | 'contorno' | 'vidro';
 
 const VARIANTES: Record<Variante, string> = {
-  // marfim sobre floresta: 12,26:1 — ação principal, com reflexo no hover
-  primario: 'botao-brilho bg-floresta-900 text-ivory-100 border-floresta-900 hover:bg-floresta-700 hover:border-floresta-700 hover:shadow-md',
-  // tinta sobre oliva claro: 7,09:1
-  destaque: 'bg-oliva-400 text-ink border-oliva-400 hover:bg-oliva-200 hover:border-oliva-200',
+  // marfim sobre espresso: 14,9:1 — ação principal, com reflexo no hover
+  primario: 'botao-brilho bg-espresso-900 text-ivory-100 border-espresso-900 hover:bg-espresso-700 hover:border-espresso-700 hover:shadow-md',
+  // tinta sobre ouro claro: 7,08:1
+  destaque: 'bg-gold-400 text-ink border-gold-400 hover:bg-gold-200 hover:border-gold-200',
   // sobre superfície escura
-  fantasma: 'bg-transparent text-texto border-borda-campo hover:border-oliva-200 hover:text-oliva-200',
+  fantasma: 'bg-transparent text-texto border-borda-campo hover:border-gold-200 hover:text-gold-200',
   // sobre superfície clara
   contorno: 'bg-transparent text-texto border-borda-campo hover:border-ink hover:bg-elevado',
   // vidro sobre marfim/aurora (tinta sobre quase-marfim)

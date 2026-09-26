@@ -32,7 +32,7 @@ export default async function Integracoes({ searchParams }: { searchParams: Prom
   await exigirAdmin();
   const { conectado, erro } = await searchParams;
   const e = await estadoPainel();
-  const conectar = <a href="/api/oauth/google/start?proposito=agenda" className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-floresta-900 bg-floresta-900 px-6 font-medium text-ivory-100 md:w-auto">{e.google === 'revogado' ? 'Reconectar agora' : 'Conectar Google Agenda'}</a>;
+  const conectar = <a href="/api/oauth/google/start?proposito=agenda" className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-espresso-900 bg-espresso-900 px-6 font-medium text-ivory-100 md:w-auto">{e.google === 'revogado' ? 'Reconectar agora' : 'Conectar Google Agenda'}</a>;
 
   return (
     <div className="mx-auto max-w-[40rem]">

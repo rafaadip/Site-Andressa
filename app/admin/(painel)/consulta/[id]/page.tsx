@@ -68,7 +68,7 @@ export default async function DetalheConsulta({ params, searchParams }: {
       <section aria-labelledby="titulo-acoes" className="mt-8 space-y-3">
         <h2 id="titulo-acoes" className="sr-only">Ações</h2>
         {c.status === 'confirmed' && futura && (
-          <Link href={`/admin/consulta/${c.id}/remarcar`} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-floresta-900 bg-floresta-900 px-6 font-medium text-ivory-100 md:w-auto">
+          <Link href={`/admin/consulta/${c.id}/remarcar`} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-espresso-900 bg-espresso-900 px-6 font-medium text-ivory-100 md:w-auto">
             <CalendarClock aria-hidden size={18} />Remarcar
           </Link>
         )}

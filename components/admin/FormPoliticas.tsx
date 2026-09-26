@@ -21,7 +21,7 @@ export function FormPoliticas({ p }: { p: { lead: number; horizonte: number; pra
         <span className="mt-1 block">Com ele, o paciente recebe o link na confirmação, nos lembretes e na página da consulta.</span>
       </label>
       <label className="flex min-h-11 cursor-pointer items-start gap-3 text-sm text-texto">
-        <input type="checkbox" name="motivoNoEvento" defaultChecked={p.motivoNoEvento} className="mt-0.5 size-6 shrink-0 accent-floresta-900" />
+        <input type="checkbox" name="motivoNoEvento" defaultChecked={p.motivoNoEvento} className="mt-0.5 size-6 shrink-0 accent-espresso-900" />
         <span>Incluir o motivo da consulta no evento da minha agenda do Google <span className="block text-texto-2">É dado de saúde: desmarcado, o evento traz só o link do painel.</span></span>
       </label>
       <BotaoEnviar larguraTotal>Salvar políticas</BotaoEnviar>

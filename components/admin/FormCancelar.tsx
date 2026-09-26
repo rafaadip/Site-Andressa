@@ -36,7 +36,7 @@ export function FormCancelar({ id, futura }: { id: string; futura: boolean }) {
         className="w-full rounded-md border border-borda-campo bg-elevado px-4 py-3 text-base text-texto" />
       {futura && (
         <label className="mt-4 flex min-h-11 cursor-pointer items-center gap-3 text-sm text-texto">
-          <input type="checkbox" name="avisar" defaultChecked className="size-6 accent-floresta-900" />
+          <input type="checkbox" name="avisar" defaultChecked className="size-6 accent-espresso-900" />
           Avisar o paciente por e-mail (com o cancelamento para o calendário dele)
         </label>
       )}
