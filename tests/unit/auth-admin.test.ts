@@ -66,7 +66,11 @@ describe('lib/auth/admin', () => {
 
     it('cookie ADULTERADO: null (a assinatura não bate)', async () => {
       const bom = criarSessao(ADMIN_EMAIL);
-      jarCom(`${bom.slice(0, -2)}xx`);
+      // Troca um caractere do MEIO da assinatura. O último não serve: num
+      // HMAC de 32 bytes em base64url ele só carrega 4 bits, e "…xw" → "…xx"
+      // decodifica nos mesmos bytes (falhava 1 vez a cada ~1.024 execuções).
+      const i = bom.length - 10;
+      jarCom(`${bom.slice(0, i)}${bom[i] === 'A' ? 'B' : 'A'}${bom.slice(i + 1)}`);
       expect(await sessaoAtual()).toBeNull();
     });
 

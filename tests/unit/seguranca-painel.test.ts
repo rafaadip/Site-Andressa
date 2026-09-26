@@ -20,7 +20,10 @@ describe('sessão do painel', () => {
   it('recusa assinatura adulterada, payload trocado e segredo diferente', () => {
     const v = criarSessao('dra@exemplo.com');
     const [dados, assin] = v.split('.');
-    expect(lerSessao(`${dados}.${assin!.slice(0, -2)}xx`)).toBeNull();
+    // Adultera o MEIO da assinatura: o último caractere do base64url de 32
+    // bytes só carrega 4 bits ("…xw" e "…xx" decodificam nos mesmos bytes).
+    const i = 20;
+    expect(lerSessao(`${dados}.${assin!.slice(0, i)}${assin![i] === 'A' ? 'B' : 'A'}${assin!.slice(i + 1)}`)).toBeNull();
     const outro = Buffer.from(JSON.stringify({ email: 'dra@exemplo.com', iat: 0, exp: 9e9 })).toString('base64url');
     expect(lerSessao(`${outro}.${assin}`)).toBeNull();
     expect(lerSessao(criarSessao('dra@exemplo.com', Date.now(), 'outro-segredo-com-mais-de-32-caracteres!!'))).toBeNull();
