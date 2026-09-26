@@ -26,9 +26,35 @@
 >   progresso de leitura, parallax leve (CSS com `animation-timeline`, onde há
 >   suporte). Curvas: `--ease-saida` (.23,1,.32,1), `--ease-suave` (.16,1,.3,1),
 >   `--ease-gaveta` (.32,.72,0,1). Tudo some com `prefers-reduced-motion: reduce`.
-> - **Vidro** (`.vidro`, `.vidro-escuro`): cabeçalho, selos do retrato, faixa de
->   credenciais, painel de agendamento e barra fixa do celular. O texto por cima
->   mantém o contraste da superfície de base.
+> - **Vidro no estilo Apple** — materiais como os do iOS: tinta translúcida +
+>   desfoque com saturação, brilho de topo, fio externo quase invisível, sombra
+>   em camadas e aresta de luz (`::before`) que acende nos cantos, como o
+>   Liquid Glass. Tokens na camada base de `app/globals.css` (`--vidro-*`):
+>
+>   | Material | Classe | Tinta | Onde |
+>   |---|---|---|---|
+>   | Fino | `.vidro-fino` | marfim 60 %, blur 14px | selos do retrato, botão "vidro" |
+>   | Regular | `.vidro` | marfim 70 %, blur 26px (18px no celular) | credenciais, painel de agendar, barra flutuante do celular |
+>   | Espesso | `.vidro-espesso`, pílula do cabeçalho, `.painel-menu`, `.barra-acoes` | marfim 86 %, blur 34px (24px no celular) | onde qualquer conteúdo passa por baixo |
+>   | Escuro | pílula do cabeçalho com `data-tom="escuro"` | espresso 82 % | cabeçalho sobre seção escura |
+>   | Cartão escuro | `.vidro-escuro` | véu branco 8 %, **sem** blur | cartões sobre espresso (o blur não mudaria nada ali) |
+>
+>   - **Leitura garantida pelo build:** o `check:contrast` compõe cada material
+>     sobre o PIOR fundo do seu uso (espresso sob o cabeçalho e os selos, areia
+>     sob os painéis) e cobra 4,5:1. Baixar uma opacidade à mão quebra o build.
+>   - **Cabeçalho adaptativo:** com o meio da pílula sobre uma `.superficie-escura`,
+>     o `Cabecalho` marca `data-tom="escuro"` — vidro escuro, texto claro, CTA em
+>     ouro. Rolando, o "MÉDICA" do logo passa do ouro ao secundário.
+>   - **Sólido quando pedido:** `prefers-reduced-transparency`, `prefers-contrast:
+>     more`, `forced-colors` e navegador sem `backdrop-filter` recebem superfície
+>     opaca, sem desfoque (E2E em `tests/e2e/site.spec.ts`).
+>   - **Não usar vidro** em campos de formulário, textos longos (Sobre,
+>     privacidade, termos), e-mails e no painel admin. Vidro só onde há algo
+>     atrás para desfocar — sobre marfim liso o efeito some e só gasta GPU.
+>   - **Regra 15:** nenhum vidro pode conter elemento `position: fixed`.
+>   - **Capturas de tela:** o Chromium headless compõe por software e não
+>     desenha o `backdrop-filter` do cabeçalho. Para conferir o vidro, lance o
+>     navegador com `--enable-gpu --use-angle=swiftshader --enable-unsafe-swiftshader`.
 
 
 ## 1. Leitura da marca

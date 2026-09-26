@@ -131,6 +131,21 @@ test.describe('celular (375px)', () => {
     await expect(page.getByRole('navigation', { name: 'Principal (celular)' })).toBeHidden();
   });
 
+  test('menu aberto no meio da página: cabeçalho e botão de fechar continuam na tela', async ({ page }) => {
+    // Regressão: a trava de rolagem no <body> soltava o cabeçalho sticky
+    // (html tem overflow-x: clip) e o botão de fechar saía da tela.
+    await page.goto('/');
+    await page.locator('#atendimento').scrollIntoViewIfNeeded();
+    await page.getByRole('button', { name: 'Abrir menu' }).click();
+
+    await expect(page.getByRole('button', { name: 'Fechar menu' })).toBeInViewport();
+    const topo = await page.getByRole('banner').evaluate((el) => el.getBoundingClientRect().top);
+    expect(topo).toBe(0);
+
+    await page.getByRole('button', { name: 'Fechar menu' }).click();
+    await expect(page.getByRole('navigation', { name: 'Principal (celular)' })).toBeHidden();
+  });
+
   test('barra de agendar: escondida no topo, aparece ao rolar, some na seção de agendamento', async ({ page }) => {
     await page.goto('/');
     const barra = page.getByTestId('barra-agendar');
@@ -150,6 +165,68 @@ test.describe('celular (375px)', () => {
     const corpo = await page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
     expect(corpo).toBeGreaterThanOrEqual(16);
   });
+});
+
+test.describe('vidro (glassmorphism)', () => {
+  /** Rola sem a animação do `scroll-behavior: smooth`, com o alvo logo abaixo do topo. */
+  async function rolarPara(page: Page, seletor: string, folga: number) {
+    await page.evaluate(([s, f]) => {
+      const el = document.querySelector(s as string)!;
+      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY + (f as number), behavior: 'instant' });
+    }, [seletor, folga] as const);
+  }
+
+  /** Painel de credenciais: o vidro regular mais visível da home. */
+  async function estiloDoVidro(page: Page) {
+    return page.getByRole('region', { name: 'Credenciais' }).getByRole('list').evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { filtro: s.backdropFilter, fundo: s.backgroundColor };
+    });
+  }
+  const translucido = (cor: string) => /\/\s*0?\.\d+\)$|rgba\(.*,\s*0?\.\d+\)$/.test(cor);
+
+  test('cabeçalho: vidro claro no hero, escuro sobre a seção escura, claro de novo depois', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    const cabecalho = page.getByRole('banner');
+    await expect(cabecalho).toHaveAttribute('data-tom', 'claro');
+
+    await rolarPara(page, '#atendimento', 200);
+    await expect(cabecalho).toHaveAttribute('data-tom', 'escuro');
+    await expect(cabecalho).toHaveAttribute('data-rolou', 'true');
+    await expect(cabecalho.getByRole('link', { name: 'Agendar consulta' })).toBeVisible();
+
+    await rolarPara(page, '#agendar', 100);
+    await expect(cabecalho).toHaveAttribute('data-tom', 'claro');
+  });
+
+  test('sem preferência: vidro translúcido com desfoque', async ({ page }) => {
+    await page.goto('/');
+    const { filtro, fundo } = await estiloDoVidro(page);
+    expect(filtro).toContain('blur(');
+    expect(translucido(fundo)).toBe(true);
+  });
+
+  const PREFERENCIAS: Array<[string, (page: Page) => Promise<void>]> = [
+    ['prefers-contrast: more', (page) => page.emulateMedia({ contrast: 'more' })],
+    ['forced-colors: active', (page) => page.emulateMedia({ forcedColors: 'active' })],
+    ['prefers-reduced-transparency: reduce', async (page) => {
+      // O Playwright não expõe esta mídia; o Chromium aceita pelo protocolo.
+      const cdp = await page.context().newCDPSession(page);
+      await cdp.send('Emulation.setEmulatedMedia', {
+        features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }],
+      });
+    }],
+  ];
+  for (const [nome, emular] of PREFERENCIAS) {
+    test(`${nome}: o vidro vira superfície sólida, sem desfoque`, async ({ page }) => {
+      await emular(page);
+      await page.goto('/');
+      const { filtro, fundo } = await estiloDoVidro(page);
+      expect(filtro).toBe('none');
+      expect(translucido(fundo)).toBe(false);
+    });
+  }
 });
 
 test.describe('SEO', () => {

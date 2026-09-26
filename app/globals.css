@@ -133,6 +133,70 @@
  */
 
 @layer base {
+  /* ── Vidro: tokens dos materiais (estilo Apple) ──────────
+     Fino (selos, botão de vidro), regular (painéis sobre halo) e espesso
+     (cabeçalho, menu, barras presas à tela, onde o conteúdo passa por
+     baixo). A OPACIDADE da tinta é o que garante a leitura: o
+     `check:contrast` compõe cada material sobre o pior fundo possível e
+     cobra 4,5:1. Nunca baixe a opacidade à mão num componente. */
+  :root {
+    --vidro-fino: 60%;
+    --vidro-regular: 70%;
+    --vidro-espesso: 86%;
+    --vidro-escuro: 82%;          /* espesso escuro: cabeçalho sobre seção escura */
+    --vidro-realce-escuro: 8%;    /* véu branco dos cartões sobre espresso */
+
+    --vidro-filtro-fino:     blur(14px) saturate(185%);
+    --vidro-filtro-regular:  blur(26px) saturate(185%);
+    --vidro-filtro-espesso:  blur(34px) saturate(185%);
+
+    /* Brilho de topo (a luz bate de cima), fio externo quase invisível que
+       recorta o vidro do fundo claro e sombra em camadas: contato + difusa. */
+    --vidro-brilho: linear-gradient(180deg, rgb(255 255 255 / .42), rgb(255 255 255 / 0) 46%);
+    --vidro-borda: color-mix(in srgb, var(--color-espresso-900) 7%, transparent);
+    --vidro-sombra:
+      inset 0 1px 0 rgb(255 255 255 / .9),
+      inset 0 -1px 0 rgb(255 255 255 / .28),
+      0 1px 1px color-mix(in srgb, var(--color-espresso-900) 4%, transparent),
+      0 10px 24px -14px color-mix(in srgb, var(--color-espresso-900) 16%, transparent),
+      0 34px 70px -34px color-mix(in srgb, var(--color-espresso-900) 30%, transparent);
+  }
+
+  /* Celular: o custo do backdrop-filter cresce com o raio do desfoque e
+     a GPU de um Android de entrada é o limite — desfoque menor. */
+  @media (max-width: 767px) {
+    :root {
+      --vidro-filtro-regular: blur(18px) saturate(180%);
+      --vidro-filtro-espesso: blur(24px) saturate(180%);
+    }
+  }
+
+  /* Quem pede menos transparência ou mais contraste, e navegador sem
+     backdrop-filter, recebe superfície SÓLIDA — nunca vidro sem desfoque
+     (tinta translúcida sem blur deixa o texto brigando com o fundo). */
+  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+    :root {
+      --vidro-fino: 100%;
+      --vidro-regular: 100%;
+      --vidro-espesso: 100%;
+      --vidro-escuro: 100%;
+      --vidro-filtro-fino: none;
+      --vidro-filtro-regular: none;
+      --vidro-filtro-espesso: none;
+    }
+  }
+  @media (prefers-contrast: more) {
+    :root { --vidro-borda: var(--color-sand-400); }
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :root {
+      --vidro-fino: 100%;
+      --vidro-regular: 100%;
+      --vidro-espesso: 100%;
+      --vidro-escuro: 100%;
+    }
+  }
+
   /* O preflight do Tailwind já zera margin/padding e aplica border-box. */
 
   html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
@@ -196,8 +260,10 @@
 
 @layer components {
   /* Superfície escura (espresso) — o contraponto do carrossel. As utilities semânticas
-     (bg-fundo, text-texto…) viram a versão escura sozinhas aqui dentro. */
-  .superficie-escura {
+     (bg-fundo, text-texto…) viram a versão escura sozinhas aqui dentro.
+     O cabeçalho no tom escuro (vidro sobre seção escura) herda as mesmas
+     variáveis, mas não o fundo: quem pinta o vidro dele é a pílula. */
+  .superficie-escura, .cabecalho[data-tom="escuro"] {
     --bg-page:        var(--color-espresso-900);
     --bg-surface:     var(--color-espresso-800);
     --bg-raised:      var(--color-espresso-700);
@@ -207,6 +273,8 @@
     --border-subtle:  rgb(235 217 188 / .14);
     --border-field:   rgb(235 217 188 / .34);
     --focus-ring:     var(--color-gold-200);
+  }
+  .superficie-escura {
     background: var(--bg-page);
     color: var(--text-primary);
   }
@@ -326,36 +394,87 @@
   }
   .link-nav:hover::after, .link-nav:focus-visible::after { transform: scaleX(1); transform-origin: left; }
 
-  /* ── Vidro (glass) ───────────────────────────────────────
-     Claro: sobre marfim e aurora. Escuro: sobre espresso. O texto por cima
-     continua com o contraste da superfície de base (o vidro claro é quase
-     marfim; o escuro, quase espresso). */
-  .vidro {
-    background: color-mix(in srgb, var(--color-ivory-50) 58%, transparent);
-    border: 1px solid rgb(255 255 255 / .72);
-    -webkit-backdrop-filter: blur(20px) saturate(1.6);
-    backdrop-filter: blur(20px) saturate(1.6);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / .8),
-      0 1px 2px rgb(36 26 19 / .04),
-      0 22px 44px -26px rgb(36 26 19 / .3);
+  /* ── Vidro (glassmorphism no estilo Apple) ──────────────
+     Materiais como os do iOS: tinta translúcida + desfoque com saturação
+     (a cor do que passa por trás "acende" no vidro), brilho de topo, fio
+     externo quase invisível, sombra em camadas e uma ARESTA DE LUZ
+     (::before) mais forte no canto de cima e no de baixo — a refração do
+     Liquid Glass. Opacidade e desfoque vêm dos tokens --vidro-* (camada
+     base), que também cuidam do celular e das preferências de acessibilidade.
+     ⚠️ Regra 15: nenhum vidro pode conter elemento `position: fixed`. */
+  .vidro-fino, .vidro, .vidro-espesso {
+    --_opacidade: var(--vidro-regular);
+    --_filtro: var(--vidro-filtro-regular);
+    position: relative;
+    background: var(--vidro-brilho), color-mix(in srgb, var(--color-ivory-50) var(--_opacidade), transparent);
+    border: 1px solid var(--vidro-borda);
+    -webkit-backdrop-filter: var(--_filtro);
+    backdrop-filter: var(--_filtro);
+    box-shadow: var(--vidro-sombra);
   }
+  .vidro-fino { --_opacidade: var(--vidro-fino); --_filtro: var(--vidro-filtro-fino); }
+  .vidro-espesso { --_opacidade: var(--vidro-espesso); --_filtro: var(--vidro-filtro-espesso); }
+
+  /* Vidro escuro dos cartões sobre espresso: véu branco + aresta discreta.
+     SEM desfoque de propósito — atrás dele só há espresso e um halo em
+     gradiente, que o blur não mudaria; seria custo de GPU sem efeito. */
   .vidro-escuro {
-    background: linear-gradient(180deg, rgb(255 255 255 / .065), rgb(255 255 255 / .018));
-    border: 1px solid rgb(235 217 188 / .13);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / .07), 0 30px 60px -40px rgb(0 0 0 / .7);
+    --_aresta: .3;
+    position: relative;
+    background: linear-gradient(180deg, rgb(255 255 255 / var(--vidro-realce-escuro)), rgb(255 255 255 / 2%));
+    border: 1px solid rgb(255 255 255 / .07);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .1), 0 30px 60px -40px rgb(0 0 0 / .7);
+  }
+
+  /* Aresta de luz: um anel de 1px (máscara que exclui o miolo) sobre a
+     borda, com gradiente diagonal — acende nos cantos opostos e some no
+     meio, como a luz passando pela espessura do vidro. */
+  .vidro-fino::before, .vidro::before, .vidro-espesso::before, .vidro-escuro::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(135deg,
+      rgb(255 255 255 / var(--_aresta, .95)),
+      rgb(255 255 255 / 0) 34% 66%,
+      rgb(255 255 255 / calc(var(--_aresta, .95) * .55)));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  }
+  @media (forced-colors: active) {
+    .vidro-fino::before, .vidro::before, .vidro-espesso::before, .vidro-escuro::before { content: none; }
   }
 
   /* ── Cabeçalho ───────────────────────────────────────────
      No topo ele se funde ao hero. Depois de rolar, a barra vira uma pílula
-     de vidro flutuante (só cor, borda, sombra e blur mudam — nenhuma medida
-     de layout, então nada "pula"). O painel do menu NÃO fica dentro dele
-     (regra 15: fixed dentro de backdrop-filter perde a altura). */
+     de vidro espesso flutuante (só cor, borda, sombra e blur mudam — nenhuma
+     medida de layout, então nada "pula"). Como no Liquid Glass do iOS, o
+     vidro se adapta ao que passa por baixo: sobre uma `.superficie-escura`
+     o Cabecalho marca data-tom="escuro" e a pílula vira vidro escuro, com
+     texto claro. O painel do menu NÃO fica dentro dele (regra 15). */
   .cabecalho {
+    --_cab-tinta: var(--color-ivory-50);
+    --_cab-opacidade: var(--vidro-espesso);
+    --_cab-brilho: var(--vidro-brilho);
+    --_cab-borda: var(--vidro-borda);
+    --_cab-sombra: var(--vidro-sombra);
     background: var(--bg-page);
     transition: background-color .45s var(--ease-saida);
   }
+  .cabecalho[data-tom="escuro"] {
+    --_cab-tinta: var(--color-espresso-900);
+    --_cab-opacidade: var(--vidro-escuro);
+    --_cab-brilho: linear-gradient(180deg, rgb(255 255 255 / .07), rgb(255 255 255 / 0) 50%);
+    --_cab-borda: rgb(255 255 255 / .1);
+    --_cab-sombra: inset 0 1px 0 rgb(255 255 255 / .14), 0 18px 40px -20px rgb(0 0 0 / .55);
+  }
   .cabecalho[data-rolou="true"] { background: transparent; }
+  /* Rolando, o "MÉDICA" do logo sai do ouro para o secundário: a pílula
+     passa sobre a foto e outras seções, e ouro-700 em 11px não garante 4,5:1. */
+  .cabecalho[data-rolou="true"] .eyebrow { color: var(--text-secondary); }
 
   /* A barra fica alinhada à coluna de conteúdo; a pílula é um ::before que
      transborda um pouco para os lados — no topo, logo e botão alinham com
@@ -367,17 +486,19 @@
     inset: 0 -.5rem 0 -.75rem;
     z-index: -1;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--color-ivory-50) 80%, transparent);
-    border: 1px solid rgb(255 255 255 / .75);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / .8),
-      0 1px 2px rgb(36 26 19 / .05),
-      0 18px 40px -22px rgb(36 26 19 / .32);
-    -webkit-backdrop-filter: blur(24px) saturate(1.6);
-    backdrop-filter: blur(24px) saturate(1.6);
+    background: var(--_cab-brilho), color-mix(in srgb, var(--_cab-tinta) var(--_cab-opacidade), transparent);
+    border: 1px solid var(--_cab-borda);
+    box-shadow: var(--_cab-sombra);
+    -webkit-backdrop-filter: var(--vidro-filtro-espesso);
+    backdrop-filter: var(--vidro-filtro-espesso);
     opacity: 0;
     transform: scale(.985);
-    transition: opacity .45s var(--ease-saida), transform .7s var(--ease-saida);
+    transition:
+      opacity .45s var(--ease-saida),
+      transform .7s var(--ease-saida),
+      background-color .45s var(--ease-saida),
+      border-color .45s var(--ease-saida),
+      box-shadow .45s var(--ease-saida);
   }
   @media (min-width: 1024px) {
     .cabecalho-barra::before { inset: 0 -.4rem 0 -1.5rem; }
@@ -418,8 +539,15 @@
   [aria-expanded="true"] > .icone-menu > span:last-child { transform: translateY(-5.25px) rotate(-45deg); }
 
   /* Painel do menu (celular/tablet): entra deslizando; os links sobem em
-     cascata. @starting-style anima a saída de `hidden` (display: none). */
+     cascata. @starting-style anima a saída de `hidden` (display: none).
+     É uma folha de vidro espesso: a página aparece desfocada por baixo,
+     como a Central de Controle do iOS. Sem a aresta ::before — o painel
+     rola (overflow) e ela rolaria junto com os links. */
   .painel-menu {
+    background: var(--vidro-brilho), color-mix(in srgb, var(--color-ivory-50) var(--vidro-espesso), transparent);
+    -webkit-backdrop-filter: var(--vidro-filtro-espesso);
+    backdrop-filter: var(--vidro-filtro-espesso);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .9);
     transition: opacity .3s var(--ease-saida), transform .5s var(--ease-gaveta);
   }
   .painel-menu .item-menu {
@@ -438,6 +566,21 @@
     transition: translate .6s var(--ease-gaveta), opacity .4s var(--ease-saida);
   }
   .barra-agendar[aria-hidden="true"] { opacity: 0; }
+
+  /* ── Barra de ações do agendamento ──────────────────────
+     No celular fica presa ao rodapé com a grade de horários rolando por
+     baixo: vidro espesso (o horário escolhido, em espresso, passa
+     desfocado). No tablet/desktop volta ao fluxo, sem fundo. */
+  @media (max-width: 767px) {
+    .barra-acoes {
+      background: var(--vidro-brilho), color-mix(in srgb, var(--color-ivory-50) var(--vidro-espesso), transparent);
+      -webkit-backdrop-filter: var(--vidro-filtro-espesso);
+      backdrop-filter: var(--vidro-filtro-espesso);
+      box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / .9),
+        0 -14px 32px -22px color-mix(in srgb, var(--color-espresso-900) 26%, transparent);
+    }
+  }
 
   /* ── Hero ────────────────────────────────────────────── */
   .heroi { background: var(--bg-page); }

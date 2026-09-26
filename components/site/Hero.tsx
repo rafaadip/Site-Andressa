@@ -100,12 +100,12 @@ export function Hero() {
 
           <div aria-hidden className="pointer-events-none absolute inset-0">
             {modalidades && (
-              <span className="selo selo-a vidro absolute left-[-9%] top-[12%] md:left-[-14%] lg:left-[-7%] lg:top-[19%]">
+              <span className="selo selo-a vidro-fino absolute left-[-9%] top-[12%] md:left-[-14%] lg:left-[-7%] lg:top-[19%]">
                 <span className="selo-icone"><Stethoscope size={15} strokeWidth={1.75} /></span>
                 {modalidades}
               </span>
             )}
-            <span className="selo selo-b vidro absolute right-[-7%] bottom-[9%] md:right-[-10%] lg:right-[-8%] lg:bottom-[12%]">
+            <span className="selo selo-b vidro-fino absolute right-[-7%] bottom-[9%] md:right-[-10%] lg:right-[-8%] lg:bottom-[12%]">
               <span className="selo-icone"><BadgeCheck size={15} strokeWidth={1.75} /></span>
               <span className="tabular">{PROFISSIONAL.crm}</span>
             </span>
