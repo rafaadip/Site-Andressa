@@ -1,5 +1,5 @@
 import { AlertCircle } from 'lucide-react';
-import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react';
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 
 type Base = {
   id: string;
@@ -78,6 +78,29 @@ export function CampoTexto({ id, rotulo, obrigatorio, ajuda, erro, extra, ...are
         className={`${CLASSE_CAMPO} min-h-28 py-3 resize-y`}
         {...area}
       />
+      <Rodape id={id} ajuda={ajuda} erro={erro} extra={extra} />
+    </div>
+  );
+}
+
+/** Seleção nativa: no celular abre o seletor do sistema, com alvo de 48px. */
+export function CampoSelecao({ id, rotulo, obrigatorio, ajuda, erro, extra, children, ...select }:
+  Base & SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <div>
+      <Rotulo id={id} rotulo={rotulo} obrigatorio={obrigatorio} />
+      <select
+        id={id}
+        name={id}
+        required={obrigatorio}
+        aria-required={obrigatorio}
+        aria-invalid={Boolean(erro)}
+        aria-describedby={descritoPor(id, ajuda, erro)}
+        className={`${CLASSE_CAMPO} min-h-12 cursor-pointer`}
+        {...select}
+      >
+        {children}
+      </select>
       <Rodape id={id} ajuda={ajuda} erro={erro} extra={extra} />
     </div>
   );

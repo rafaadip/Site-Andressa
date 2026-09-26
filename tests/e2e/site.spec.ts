@@ -146,6 +146,33 @@ test.describe('celular (375px)', () => {
     await expect(page.getByRole('navigation', { name: 'Principal (celular)' })).toBeHidden();
   });
 
+  test('formulário de contato: valida os obrigatórios e abre o WhatsApp com os dados do paciente', async ({ page, context }) => {
+    // O wa.me é externo: a aba abre, mas quem responde é o próprio teste.
+    await context.route(/wa\.me/, (rota) => rota.fulfill({ status: 200, contentType: 'text/plain', body: 'ok' }));
+    await page.goto('/#contato');
+    const form = page.getByRole('form', { name: /Prefere que o consultório fale com você/ });
+    const enviar = form.getByRole('button', { name: 'Enviar pelo WhatsApp' });
+
+    await enviar.click();
+    await expect(form.getByRole('textbox', { name: /^Nome/ })).toBeFocused();
+    await expect(form.getByText('Selecione o motivo da consulta.')).toBeVisible();
+
+    await form.getByRole('textbox', { name: /^Nome/ }).fill('Maria');
+    await form.getByRole('textbox', { name: /^Sobrenome/ }).fill('da Silva');
+    await form.getByRole('textbox', { name: /^E-mail/ }).fill('maria@exemplo.com');
+    await form.getByRole('textbox', { name: /^Idade/ }).fill('34');
+    await form.getByRole('radio', { name: 'Manhã' }).check({ force: true });
+    await form.getByRole('combobox', { name: /Motivo da consulta/ }).selectOption({ label: 'Performance esportiva' });
+
+    const [aba] = await Promise.all([context.waitForEvent('page'), enviar.click()]);
+    await aba.waitForLoadState();
+    const texto = new URL(aba.url()).searchParams.get('text') ?? '';
+    expect(aba.url()).toMatch(/^https:\/\/wa\.me\/\d+\?text=/);
+    expect(texto).toContain('Nome: Maria da Silva');
+    expect(texto).toContain('Preferência de horário: Manhã');
+    expect(texto).toContain('Motivo: Performance esportiva');
+  });
+
   test('barra de agendar: escondida no topo, aparece ao rolar, some na seção de agendamento', async ({ page }) => {
     await page.goto('/');
     const barra = page.getByTestId('barra-agendar');

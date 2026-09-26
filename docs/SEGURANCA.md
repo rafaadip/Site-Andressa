@@ -164,6 +164,15 @@ confirmadas (§6). **SCA:** 0 vulnerabilidades (produção e desenvolvimento).
   HSTS, COOP, `nosniff`, `Permissions-Policy`, sem `X-Powered-By`.
 - **Webhooks e crons:** segredo em tempo constante; sem segredo, fechados.
 - **Logs:** só o tipo do erro; PII mascarada; query fora do caminho.
+- **Formulário de contato (home → WhatsApp):** não há servidor nem banco no
+  caminho — o navegador valida e abre o `wa.me`; o site não guarda nada.
+  Validação por LISTA DE PERMITIDOS em `lib/validation/contato.ts`: nome só
+  com letras, e-mail ASCII sem aspas/`;`/`<>`, telefone brasileiro válido,
+  idade 1–120 só com dígitos, motivo e horário só entre as opções fechadas.
+  Controle, zero-width e bidi (U+202E) saem antes de validar, para não forjar
+  linhas nem disfarçar o texto na mensagem. A mensagem usa só dados validados
+  e vai inteira em `encodeURIComponent`. SQLi, XSS, template e path traversal
+  cobertos em `tests/unit/contato-formulario.test.ts`.
 
 ## 7. Como reproduzir
 

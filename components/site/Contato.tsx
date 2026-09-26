@@ -3,6 +3,7 @@ import { PROFISSIONAL, localConsulta } from '@/lib/config';
 import { linkWhatsApp } from '@/lib/contato';
 import { URGENCIA } from '@/lib/content/site';
 import { Secao, CabecalhoSecao } from '@/components/ui/Secao';
+import { FormularioContato } from '@/components/site/FormularioContato';
 
 export function Contato() {
   const itens = [
@@ -23,7 +24,7 @@ export function Contato() {
 
   return (
     <Secao id="contato" superficie>
-      <div className="grid gap-12 lg:grid-cols-[1.1fr_.9fr] lg:gap-24">
+      <div className="grid gap-12 lg:grid-cols-[.9fr_1.1fr] lg:gap-20">
         <div>
           <CabecalhoSecao eyebrow="Contato" titulo="Fale com o consultório" />
           <ul className="border-t border-borda">
@@ -53,24 +54,28 @@ export function Contato() {
               </li>
             ))}
           </ul>
+
+          {/* Conteúdo de SEGURANÇA, não rodapé decorativo: ícone + texto, nunca só cor. */}
+          <aside
+            aria-labelledby="titulo-urgencia"
+            data-revelar
+            className="mt-10 rounded-[1.25rem] border border-borda bg-elevado p-7 shadow-sm md:p-8"
+          >
+            <div className="flex gap-4">
+              <TriangleAlert aria-hidden size={24} strokeWidth={1.75} className="mt-0.5 shrink-0 text-danger" />
+              <div>
+                <h3 id="titulo-urgencia" className="font-medium text-texto">{URGENCIA.titulo}</h3>
+                <p className="mt-2 text-texto-2 leading-relaxed">
+                  {URGENCIA.texto} <strong className="font-medium text-texto">{URGENCIA.telefone}</strong>.
+                </p>
+              </div>
+            </div>
+          </aside>
         </div>
 
-        {/* Conteúdo de SEGURANÇA, não rodapé decorativo: ícone + texto, nunca só cor. */}
-        <aside
-          aria-labelledby="titulo-urgencia"
-          data-revelar
-          className="self-start rounded-[1.25rem] border border-borda bg-elevado p-7 shadow-sm md:p-8 lg:mt-[7.5rem]"
-        >
-          <div className="flex gap-4">
-            <TriangleAlert aria-hidden size={24} strokeWidth={1.75} className="mt-0.5 shrink-0 text-danger" />
-            <div>
-              <h3 id="titulo-urgencia" className="font-medium text-texto">{URGENCIA.titulo}</h3>
-              <p className="mt-2 text-texto-2 leading-relaxed">
-                {URGENCIA.texto} <strong className="font-medium text-texto">{URGENCIA.telefone}</strong>.
-              </p>
-            </div>
-          </div>
-        </aside>
+        <div data-revelar className="lg:pt-2">
+          <FormularioContato />
+        </div>
       </div>
     </Secao>
   );

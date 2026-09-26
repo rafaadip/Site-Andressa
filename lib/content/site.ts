@@ -238,3 +238,57 @@ export const CONFIRMAR_APAGAR_MOTIVO = {
   botaoConfirmar: 'Sim, apagar',
   botaoManter: 'Manter o motivo',
 } as const;
+
+/**
+ * Formulário de contato (seção Contato da home): não grava nada no site —
+ * valida e abre o WhatsApp do consultório com a mensagem já montada
+ * (lib/contato.ts → mensagemContato). Motivo e horário são listas FECHADAS:
+ * o que chega ao WhatsApp é sempre um destes rótulos, nunca texto livre.
+ */
+export const FORMULARIO_CONTATO = {
+  titulo: 'Prefere que o consultório fale com você?',
+  lead: 'Preencha e a conversa abre no WhatsApp já com os seus dados — é só enviar.',
+  rotulos: {
+    nome: 'Nome',
+    sobrenome: 'Sobrenome',
+    telefone: 'Telefone com DDD',
+    email: 'E-mail',
+    idade: 'Idade',
+    horario: 'Preferência de horário para a consulta',
+    motivo: 'Motivo da consulta',
+  },
+  selecione: 'Selecione um motivo',
+  botao: 'Enviar pelo WhatsApp',
+  enviado: 'Abrimos o WhatsApp com a sua mensagem. Se não abriu, toque de novo em "Enviar pelo WhatsApp".',
+  aviso:
+    'Seus dados vão direto para o WhatsApp do consultório — este site não os guarda. '
+    + 'O motivo da consulta é informação de saúde: envie só se estiver de acordo.',
+  horarios: [
+    { id: 'manha', rotulo: 'Manhã' },
+    { id: 'tarde', rotulo: 'Tarde' },
+    { id: 'noite', rotulo: 'Noite' },
+  ],
+  motivos: [
+    { id: 'emagrecimento', rotulo: 'Emagrecimento' },
+    { id: 'ganho-de-massa', rotulo: 'Ganho de massa muscular' },
+    { id: 'performance', rotulo: 'Performance esportiva' },
+    { id: 'reeducacao', rotulo: 'Reeducação alimentar' },
+    { id: 'vitaminas', rotulo: 'Vitaminas e minerais' },
+    { id: 'metabolismo', rotulo: 'Glicemia, colesterol e triglicerídeos' },
+    { id: 'intestino', rotulo: 'Saúde intestinal' },
+    { id: 'vegetariana', rotulo: 'Alimentação vegetariana ou vegana' },
+    { id: 'gestacao', rotulo: 'Gestação e amamentação' },
+    { id: 'exames', rotulo: 'Avaliação de exames' },
+    { id: 'outros', rotulo: 'Outros' },
+  ],
+  /** Rótulos das linhas da mensagem do WhatsApp. */
+  mensagem: {
+    abertura: 'Gostaria de agendar uma consulta.',
+    nome: 'Nome',
+    idade: 'Idade',
+    email: 'E-mail',
+    telefone: 'Telefone',
+    horario: 'Preferência de horário',
+    motivo: 'Motivo',
+  },
+} as const;
