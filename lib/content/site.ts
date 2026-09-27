@@ -240,10 +240,20 @@ export const CONFIRMAR_APAGAR_MOTIVO = {
 } as const;
 
 /**
- * Formulário de contato (seção Contato da home): não grava nada no site —
- * valida e abre o WhatsApp do consultório com a mensagem já montada
- * (lib/contato.ts → mensagemContato). Motivo e horário são listas FECHADAS:
- * o que chega ao WhatsApp é sempre um destes rótulos, nunca texto livre.
+ * Prazo em que o pedido de contato é apagado por inteiro. Fonte ÚNICA: o
+ * texto de consentimento abaixo e a retenção automática
+ * (lib/lgpd/retencao.ts) leem daqui — o texto nunca promete outro prazo.
+ */
+export const CONTATO_RETENCAO_DIAS = 90;
+
+/**
+ * Formulário de contato (seção Contato da home): grava o pedido para a
+ * médica retornar pelo painel (POST /api/contatos, com consentimento) e
+ * abre o WhatsApp com a mensagem já montada (lib/contato.ts →
+ * mensagemContato). Motivo e horário são listas FECHADAS: o que chega ao
+ * banco e ao WhatsApp é sempre um destes itens, nunca texto livre.
+ * ⚠️ Mudou `consentimento`? Suba VERSAO_CONSENTIMENTO_CONTATO em
+ * lib/validation/contato.ts.
  */
 export const FORMULARIO_CONTATO = {
   titulo: 'Prefere que o consultório fale com você?',
@@ -260,9 +270,15 @@ export const FORMULARIO_CONTATO = {
   selecione: 'Selecione um motivo',
   botao: 'Enviar pelo WhatsApp',
   enviado: 'Abrimos o WhatsApp com a sua mensagem. Se não abriu, toque de novo em "Enviar pelo WhatsApp".',
-  aviso:
-    'Seus dados vão direto para o WhatsApp do consultório — este site não os guarda. '
-    + 'O motivo da consulta é informação de saúde: envie só se estiver de acordo.',
+  registrado: 'Seu pedido também ficou registrado para o consultório retornar o contato.',
+  consentimento: {
+    texto:
+      'Autorizo o consultório a guardar estes dados — inclusive o motivo da consulta, que é informação de saúde — '
+      + `para retornar o meu contato. Eles são apagados em ${CONTATO_RETENCAO_DIAS} dias. Detalhes na`,
+    link: 'política de privacidade',
+  },
+  /** Campo-isca: invisível para pessoas; robô que preenche tudo é ignorado. */
+  isca: 'Não preencha este campo',
   horarios: [
     { id: 'manha', rotulo: 'Manhã' },
     { id: 'tarde', rotulo: 'Tarde' },

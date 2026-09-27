@@ -1,14 +1,21 @@
 'use client';
 
 /**
- * Formulário de contato: valida e abre o WhatsApp do consultório com a
- * mensagem já personalizada. Nada vai para o servidor nem fica gravado.
+ * Formulário de contato: grava o pedido (POST /api/contatos, validado de
+ * novo no servidor) para a médica ver no painel e abre o WhatsApp do
+ * consultório com a mensagem já personalizada.
+ *
+ * O WhatsApp abre no MESMO toque, sem esperar a API: `window.open` depois
+ * de um `await` é barrado pelo bloqueador de pop-up do Safari, e o paciente
+ * não pode ficar sem canal se o registro falhar. O pedido vai com
+ * `keepalive` (sobrevive à troca de aba) e, se gravar, a tela confirma.
  *
  * Validação: lib/validation/contato.ts (lista de permitidos). O erro de um
  * campo aparece ao sair dele e é refeito a cada tecla dali em diante; no
  * envio, todos os erros aparecem e o foco vai para o primeiro inválido.
  * Obrigatórios: nome, sobrenome, e-mail, idade e motivo.
  */
+import Link from 'next/link';
 import { useRef, useState, type FormEvent } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { FORMULARIO_CONTATO } from '@/lib/content/site';
@@ -22,22 +29,25 @@ import { Campo, CampoSelecao } from '@/components/agendamento/Campo';
 
 const T = FORMULARIO_CONTATO;
 /** Ordem visual — é nela que o foco procura o primeiro erro. */
-const ORDEM: CampoContato[] = ['nome', 'sobrenome', 'telefone', 'email', 'idade', 'horario', 'motivo'];
+const ORDEM: CampoContato[] = ['nome', 'sobrenome', 'telefone', 'email', 'idade', 'horario', 'motivo', 'consentimento'];
 const id = (campo: CampoContato) => `contato-${campo}`;
 
 export function FormularioContato() {
   const [dados, setDados] = useState<FormularioContatoDados>(CONTATO_VAZIO);
   const [tocados, setTocados] = useState<Partial<Record<CampoContato, boolean>>>({});
   const [enviado, setEnviado] = useState(false);
+  const [registrado, setRegistrado] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const iscaRef = useRef<HTMLInputElement>(null);
 
   const validacao = validarContato(dados);
   const erroDe = (campo: CampoContato) =>
     tocados[campo] && !validacao.ok ? validacao.erros[campo] : undefined;
 
-  function mudar(campo: CampoContato, valor: string) {
+  function mudar(campo: CampoContato, valor: string | boolean) {
     setDados((d) => ({ ...d, [campo]: valor }));
     setEnviado(false);
+    setRegistrado(false);
   }
   const sair = (campo: CampoContato) => setTocados((t) => ({ ...t, [campo]: true }));
 
@@ -49,10 +59,22 @@ export function FormularioContato() {
       if (primeiro) formRef.current?.querySelector<HTMLElement>(`[name="${id(primeiro)}"]`)?.focus();
       return;
     }
+    // Registro para o painel: em paralelo, sem segurar o WhatsApp.
+    fetch('/api/contatos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...dados, site: iscaRef.current?.value ?? '' }),
+      keepalive: true,
+    }).then((r) => { if (r.ok) setRegistrado(true); }).catch(() => { /* o WhatsApp já abriu */ });
+
     // Só dados já validados e normalizados chegam aqui; o link os codifica.
     const url = linkWhatsApp(mensagemContato(validacao.dados));
-    const aba = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!aba) window.location.assign(url);   // bloqueador de pop-up: mesma aba
+    // Sem 'noopener' nos recursos: com ele, window.open devolve SEMPRE null
+    // (especificação) e pareceria bloqueado — abria o WhatsApp duas vezes e
+    // tirava o site da tela. O opener é cortado logo depois, com o mesmo efeito.
+    const aba = window.open(url, '_blank');
+    if (aba) aba.opener = null;
+    else window.location.assign(url);   // bloqueador de pop-up: mesma aba
     setEnviado(true);
   }
 
@@ -62,7 +84,7 @@ export function FormularioContato() {
       onSubmit={enviar}
       noValidate
       aria-labelledby="titulo-formulario-contato"
-      className="rounded-[1.5rem] border border-borda bg-elevado p-6 shadow-sm md:p-8"
+      className="relative rounded-[1.5rem] border border-borda bg-elevado p-6 shadow-sm md:p-8"
     >
       <h3 id="titulo-formulario-contato" className="titulo-display text-[1.625rem] text-texto md:text-[1.875rem]">
         {T.titulo}
@@ -152,6 +174,40 @@ export function FormularioContato() {
           <option value="" disabled>{T.selecione}</option>
           {T.motivos.map((m) => <option key={m.id} value={m.id}>{m.rotulo}</option>)}
         </CampoSelecao>
+
+        <div>
+          {/* O rótulo inteiro é a área de toque — o checkbox sozinho é pequeno. */}
+          <label htmlFor={id('consentimento')} className="flex cursor-pointer gap-3.5 text-sm text-texto-2">
+            <input
+              id={id('consentimento')}
+              name={id('consentimento')}
+              type="checkbox"
+              checked={dados.consentimento}
+              onChange={(e) => { mudar('consentimento', e.target.checked); sair('consentimento'); }}
+              aria-required
+              aria-invalid={Boolean(erroDe('consentimento'))}
+              aria-describedby={erroDe('consentimento') ? `${id('consentimento')}-erro` : undefined}
+              className="mt-0.5 size-6 min-h-0 shrink-0 cursor-pointer accent-espresso-900"
+            />
+            <span className="leading-relaxed">
+              {T.consentimento.texto}{' '}
+              <Link href="/politica-de-privacidade" target="_blank" className="font-medium text-acento underline underline-offset-4">
+                {T.consentimento.link}
+              </Link>.
+              <span aria-hidden className="text-danger"> *</span>
+            </span>
+          </label>
+          {erroDe('consentimento') && (
+            <p id={`${id('consentimento')}-erro`} role="alert" className="mt-2 pl-[2.375rem] text-sm text-danger">
+              {erroDe('consentimento')}
+            </p>
+          )}
+        </div>
+
+        {/* Isca para robôs: fora da tela, fora do Tab e do leitor de tela. */}
+        <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
+          <label>{T.isca}<input ref={iscaRef} type="text" name="site" tabIndex={-1} autoComplete="off" defaultValue="" /></label>
+        </div>
       </div>
 
       <button
@@ -163,8 +219,10 @@ export function FormularioContato() {
         <MessageCircle aria-hidden size={18} strokeWidth={1.75} />
         {T.botao}
       </button>
-      <p className="mt-4 text-sm leading-relaxed text-texto-2">{T.aviso}</p>
-      {enviado && <p role="status" className="mt-3 text-sm font-medium text-texto">{T.enviado}</p>}
+      <div role="status" className="mt-3 space-y-1 text-sm font-medium text-texto">
+        {enviado && <p>{T.enviado}</p>}
+        {registrado && <p>{T.registrado}</p>}
+      </div>
     </form>
   );
 }

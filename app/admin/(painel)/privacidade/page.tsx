@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { exigirAdmin } from '@/lib/auth/admin';
 import { Download } from 'lucide-react';
 import { consultasDoTitular } from '@/lib/agendamento/admin';
+import { contatosDoTitular } from '@/lib/contatos/servico';
 import { formatarCurto } from '@/lib/datetime';
 import { FormAnonimizar } from '@/components/admin/FormAnonimizar';
 
@@ -19,7 +20,9 @@ export default async function Privacidade({ searchParams }: { searchParams: Prom
   await exigirAdmin();
   const email = ((await searchParams).email ?? '').trim().toLowerCase().slice(0, 254);
   const linhas = email ? await consultasDoTitular(email) : [];
+  const pedidos = email ? await contatosDoTitular(email) : [];
   const ativas = linhas.filter((l) => !l.ag.anonymizedAt);
+  const temDados = ativas.length > 0 || pedidos.length > 0;
 
   return (
     <div className="mx-auto max-w-[40rem]">
@@ -36,7 +39,9 @@ export default async function Privacidade({ searchParams }: { searchParams: Prom
 
       {email && (
         <section aria-labelledby="titulo-resultado" className="mt-8">
-          <h2 id="titulo-resultado" className="font-medium text-texto">{ativas.length} consulta(s) com dados</h2>
+          <h2 id="titulo-resultado" className="font-medium text-texto">
+            {ativas.length} consulta(s) com dados · {pedidos.length} pedido(s) de contato
+          </h2>
           {linhas.length > 0 && (
             <ul className="mt-3 divide-y divide-borda border-y border-borda text-sm">
               {linhas.map(({ ag, tipo }) => (
@@ -47,7 +52,7 @@ export default async function Privacidade({ searchParams }: { searchParams: Prom
               ))}
             </ul>
           )}
-          {ativas.length > 0 && (
+          {temDados && (
             <div className="mt-5 space-y-4">
               <div className="flex flex-col gap-2 md:flex-row">
                 {(['json', 'csv'] as const).map((f) => (

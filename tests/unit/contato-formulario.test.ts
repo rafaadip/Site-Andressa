@@ -5,7 +5,7 @@ import { PROFISSIONAL } from '@/lib/config';
 
 const VALIDO: FormularioContatoDados = {
   nome: 'Maria', sobrenome: 'da Silva', email: 'maria@exemplo.com',
-  telefone: '', idade: '34', horario: '', motivo: 'emagrecimento',
+  telefone: '', idade: '34', horario: '', motivo: 'emagrecimento', consentimento: true,
 };
 const com = (parcial: Partial<FormularioContatoDados>) => validarContato({ ...VALIDO, ...parcial });
 const erroDe = (r: ReturnType<typeof validarContato>, campo: keyof FormularioContatoDados) =>
@@ -21,8 +21,13 @@ describe('formulário de contato — obrigatórios', () => {
     expect(r.erros.email).toBe(MSG_CONTATO.email);
     expect(r.erros.idade).toBe(MSG_CONTATO.idade);
     expect(r.erros.motivo).toBe(MSG_CONTATO.motivo);
+    expect(r.erros.consentimento).toBe(MSG_CONTATO.consentimento);
     expect(r.erros.telefone).toBeUndefined();
     expect(r.erros.horario).toBeUndefined();
+  });
+
+  it('sem o consentimento (LGPD art. 11), não passa', () => {
+    expect(erroDe(com({ consentimento: false }), 'consentimento')).toBe(MSG_CONTATO.consentimento);
   });
 
   it('só com os obrigatórios preenchidos, passa', () => {

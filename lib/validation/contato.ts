@@ -13,6 +13,13 @@ import { z } from 'zod';
 import { telefoneValido, mascararTelefone } from '../telefone';
 import { FORMULARIO_CONTATO } from '../content/site';
 
+/**
+ * Versão do texto de consentimento do formulário de contato
+ * (FORMULARIO_CONTATO.consentimento em lib/content/site.ts). Mudou o texto?
+ * Suba a versão: cada pedido gravado registra qual texto a pessoa aceitou.
+ */
+export const VERSAO_CONSENTIMENTO_CONTATO = '2026-09-27';
+
 export const MSG_CONTATO = {
   nome: 'Informe o seu nome.',
   sobrenome: 'Informe o seu sobrenome.',
@@ -22,6 +29,7 @@ export const MSG_CONTATO = {
   idade: 'Informe a idade em anos, só números (de 1 a 120).',
   motivo: 'Selecione o motivo da consulta.',
   horario: 'Escolha manhã, tarde ou noite — ou deixe sem escolher.',
+  consentimento: 'Para enviar, é preciso autorizar o uso dos seus dados.',
 } as const;
 
 /** Limites que também vão como `maxLength` nos campos. */
@@ -71,16 +79,27 @@ export const schemaContato = z.object({
     .refine((n) => n >= 1 && n <= 120, MSG_CONTATO.idade),
   horario: z.enum(['', ...IDS_HORARIO], MSG_CONTATO.horario),   // '' = sem preferência
   motivo: z.enum(IDS_MOTIVO, MSG_CONTATO.motivo),
+  // O motivo é dado de saúde (LGPD Art. 11): gravar exige consentimento.
+  consentimento: z.literal(true, { error: MSG_CONTATO.consentimento }),
+});
+
+/**
+ * Corpo da API: o formulário + campo-isca (humano não vê, robô preenche).
+ * O valor é ACEITO aqui e a rota descarta o pedido em silêncio — recusar
+ * com 422 ensinaria ao robô qual campo o denunciou.
+ */
+export const schemaCriarContato = schemaContato.extend({
+  site: z.string().max(500).optional(),
 });
 
 /** O que o formulário guarda enquanto a pessoa digita (tudo texto). */
-export type FormularioContatoDados = z.input<typeof schemaContato>;
+export type FormularioContatoDados = Omit<z.input<typeof schemaContato>, 'consentimento'> & { consentimento: boolean };
 /** O que sai da validação: limpo, normalizado e pronto para a mensagem. */
 export type Contato = z.output<typeof schemaContato>;
 export type CampoContato = keyof FormularioContatoDados;
 
 export const CONTATO_VAZIO: FormularioContatoDados = {
-  nome: '', sobrenome: '', email: '', telefone: '', idade: '', horario: '', motivo: '',
+  nome: '', sobrenome: '', email: '', telefone: '', idade: '', horario: '', motivo: '', consentimento: false,
 };
 
 /** Valida tudo e devolve os dados limpos, ou o 1º erro de cada campo. */

@@ -30,7 +30,7 @@ afterEach(() => {
   vi.mocked(usePathname).mockReset();
 });
 
-const ITENS_TOPO = ['Agenda', 'Horários', 'Integrações', 'Ajustes', 'Privacidade'];
+const ITENS_TOPO = ['Agenda', 'Contatos', 'Horários', 'Integrações', 'Ajustes', 'Privacidade'];
 
 describe('<NavAdminTopo>', () => {
   it('lista os itens do painel, na navegação "Painel"', () => {

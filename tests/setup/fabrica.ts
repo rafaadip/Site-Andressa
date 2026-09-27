@@ -16,6 +16,7 @@ const iso = (d: Date) => d.toISOString();
 
 export async function limparBanco(sql: postgres.Sql) {
   await sql`DELETE FROM notification`;
+  await sql`DELETE FROM contact_request`;
   await sql`DELETE FROM audit_log`;
   await sql`DELETE FROM appointment`;
   await sql`DELETE FROM busy_cache`;

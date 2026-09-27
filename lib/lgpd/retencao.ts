@@ -7,6 +7,7 @@
  *   recado de cancelamento (texto livre) → apagado 90 dias após a consulta
  *   (motivo e contato saem também do evento na agenda Google — SEC-06)
  *   dados de contato                   → anonimizados 5 anos após a consulta
+ *   pedido do formulário de contato    → apagado inteiro 90 dias após chegar
  *   audit_log                          → apagado após 5 anos
  *   fila de e-mails já resolvida       → apagada após 1 ano (só metadados)
  *   cache do FreeBusy                  → dias que já passaram
@@ -14,14 +15,17 @@
 import { and, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { db, schema } from '../db';
 import { dataLocal, somarMinutos } from '../datetime';
+import { CONTATO_RETENCAO_DIAS } from '../content/site';
 
-const { appointment, auditLog, notification, busyCache } = schema;
+const { appointment, auditLog, notification, busyCache, contactRequest } = schema;
 
 export const RETENCAO = {
   motivoDias: 90,
   contatoAnos: 5,
   auditoriaAnos: 5,
   filaDias: 365,
+  /** Mesmo número que o texto de consentimento promete. */
+  pedidoContatoDias: CONTATO_RETENCAO_DIAS,
 } as const;
 
 const dias = (agora: Date, n: number) => somarMinutos(agora, -n * 24 * 60);
@@ -66,6 +70,11 @@ export async function aplicarRetencao(agora = new Date()) {
       .where(and(inArray(notification.status, ['sent', 'skipped', 'failed']), lt(notification.createdAt, dias(agora, RETENCAO.filaDias))))
       .returning({ id: notification.id });
 
+    // Pedido de contato: a linha inteira (inclui o motivo, dado de saúde).
+    const pedidos = await tx.delete(contactRequest)
+      .where(lt(contactRequest.createdAt, dias(agora, RETENCAO.pedidoContatoDias)))
+      .returning({ id: contactRequest.id });
+
     await tx.delete(busyCache).where(lt(busyCache.day, dataLocal(agora)));
 
     const resumo = {
@@ -74,6 +83,7 @@ export async function aplicarRetencao(agora = new Date()) {
       contatosAnonimizados: contatos.length,
       auditoriaApagada: auditoria.length,
       filaApagada: fila.length,
+      pedidosContatoApagados: pedidos.length,
     };
     await tx.insert(auditLog).values({ actor: 'system', action: 'data.retention', meta: resumo });
     return resumo;

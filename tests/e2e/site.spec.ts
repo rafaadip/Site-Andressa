@@ -163,14 +163,21 @@ test.describe('celular (375px)', () => {
     await form.getByRole('textbox', { name: /^Idade/ }).fill('34');
     await form.getByRole('radio', { name: 'Manhã' }).check({ force: true });
     await form.getByRole('combobox', { name: /Motivo da consulta/ }).selectOption({ label: 'Performance esportiva' });
+    await form.getByRole('checkbox', { name: /Autorizo o consultório/ }).check();
 
     const [aba] = await Promise.all([context.waitForEvent('page'), enviar.click()]);
     await aba.waitForLoadState();
+    // O WhatsApp abre numa aba nova e o site CONTINUA na tela (regressão:
+    // com 'noopener', window.open devolvia null e a página também navegava).
+    await expect(page).toHaveURL(/\/#contato$/);
+    expect(await aba.evaluate(() => window.opener)).toBeNull();
     const texto = new URL(aba.url()).searchParams.get('text') ?? '';
     expect(aba.url()).toMatch(/^https:\/\/wa\.me\/\d+\?text=/);
     expect(texto).toContain('Nome: Maria da Silva');
     expect(texto).toContain('Preferência de horário: Manhã');
     expect(texto).toContain('Motivo: Performance esportiva');
+    // E o pedido ficou registrado para o painel (quando há banco de teste).
+    if (process.env.DATABASE_URL_TEST) await expect(form.getByText(/ficou registrado para o consultório/)).toBeVisible();
   });
 
   test('barra de agendar: escondida no topo, aparece ao rolar, some na seção de agendamento', async ({ page }) => {

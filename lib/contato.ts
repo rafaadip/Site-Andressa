@@ -1,4 +1,5 @@
 import { PROFISSIONAL } from './config';
+import { digitosNacionais } from './telefone';
 import { FORMULARIO_CONTATO } from './content/site';
 import type { Contato } from './validation/contato';
 
@@ -38,4 +39,14 @@ export function mensagemContato(c: Contato): string {
     motivo ? `${M.motivo}: ${motivo}` : null,
   ];
   return linhas.filter((l): l is string => l !== null).join('\n');
+}
+
+/**
+ * WhatsApp DO PACIENTE, para a médica responder pelo painel. Recebe o
+ * telefone já validado e mascarado; sem telefone, não há link.
+ */
+export function linkWhatsAppDoPaciente(telefone: string | null): string | null {
+  if (!telefone) return null;
+  const nacional = digitosNacionais(telefone);
+  return nacional.length === 10 || nacional.length === 11 ? `https://wa.me/55${nacional}` : null;
 }

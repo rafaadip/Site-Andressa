@@ -79,7 +79,7 @@ test.describe('celular (375px), com uma mão', () => {
 
   test('todas as telas: sem rolagem horizontal, navegação no rodapé e sem violação de acessibilidade', async ({ page, context }) => {
     await entrar(context);
-    for (const rota of ['/admin', '/admin/disponibilidade', '/admin/disponibilidade/bloquear', '/admin/integracoes', '/admin/configuracoes', '/admin/privacidade']) {
+    for (const rota of ['/admin', '/admin/contatos', '/admin/disponibilidade', '/admin/disponibilidade/bloquear', '/admin/integracoes', '/admin/configuracoes', '/admin/privacidade']) {
       await page.goto(rota);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await semRolagemHorizontal(page);
@@ -90,6 +90,34 @@ test.describe('celular (375px), com uma mão', () => {
       const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
       expect(r.violations, `${rota}: ${r.violations.map((v) => v.id).join(', ')}`).toEqual([]);
     }
+  });
+
+  test('contatos: o pedido do site aparece no painel, é marcado como retornado e apagado', async ({ page, context, request }) => {
+    // Sobrenome único: a lista pode ter pedidos de outros testes.
+    const sobrenome = `Teste ${randomUUID().slice(0, 6).replace(/\d/g, (d) => 'ghijklmnop'[Number(d)]!)}`;
+    const r = await request.post('/api/contatos', {
+      headers: { 'x-forwarded-for': ip() },
+      data: { nome: 'Carla', sobrenome, email: 'carla@exemplo.com', telefone: '21998765432', idade: '29', horario: 'manha', motivo: 'performance', consentimento: true, site: '' },
+    });
+    expect(r.status()).toBe(201);
+
+    await entrar(context);
+    await page.goto('/admin/contatos');
+    const cartao = page.getByRole('article', { name: new RegExp(`Carla ${sobrenome}`) });
+    await expect(cartao).toBeVisible();
+    await expect(cartao).toContainText('Performance esportiva');
+    await expect(cartao).toContainText('Manhã');
+    await expect(cartao.getByRole('link', { name: /WhatsApp \(21\) 99876-5432/ })).toHaveAttribute('href', 'https://wa.me/5521998765432');
+
+    await cartao.getByRole('button', { name: 'Marcar como retornado' }).click();
+    await expect(page.getByRole('article', { name: new RegExp(sobrenome) })).toHaveCount(0);   // saiu dos pendentes
+
+    await page.getByRole('link', { name: 'Todos' }).click();
+    const retornado = page.getByRole('article', { name: new RegExp(sobrenome) });
+    await expect(retornado).toContainText('Retornado');
+    await retornado.getByRole('button', { name: 'Apagar' }).click();
+    await retornado.getByRole('button', { name: 'Sim, apagar' }).click();
+    await expect(page.getByRole('article', { name: new RegExp(sobrenome) })).toHaveCount(0);
   });
 
   test('"Bloquear o resto de hoje" em UM toque a partir da agenda — e desfazer', async ({ page, context }) => {
