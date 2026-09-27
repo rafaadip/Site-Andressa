@@ -6,7 +6,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { PROFISSIONAL, tituloPublico } from '@/lib/config';
-import { NUTROLOGIA, SOBRE, TRAJETORIA } from '@/lib/content/site';
+import { NUTROLOGIA, SOBRE } from '@/lib/content/site';
 import { Sobre } from '@/components/site/Sobre';
 import { Nutrologia } from '@/components/site/Nutrologia';
 import { Rodape } from '@/components/site/Rodape';
@@ -14,17 +14,19 @@ import { Rodape } from '@/components/site/Rodape';
 afterEach(cleanup);
 
 describe('<Sobre>', () => {
-  it('nome, parágrafos e trajetória vêm do conteúdo central', () => {
+  it('nome e parágrafos vêm do conteúdo central; sem trajetória na home', () => {
     render(<Sobre />);
     expect(screen.getByRole('heading', { level: 2 }).textContent).toBe(PROFISSIONAL.nome);
     expect(screen.getByText(SOBRE.paragrafos[0]!)).toBeTruthy();
-    for (const t of TRAJETORIA) expect(screen.getAllByText(new RegExp(t.onde)).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('heading', { name: 'Trajetória' })).toBeNull();
+    expect(screen.queryByRole('list')).toBeNull();
   });
 
-  it('leva à página /sobre', () => {
+  it('um único link, "Mais sobre a doutora", leva à página /sobre', () => {
     render(<Sobre />);
-    const links = screen.getAllByRole('link').map((l) => l.getAttribute('href'));
-    expect(links).toContain('/sobre');
+    const link = screen.getByRole('link');
+    expect(link.textContent).toContain(SOBRE.linkMais);
+    expect(link.getAttribute('href')).toBe('/sobre');
   });
 });
 

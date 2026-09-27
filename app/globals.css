@@ -761,32 +761,6 @@
     transition: transform 1.2s var(--ease-suave);
   }
 
-  /* Linha do tempo (trajetória): um ponto por item e um fio entre os
-     pontos — cada item desenha o trecho até o próximo, então a linha
-     acompanha qualquer altura de texto. */
-  .linha-tempo > li { position: relative; padding-left: 2rem; }
-  .linha-tempo > li::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 1.5rem;
-    width: .6875rem;
-    height: .6875rem;
-    border-radius: 999px;
-    background: var(--bg-page);
-    border: 1px solid var(--color-gold-500);
-  }
-  .linha-tempo > li:first-child::before { background: var(--color-gold-500); }
-  .linha-tempo > li:not(:last-child)::after {
-    content: "";
-    position: absolute;
-    left: .3125rem;
-    top: 2.35rem;
-    bottom: -1.5rem;
-    width: 1px;
-    background: var(--color-sand-300);
-  }
-
   /* ── Perguntas frequentes ──────────────────────────────
      Abre com altura animada onde há suporte (::details-content +
      interpolate-size); nos demais, abre na hora — sem quebrar nada. */

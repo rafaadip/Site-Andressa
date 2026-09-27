@@ -50,14 +50,6 @@ export const SOBRE = {
   linkMais: 'Mais sobre a doutora',
 } as const;
 
-/** Trajetória (seção Sobre da home). */
-export const TRAJETORIA = [
-  { onde: 'Hapvida', papel: 'Médica', quando: 'desde dez/2025' },
-  { onde: 'UPA Taboão — Guarulhos', papel: 'Médica', quando: 'desde jan/2025' },
-  { onde: 'Complexo Hospitalar Padre Bento de Guarulhos', papel: 'Médica', quando: 'ago/2025 – fev/2026' },
-  { onde: 'Hospital Keila Ferreira — Guarulhos', papel: 'Médica', quando: 'fev/2026' },
-] as const;
-
 export const FORMACAO = [
   { onde: 'Afya', papel: 'Pós-graduação Lato Sensu em Nutrologia — em curso', quando: 'fev/2026 – jul/2027' },
   { onde: 'Universidade Nove de Julho (UNINOVE)', papel: 'Graduação em Medicina', quando: 'fev/2019 – dez/2024' },
