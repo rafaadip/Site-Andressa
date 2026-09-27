@@ -27,12 +27,13 @@ import { processarFila } from '@/lib/notificacoes/fila';
 import { DataInvalidaError } from '@/lib/datetime';
 import { db, schema } from '@/lib/db';
 import { log } from '@/lib/log';
+import { apagarContato, ContatoInexistenteError, marcarContatoAtendido } from '@/lib/contatos/servico';
 
 export type Estado = { ok?: string; erro?: string } | null;
 
 /** Erro de domínio vira mensagem na tela; o resto vai para o log. */
 function mensagem(e: unknown): string {
-  if (e instanceof OperacaoInvalidaError || e instanceof NaoAutorizadoError) return e.message;
+  if (e instanceof OperacaoInvalidaError || e instanceof NaoAutorizadoError || e instanceof ContatoInexistenteError) return e.message;
   if (e instanceof SlotIndisponivelError) return 'Esse horário não está mais livre. Escolha outro.';
   if (e instanceof DataInvalidaError) return 'Data ou hora inválida.';
   log.excecao('admin.acao', e);
@@ -246,7 +247,33 @@ export async function acaoAnonimizar(_: Estado, fd: FormData): Promise<Estado> {
     const r = await anonimizarTitular(texto(fd, 'email'));
     efeitos([...r.canceladas, ...r.redigidas]);
     revalidatePath('/admin/privacidade');
-    return { ok: `Dados eliminados de ${r.consultas} consulta(s).${r.canceladas.length ? ` ${r.canceladas.length} consulta(s) futura(s) cancelada(s).` : ''}` };
+    return { ok: `Dados eliminados de ${r.consultas} consulta(s) e ${r.contatos} pedido(s) de contato.${r.canceladas.length ? ` ${r.canceladas.length} consulta(s) futura(s) cancelada(s).` : ''}` };
+  } catch (e) {
+    return { erro: mensagem(e) };
+  }
+}
+
+// ── Contatos do formulário ───────────────────────────────────────────────
+
+export async function acaoContatoAtendido(_: Estado, fd: FormData): Promise<Estado> {
+  try {
+    await exigirAdminAcao();
+    const atendido = fd.get('atendido') === '1';
+    await marcarContatoAtendido(texto(fd, 'id'), atendido);
+    revalidatePath('/admin/contatos');
+    return { ok: atendido ? 'Marcado como retornado.' : 'Voltou para a lista de pendentes.' };
+  } catch (e) {
+    return { erro: mensagem(e) };
+  }
+}
+
+export async function acaoApagarContato(_: Estado, fd: FormData): Promise<Estado> {
+  try {
+    await exigirAdminAcao();
+    if (fd.get('confirmo') !== '1') return { erro: 'Confirme para apagar.' };
+    await apagarContato(texto(fd, 'id'));
+    revalidatePath('/admin/contatos');
+    return { ok: 'Contato apagado.' };
   } catch (e) {
     return { erro: mensagem(e) };
   }

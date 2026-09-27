@@ -164,6 +164,23 @@ confirmadas (§6). **SCA:** 0 vulnerabilidades (produção e desenvolvimento).
   HSTS, COOP, `nosniff`, `Permissions-Policy`, sem `X-Powered-By`.
 - **Webhooks e crons:** segredo em tempo constante; sem segredo, fechados.
 - **Logs:** só o tipo do erro; PII mascarada; query fora do caminho.
+- **Formulário de contato (home → Postgres + WhatsApp):** o navegador envia
+  para `POST /api/contatos`, que valida DE NOVO com o mesmo schema (nunca
+  confia no cliente), exige `application/json` (sem POST de outro site sem
+  preflight), limita o corpo a 4 KB, tem campo-isca contra robôs e grava só
+  pelo builder do Drizzle (parâmetros; o banco ainda tem CHECK de formato).
+  Limite por IP e global contados SOB advisory lock (regra 17); resposta
+  sem dado do paciente. Consentimento obrigatório (motivo é dado de saúde);
+  linha apagada em 90 dias (retenção), exportada e eliminada pelos direitos
+  do titular. No painel, `/admin/contatos` confere a sessão na página e em
+  cada Server Action. Validação por LISTA DE PERMITIDOS em
+  `lib/validation/contato.ts`: nome só
+  com letras, e-mail ASCII sem aspas/`;`/`<>`, telefone brasileiro válido,
+  idade 1–120 só com dígitos, motivo e horário só entre as opções fechadas.
+  Controle, zero-width e bidi (U+202E) saem antes de validar, para não forjar
+  linhas nem disfarçar o texto na mensagem. A mensagem usa só dados validados
+  e vai inteira em `encodeURIComponent`. SQLi, XSS, template e path traversal
+  cobertos em `tests/unit/contato-formulario.test.ts`.
 
 ## 7. Como reproduzir
 

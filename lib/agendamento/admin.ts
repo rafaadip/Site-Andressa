@@ -9,6 +9,8 @@
  * NUNCA cancela em silêncio — cada consulta afetada exige uma decisão.
  */
 import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, lt, sql } from 'drizzle-orm';
+import { contatosDoTitular } from '../contatos/servico';
+import { FORMULARIO_CONTATO } from '../content/site';
 import { randomBytes } from 'node:crypto';
 import { db, schema } from '../db';
 import { dataLocal, fimDoDiaLocal, horaLocalParaUtc, somarDiasLocal, somarMinutos, formatarParaPaciente } from '../datetime';
@@ -21,7 +23,7 @@ import type { Modalidade } from '../config';
 import { _limparCachePrazo, disponibilidade, practitionerId } from './servico';
 import type { Linha } from './apresentacao';
 
-const { appointment, appointmentType, availabilityRule, availabilityException, practitioner, auditLog, notification } = schema;
+const { appointment, appointmentType, availabilityRule, availabilityException, practitioner, auditLog, notification, contactRequest } = schema;
 
 export class OperacaoInvalidaError extends Error {
   constructor(msg: string) { super(msg); this.name = 'OperacaoInvalidaError'; }
@@ -417,7 +419,10 @@ export async function consultasDoTitular(email: string) {
 /** Portabilidade/acesso: tudo o que existe sobre o titular, sem campo interno. */
 export async function exportarTitular(email: string) {
   const linhas = await consultasDoTitular(email);
-  await db().insert(auditLog).values({ actor: 'practitioner', action: 'data.exported', meta: { consultas: linhas.length } });
+  const pedidos = emailDeTitular(email) ? await contatosDoTitular(normalizarEmail(email)) : [];
+  await db().insert(auditLog).values({ actor: 'practitioner', action: 'data.exported', meta: { consultas: linhas.length, contatos: pedidos.length } });
+  const rotulo = (lista: readonly { id: string; rotulo: string }[], id: string | null) =>
+    (id ? lista.find((i) => i.id === id)?.rotulo ?? id : null);
   return {
     geradoEm: new Date().toISOString(),
     titular: normalizarEmail(email),
@@ -436,6 +441,20 @@ export async function exportarTitular(email: string) {
       criadaEm: ag.createdAt.toISOString(),
       canceladaEm: ag.cancelledAt?.toISOString() ?? null,
     })),
+    // Pedidos do formulário de contato da home (apagados em 90 dias).
+    contatos: pedidos.map((c) => ({
+      nome: c.firstName,
+      sobrenome: c.lastName,
+      email: c.email,
+      telefone: c.phone,
+      idade: c.age,
+      horario: rotulo(FORMULARIO_CONTATO.horarios, c.preferredPeriod),
+      motivo: rotulo(FORMULARIO_CONTATO.motivos, c.reason),
+      consentimento: c.consentAt.toISOString(),
+      versaoConsentimento: c.consentVersion,
+      recebidoEm: c.createdAt.toISOString(),
+      retornadoEm: c.handledAt?.toISOString() ?? null,
+    })),
   };
 }
 
@@ -447,7 +466,13 @@ export function paraCsv(dados: Awaited<ReturnType<typeof exportarTitular>>): str
     const seguro = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
     return `"${seguro.replace(/"/g, '""')}"`;
   };
-  return [cab.join(','), ...dados.consultas.map((c) => cab.map((k) => esc(c[k])).join(','))].join('\r\n') + '\r\n';
+  const linhas = [cab.join(','), ...dados.consultas.map((c) => cab.map((k) => esc(c[k])).join(','))];
+  // Segunda tabela, depois de uma linha em branco: os pedidos de contato.
+  if (dados.contatos.length) {
+    const cabContato = ['nome', 'sobrenome', 'email', 'telefone', 'idade', 'horario', 'motivo', 'consentimento', 'versaoConsentimento', 'recebidoEm', 'retornadoEm'] as const;
+    linhas.push('', cabContato.join(','), ...dados.contatos.map((c) => cabContato.map((k) => esc(c[k])).join(',')));
+  }
+  return linhas.join('\r\n') + '\r\n';
 }
 
 /**
@@ -456,7 +481,7 @@ export function paraCsv(dados: Awaited<ReturnType<typeof exportarTitular>>): str
  * Consultas futuras são canceladas SEM e-mail (a pessoa pediu para sumir)
  * e saem da agenda do Google; o link de gestão deixa de funcionar.
  */
-export async function anonimizarTitular(email: string, agora = new Date()): Promise<{ consultas: number; canceladas: string[]; redigidas: string[] }> {
+export async function anonimizarTitular(email: string, agora = new Date()): Promise<{ consultas: number; contatos: number; canceladas: string[]; redigidas: string[] }> {
   if (!emailDeTitular(email)) throw new OperacaoInvalidaError('Informe o e-mail do titular.');
   // Só conta (e registra) o que de fato é anonimizado agora.
   const linhas = (await consultasDoTitular(email)).filter(({ ag }) => !ag.anonymizedAt);
@@ -464,6 +489,7 @@ export async function anonimizarTitular(email: string, agora = new Date()): Prom
   // Eventos que ficam na agenda do Google (passados, falta, realizada):
   // redigidos também — a eliminação não pode parar no banco (SEC-06).
   const redigidas: string[] = [];
+  let contatos = 0;
   await db().transaction(async (tx) => {
     for (const { ag } of linhas) {
       const futuraAtiva = ag.status === 'confirmed' && ag.visitStartsAt > agora;
@@ -488,7 +514,12 @@ export async function anonimizarTitular(email: string, agora = new Date()): Prom
       await tx.update(notification).set({ status: 'skipped', lastError: 'anonimizado' })
         .where(and(eq(notification.appointmentId, ag.id), inArray(notification.status, ['pending', 'failed'])));
     }
-    await tx.insert(auditLog).values({ actor: 'practitioner', action: 'data.erased', meta: { consultas: linhas.length, canceladas: canceladas.length } });
+    // Pedidos do formulário de contato: sem histórico a preservar, saem inteiros.
+    const pedidos = await tx.delete(contactRequest)
+      .where(eq(contactRequest.email, normalizarEmail(email)))
+      .returning({ id: contactRequest.id });
+    contatos = pedidos.length;
+    await tx.insert(auditLog).values({ actor: 'practitioner', action: 'data.erased', meta: { consultas: linhas.length, contatos, canceladas: canceladas.length } });
   });
-  return { consultas: linhas.length, canceladas, redigidas };
+  return { consultas: linhas.length, contatos, canceladas, redigidas };
 }

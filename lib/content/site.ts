@@ -238,3 +238,73 @@ export const CONFIRMAR_APAGAR_MOTIVO = {
   botaoConfirmar: 'Sim, apagar',
   botaoManter: 'Manter o motivo',
 } as const;
+
+/**
+ * Prazo em que o pedido de contato é apagado por inteiro. Fonte ÚNICA: o
+ * texto de consentimento abaixo e a retenção automática
+ * (lib/lgpd/retencao.ts) leem daqui — o texto nunca promete outro prazo.
+ */
+export const CONTATO_RETENCAO_DIAS = 90;
+
+/**
+ * Formulário de contato (seção Contato da home): grava o pedido para a
+ * médica retornar pelo painel (POST /api/contatos, com consentimento) e
+ * abre o WhatsApp com a mensagem já montada (lib/contato.ts →
+ * mensagemContato). Motivo e horário são listas FECHADAS: o que chega ao
+ * banco e ao WhatsApp é sempre um destes itens, nunca texto livre.
+ * ⚠️ Mudou `consentimento`? Suba VERSAO_CONSENTIMENTO_CONTATO em
+ * lib/validation/contato.ts.
+ */
+export const FORMULARIO_CONTATO = {
+  titulo: 'Prefere que o consultório fale com você?',
+  lead: 'Preencha e a conversa abre no WhatsApp já com os seus dados — é só enviar.',
+  rotulos: {
+    nome: 'Nome',
+    sobrenome: 'Sobrenome',
+    telefone: 'Telefone com DDD',
+    email: 'E-mail',
+    idade: 'Idade',
+    horario: 'Preferência de horário para a consulta',
+    motivo: 'Motivo da consulta',
+  },
+  selecione: 'Selecione um motivo',
+  botao: 'Enviar pelo WhatsApp',
+  enviado: 'Abrimos o WhatsApp com a sua mensagem. Se não abriu, toque de novo em "Enviar pelo WhatsApp".',
+  registrado: 'Seu pedido também ficou registrado para o consultório retornar o contato.',
+  consentimento: {
+    texto:
+      'Autorizo o consultório a guardar estes dados — inclusive o motivo da consulta, que é informação de saúde — '
+      + `para retornar o meu contato. Eles são apagados em ${CONTATO_RETENCAO_DIAS} dias. Detalhes na`,
+    link: 'política de privacidade',
+  },
+  /** Campo-isca: invisível para pessoas; robô que preenche tudo é ignorado. */
+  isca: 'Não preencha este campo',
+  horarios: [
+    { id: 'manha', rotulo: 'Manhã' },
+    { id: 'tarde', rotulo: 'Tarde' },
+    { id: 'noite', rotulo: 'Noite' },
+  ],
+  motivos: [
+    { id: 'emagrecimento', rotulo: 'Emagrecimento' },
+    { id: 'ganho-de-massa', rotulo: 'Ganho de massa muscular' },
+    { id: 'performance', rotulo: 'Performance esportiva' },
+    { id: 'reeducacao', rotulo: 'Reeducação alimentar' },
+    { id: 'vitaminas', rotulo: 'Vitaminas e minerais' },
+    { id: 'metabolismo', rotulo: 'Glicemia, colesterol e triglicerídeos' },
+    { id: 'intestino', rotulo: 'Saúde intestinal' },
+    { id: 'vegetariana', rotulo: 'Alimentação vegetariana ou vegana' },
+    { id: 'gestacao', rotulo: 'Gestação e amamentação' },
+    { id: 'exames', rotulo: 'Avaliação de exames' },
+    { id: 'outros', rotulo: 'Outros' },
+  ],
+  /** Rótulos das linhas da mensagem do WhatsApp. */
+  mensagem: {
+    abertura: 'Gostaria de agendar uma consulta.',
+    nome: 'Nome',
+    idade: 'Idade',
+    email: 'E-mail',
+    telefone: 'Telefone',
+    horario: 'Preferência de horário',
+    motivo: 'Motivo',
+  },
+} as const;

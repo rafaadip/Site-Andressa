@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CalendarDays, Clock, Plug, Settings, ShieldCheck } from 'lucide-react';
+import { CalendarDays, Clock, Inbox, Plug, Settings, ShieldCheck } from 'lucide-react';
 
 const ITENS = [
   { href: '/admin', rotulo: 'Agenda', Icone: CalendarDays },
+  { href: '/admin/contatos', rotulo: 'Contatos', Icone: Inbox },
   { href: '/admin/disponibilidade', rotulo: 'Horários', Icone: Clock },
   { href: '/admin/integracoes', rotulo: 'Integrações', Icone: Plug },
   { href: '/admin/configuracoes', rotulo: 'Ajustes', Icone: Settings },
@@ -90,13 +91,15 @@ export function NavAdminRodape() {
           aria-hidden
           className={`pointer-events-none absolute inset-x-0 -top-6 h-6 bg-gradient-to-t from-fundo to-transparent transition-opacity duration-200 ${haConteudoAbaixo ? 'opacity-100' : 'opacity-0'}`}
         />
-        <ul className="grid grid-cols-5">
+        {/* Largura natural por item (não colunas iguais): com 6 itens, colunas de
+            62px cortavam "Integrações" e "Privacidade" em 375px. Cabe em 320px. */}
+        <ul className="flex justify-between px-0.5">
           {ITENS.map(({ href, rotulo, Icone }) => (
             <li key={href}>
               <Link
                 href={href}
                 aria-current={ativo(pathname, href) ? 'page' : undefined}
-                className="flex min-h-16 flex-col items-center justify-center gap-1 text-[.75rem] text-texto-2 aria-[current=page]:font-medium aria-[current=page]:text-texto"
+                className="flex min-h-16 min-w-11 flex-col items-center justify-center gap-1 px-0.5 text-[.6875rem] tracking-[-.01em] text-texto-2 aria-[current=page]:font-medium aria-[current=page]:text-texto"
               >
                 <Icone aria-hidden size={22} strokeWidth={1.75} />
                 {rotulo}

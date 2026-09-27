@@ -242,3 +242,46 @@ export const auditLog = pgTable('audit_log', {
   // Retenção (FASE-10 §3.5) apaga por data.
   index('audit_log_at_idx').on(t.at),
 ]);
+
+/**
+ * Pedido de contato do formulário da home (seção Contato). O paciente
+ * também é levado ao WhatsApp; esta linha é o registro para a médica
+ * retornar pelo painel (/admin/contatos).
+ *
+ * DADO SENSÍVEL: o motivo é informação de saúde (LGPD Art. 5º II) — só é
+ * gravado com consentimento explícito e a linha INTEIRA é apagada 90 dias
+ * depois (lib/lgpd/retencao.ts). Motivo e horário guardam o ID da lista
+ * fechada de lib/content/site.ts, nunca texto livre.
+ */
+export const contactRequest = pgTable('contact_request', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  practitionerId: uuid('practitioner_id').notNull().references(() => practitioner.id),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  email: text('email').notNull(),
+  /** Mascarado, ex.: "(11) 91234-5678". Opcional. */
+  phone: text('phone'),
+  age: smallint('age').notNull(),
+  /** 'manha' | 'tarde' | 'noite' — ou nulo (sem preferência). */
+  preferredPeriod: text('preferred_period'),
+  /** ID do motivo (lista fechada). */
+  reason: text('reason').notNull(),
+  consentAt: timestamp('consent_at', { withTimezone: true }).notNull(),
+  consentVersion: text('consent_version').notNull(),
+  /** SHA-256(ip + salt): limite por hora e prova de consentimento, sem o IP. */
+  consentIpHash: text('consent_ip_hash').notNull(),
+  /** A médica marcou que já retornou o contato. */
+  handledAt: timestamp('handled_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index('contact_request_recentes_idx').on(t.practitionerId, t.createdAt),
+  index('contact_request_ip_idx').on(t.consentIpHash, t.createdAt),
+  index('contact_request_email_idx').on(t.email),
+  // Última barreira: mesmo que a validação da aplicação falhe, o banco
+  // recusa formato fora do esperado.
+  check('contact_request_age', sql`${t.age} between 1 and 120`),
+  check('contact_request_period', sql`${t.preferredPeriod} is null or ${t.preferredPeriod} in ('manha','tarde','noite')`),
+  check('contact_request_reason', sql`${t.reason} ~ '^[a-z-]{2,30}$'`),
+  check('contact_request_names', sql`char_length(${t.firstName}) between 1 and 60 and char_length(${t.lastName}) between 1 and 60`),
+  check('contact_request_email', sql`char_length(${t.email}) between 3 and 254`),
+]);

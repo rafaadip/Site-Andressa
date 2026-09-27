@@ -49,9 +49,12 @@ prescrição ([00-ARQUITETURA §2.3](00-ARQUITETURA.md)).
 | Registro do consentimento (data/hora, versão do texto) | Pessoal | Provar o consentimento | Obrigação legal / exercício de direitos (art. 7º, II e VI) | 5 anos |
 | Hash de IP (SHA-256 com sal) | Pessoal pseudonimizado | Prova do consentimento e limite anti-abuso | Legítimo interesse (art. 7º, IX) | 5 anos |
 | Trilha de auditoria (ação, data, ids) | Pessoal (indireto) | Prestação de contas (art. 37) | Obrigação legal | 5 anos |
+| Pedido de contato: nome, sobrenome, e-mail, idade, telefone e horário (opcionais) | Pessoal | Retornar o contato do paciente | Consentimento (art. 7º, I) | **90 dias** após chegar (a linha inteira); sai na eliminação |
+| **Motivo do pedido de contato** (lista fechada: emagrecimento, performance…) | **Sensível (saúde)** | Idem | **Consentimento específico e destacado (art. 11, I)** — caixa obrigatória, versão do texto registrada | **90 dias**, junto com o pedido |
 
 **Não coletamos**: CPF, data de nascimento, endereço, convênio, peso, altura,
-foto, exames. Cada campo passou pelo teste "o agendamento funciona sem isso?".
+foto, exames. O pedido de contato guarda a **idade** (não a data de
+nascimento) e o motivo como **item de uma lista fechada**, nunca texto livre. Cada campo passou pelo teste "o agendamento funciona sem isso?".
 
 ## 4. Necessidade e proporcionalidade
 

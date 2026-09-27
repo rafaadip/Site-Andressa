@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { PROFISSIONAL } from '@/lib/config';
+import { CONTATO_RETENCAO_DIAS } from '@/lib/content/site';
 import { Secao } from '@/components/ui/Secao';
 
 export const metadata: Metadata = {
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
  * Texto redigido para refletir o sistema como projetado; confirmar operadores
  * e prazos no momento da publicação.
  */
-const ATUALIZADO_EM = '25 de setembro de 2026';
+const ATUALIZADO_EM = '27 de setembro de 2026';
 
 export default function PoliticaPrivacidade() {
   // Operadores opcionais só são citados quando de fato ativos.
@@ -39,7 +40,7 @@ export default function PoliticaPrivacidade() {
         </p>
 
         <h2>Quais dados coletamos e para quê</h2>
-        <p>Coletamos apenas o necessário para marcar e confirmar a sua consulta:</p>
+        <p>Coletamos apenas o necessário para marcar e confirmar a sua consulta, ou para retornar o seu contato:</p>
         <div className="tabela">
           <table>
             <thead>
@@ -50,6 +51,11 @@ export default function PoliticaPrivacidade() {
               <tr><td>Data e horário da consulta</td><td>Organizar a agenda</td><td>5 anos</td></tr>
               <tr><td>Motivo da consulta <em>(opcional)</em></td><td>Permitir que a médica se prepare</td><td><strong>90 dias</strong></td></tr>
               <tr><td>Registro do seu consentimento</td><td>Comprovar que você autorizou o uso dos dados</td><td>5 anos</td></tr>
+              <tr>
+                <td>Pedido de contato: nome, sobrenome, e-mail, idade, motivo e, se você informar, telefone e horário preferido</td>
+                <td>Retornar o seu contato</td>
+                <td><strong>{CONTATO_RETENCAO_DIAS} dias</strong></td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -65,6 +71,16 @@ export default function PoliticaPrivacidade() {
           pessoal sensível</strong>. Por isso o campo é opcional e só é registrado com o
           seu consentimento específico, pedido em separado no formulário. Ele é apagado
           automaticamente 90 dias após a consulta, e você pode pedir a exclusão antes.
+        </p>
+
+        <h2>Formulário de contato</h2>
+        <p>
+          O formulário da página inicial só envia seus dados com a sua autorização, porque o
+          motivo escolhido também é <strong>informação de saúde</strong>. O pedido fica
+          registrado para o consultório retornar o contato e é apagado por inteiro{' '}
+          {CONTATO_RETENCAO_DIAS} dias depois de chegar — você pode pedir a exclusão antes.
+          Ao enviar, o site também abre o WhatsApp com uma mensagem pronta: o envio dessa
+          mensagem é escolha sua, e o que acontece nele segue a política do próprio WhatsApp.
         </p>
 
         <h2>Com quem compartilhamos</h2>

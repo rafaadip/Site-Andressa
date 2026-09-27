@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { sqlCliente } from '@/lib/db';
-import { dataLocal } from '@/lib/datetime';
+import { dataLocal, somarMinutos } from '@/lib/datetime';
 import { somarDias } from '@/lib/datetime-cliente';
 import { criarAgendamento, cancelarPorToken, disponibilidade } from '@/lib/agendamento/servico';
 import { limparBanco } from '../setup/fabrica';
@@ -20,10 +20,18 @@ d('GET /api/ics', () => {
   beforeEach(async () => { await limparBanco(sql()); });
   afterAll(async () => { await limparBanco(sql()); });
 
+  /**
+   * Horário que o paciente ainda pode cancelar pelo link (e cujo e-mail traz o
+   * link): além do prazo de cancelamento (24h) com folga. O PRIMEIRO horário
+   * livre fica a 12–24h de distância em certos momentos (domingo de manhã →
+   * segunda 9h), e o teste falhava conforme o relógio.
+   */
+  const alemDoPrazo = (s: { inicio: string }) => new Date(s.inicio) > somarMinutos(new Date(), 48 * 60);
+
   async function criar() {
     const hoje = dataLocal(new Date());
     const r = await disponibilidade({ tipo: 'consulta-presencial', de: hoje, ate: somarDias(hoje, 13) });
-    const slot = r.dias.flatMap((x) => x.slots)[0]!;
+    const slot = r.dias.flatMap((x) => x.slots).find(alemDoPrazo)!;
     const c = await criarAgendamento({
       tipo: 'consulta-presencial', inicio: slot.inicio,
       paciente: {

@@ -282,7 +282,10 @@ d('agenda do Google (FASE-05)', () => {
     });
 
     it('cancelar pelo link apaga o evento da agenda dela', async () => {
-      const r = await criarESincronizar();
+      // Além do prazo de cancelamento (24h): o 1º horário livre pode estar
+      // dentro dele, conforme o relógio (domingo de manhã → segunda 9h).
+      const { lista } = await slots();
+      const r = await criarESincronizar({}, lista.findIndex((s) => new Date(s.inicio) > somarMinutos(new Date(), 48 * 60)));
       const token = r.agendamento.urlGestao.split('/').pop()!;
       await cancelarPorToken(token);
       await efeitosDe(r.agendamento.id);
