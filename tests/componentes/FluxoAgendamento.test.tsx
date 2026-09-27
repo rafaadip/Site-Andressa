@@ -243,3 +243,29 @@ describe('<FluxoAgendamento>', () => {
     expect(screen.getByRole('radio', { name: /Teleconsulta/ }).getAttribute('aria-checked')).toBe('true');
   });
 });
+
+describe('<FluxoAgendamento> — tipo já marcado (link dos cartões da home)', () => {
+  // Seletor de modalidade usa role=radio com aria-checked (não <input>).
+  const marcado = (nome: RegExp) => screen.getByRole('radio', { name: nome }).getAttribute('aria-checked') === 'true';
+
+  it('tipoInicial chega marcado na etapa 1', () => {
+    vi.stubGlobal('fetch', vi.fn());
+    render(<FluxoAgendamento {...props({ tipoInicial: 'tele' })} />);
+    expect(marcado(/Teleconsulta/)).toBe(true);
+    expect(marcado(/Consulta presencial/)).toBe(false);
+  });
+
+  it('vence o rascunho da sessão (a pessoa acabou de escolher no cartão)', async () => {
+    sessionStorage.setItem('agendamento:rascunho', JSON.stringify({ tipo: 'presencial' }));
+    vi.stubGlobal('fetch', vi.fn());
+    render(<FluxoAgendamento {...props({ tipoInicial: 'tele' })} />);
+    await waitFor(() => expect(marcado(/Teleconsulta/)).toBe(true));
+  });
+
+  it('slug desconhecido é ignorado: nada marcado', () => {
+    vi.stubGlobal('fetch', vi.fn());
+    render(<FluxoAgendamento {...props({ tipoInicial: 'inexistente' })} />);
+    expect(marcado(/Teleconsulta/)).toBe(false);
+    expect(marcado(/Consulta presencial/)).toBe(false);
+  });
+});

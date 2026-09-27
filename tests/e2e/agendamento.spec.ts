@@ -314,3 +314,17 @@ test.describe('acessibilidade de cada etapa (axe)', () => {
     await verificar('confirmação');
   });
 });
+
+test('cartão "Teleconsulta" da home abre o /agendar com a teleconsulta já marcada', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#atendimento').getByRole('link', { name: 'Teleconsulta' }).click();
+  await expect(page).toHaveURL(/\/agendar\?modalidade=telehealth$/);
+  await expect(page.getByRole('radio', { name: /Teleconsulta/ })).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: /Continuar/ }).click();
+  await expect(page.getByRole('radiogroup', { name: 'Dia da consulta' })).toBeVisible();
+});
+
+test('modalidade estranha na URL é ignorada: nada marcado', async ({ page }) => {
+  await page.goto('/agendar?modalidade=%3Cscript%3E');
+  for (const r of await page.getByRole('radio').all()) await expect(r).toHaveAttribute('aria-checked', 'false');
+});

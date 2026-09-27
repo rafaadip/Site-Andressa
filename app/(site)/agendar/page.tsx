@@ -46,9 +46,20 @@ async function carregarOferta(): Promise<Oferta> {
   }
 }
 
-export default async function PaginaAgendar() {
+/**
+ * `?modalidade=in_person|telehealth` (vindo dos cartões de Atendimento da
+ * home) já deixa marcado o tipo daquela modalidade na etapa 1. Valor fora da
+ * lista é ignorado — nada da URL chega ao fluxo sem passar pela lista.
+ */
+const MODALIDADES = new Set(['in_person', 'telehealth']);
+
+export default async function PaginaAgendar({ searchParams }: { searchParams: Promise<{ modalidade?: string }> }) {
   const { tipos, horizonteDias } = await carregarOferta();
   const online = tipos.length > 0;
+  const modalidade = (await searchParams).modalidade;
+  const tipoInicial = modalidade && MODALIDADES.has(modalidade)
+    ? tipos.find((t) => t.modalidade === modalidade)?.slug
+    : undefined;
 
   return (
     <Secao className="pt-8 md:pt-[var(--section-y)]">
@@ -65,7 +76,7 @@ export default async function PaginaAgendar() {
 
         <div className="md:rounded-[1.75rem] md:border md:border-borda md:bg-elevado md:p-10 md:shadow-md">
           {online
-            ? <FluxoAgendamento tipos={tipos} hoje={dataLocal(new Date())} fuso={TZ_CLINICA} horizonteDias={horizonteDias} />
+            ? <FluxoAgendamento tipos={tipos} hoje={dataLocal(new Date())} fuso={TZ_CLINICA} horizonteDias={horizonteDias} tipoInicial={tipoInicial} />
             : <AgendarPorContato />}
         </div>
 

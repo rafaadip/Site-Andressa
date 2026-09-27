@@ -46,7 +46,7 @@ export function Sobre() {
             href="/sobre"
             className="link-fio mt-6 inline-flex min-h-11 items-center gap-2 font-medium text-acento"
           >
-            Trajetória completa <ArrowRight aria-hidden size={16} strokeWidth={1.75} />
+            {SOBRE.linkMais} <ArrowRight aria-hidden size={16} strokeWidth={1.75} />
           </Link>
         </div>
       </div>
