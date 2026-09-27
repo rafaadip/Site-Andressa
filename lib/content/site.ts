@@ -46,19 +46,16 @@ export const SOBRE = {
   ],
   citacao:
     'Cada paciente chega com uma história. O meu trabalho começa em ouvi-la com atenção.',
+  /** Link da home para /sobre (que mostra a formação). */
+  linkMais: 'Mais sobre a doutora',
 } as const;
 
-/** Trajetória resumida — a versão completa está em /sobre. */
+/** Trajetória (seção Sobre da home). */
 export const TRAJETORIA = [
   { onde: 'Hapvida', papel: 'Médica', quando: 'desde dez/2025' },
   { onde: 'UPA Taboão — Guarulhos', papel: 'Médica', quando: 'desde jan/2025' },
   { onde: 'Complexo Hospitalar Padre Bento de Guarulhos', papel: 'Médica', quando: 'ago/2025 – fev/2026' },
   { onde: 'Hospital Keila Ferreira — Guarulhos', papel: 'Médica', quando: 'fev/2026' },
-] as const;
-
-/** Só na página /sobre. */
-export const TRAJETORIA_COMPLEMENTAR = [
-  { onde: 'Atuação autônoma — São Paulo, SP', papel: 'Médica', quando: 'desde jan/2025' },
 ] as const;
 
 export const FORMACAO = [
@@ -67,18 +64,13 @@ export const FORMACAO = [
   { onde: 'ACLS — Advanced Cardiovascular Life Support', papel: 'Certificação', quando: '' },
 ] as const;
 
-export const TRAJETORIA_FORMACAO = [
-  { onde: 'Santa Casa de Misericórdia de São Paulo', papel: 'Internato — urgência e emergência', quando: 'out/2024 – jan/2025' },
-  { onde: 'Hospital Geral de Guarulhos', papel: 'Internato — urgência, emergência, ginecologia e obstetrícia', quando: 'jun/2024 – jan/2025' },
-  { onde: 'Liga de Alergia e Imunologia — UNINOVE', papel: 'Diretoria', quando: '2021 – 2023' },
-  { onde: 'Centro Acadêmico Rebeca Boltes Cecatto — UNINOVE', papel: 'Financeiro', quando: '2022 – 2023' },
-] as const;
-
 export const ATENDIMENTO = {
   titulo: 'Como é o atendimento',
   lead:
     'Consultas com tempo para avaliação, orientação e acompanhamento — no '
     + 'consultório ou por vídeo.',
+  /** Cada cartão é um link para /agendar com a modalidade já marcada. */
+  cta: 'Agendar consulta',
   modalidades: [
     {
       titulo: 'Consulta em Nutrologia',

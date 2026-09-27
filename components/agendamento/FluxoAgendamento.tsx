@@ -49,12 +49,15 @@ type Props = {
   fuso: string;
   /** Até quantos dias à frente a agenda abre (política do painel). */
   horizonteDias: number;
+  /** Tipo já marcado na etapa 1 (link de um cartão da home). Vence o rascunho. */
+  tipoInicial?: string;
 };
 
-export function FluxoAgendamento({ tipos, hoje, fuso, horizonteDias }: Props) {
+export function FluxoAgendamento({ tipos, hoje, fuso, horizonteDias, tipoInicial }: Props) {
   const [etapa, setEtapa] = useState<Etapa>(1);
   const [direcao, setDirecao] = useState<'frente' | 'tras'>('frente');
-  const [tipo, setTipo] = useState<string | null>(tipos.length === 1 ? tipos[0]!.slug : null);
+  const [tipo, setTipo] = useState<string | null>(
+    tipoInicial && tipos.some((x) => x.slug === tipoInicial) ? tipoInicial : tipos.length === 1 ? tipos[0]!.slug : null);
   const [janela, setJanela] = useState(hoje);
   const [disp, setDisp] = useState<EstadoDisp>({ estado: 'carregando' });
   const [dia, setDia] = useState<string | null>(null);
@@ -85,12 +88,13 @@ export function FluxoAgendamento({ tipos, hoje, fuso, horizonteDias }: Props) {
       if (bruto) {
         const r = JSON.parse(bruto) as { t: number; tipo: string | null; nome: string; telefone: string; email: string };
         if (Date.now() - r.t < VALIDADE_RASCUNHO_MS) {
-          if (r.tipo && tipos.some((x) => x.slug === r.tipo)) setTipo(r.tipo);
+          // Quem chegou por um cartão já escolheu: o rascunho não desfaz.
+          if (!tipoInicial && r.tipo && tipos.some((x) => x.slug === r.tipo)) setTipo(r.tipo);
           setDados((d) => ({ ...d, nome: r.nome ?? '', telefone: r.telefone ?? '', email: r.email ?? '' }));
         }
       }
     } catch { /* navegação privada / armazenamento bloqueado: segue sem rascunho */ }
-  }, [tipos]);
+  }, [tipos, tipoInicial]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {

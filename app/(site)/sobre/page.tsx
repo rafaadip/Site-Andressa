@@ -3,14 +3,14 @@ import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
 import retrato from '@/public/retratos/andressa-circular.png';
 import { PROFISSIONAL, tituloPublico } from '@/lib/config';
-import { SOBRE, TRAJETORIA, TRAJETORIA_COMPLEMENTAR, FORMACAO, TRAJETORIA_FORMACAO } from '@/lib/content/site';
+import { SOBRE, FORMACAO } from '@/lib/content/site';
 import { Secao } from '@/components/ui/Secao';
 import { Botao } from '@/components/ui/Botao';
 import { ListaTrajetoria } from '@/components/site/ListaTrajetoria';
 
 export const metadata: Metadata = {
   title: 'Sobre a doutora',
-  description: `Formação e trajetória de ${PROFISSIONAL.nome}, médica em ${PROFISSIONAL.cidade}–${PROFISSIONAL.uf}.`,
+  description: `Formação de ${PROFISSIONAL.nome}, médica em ${PROFISSIONAL.cidade}–${PROFISSIONAL.uf}.`,
   alternates: { canonical: '/sobre' },
 };
 
@@ -50,8 +50,6 @@ export default function PaginaSobre() {
           </blockquote>
 
           <ListaTrajetoria titulo="Formação" itens={FORMACAO} />
-          <ListaTrajetoria titulo="Atuação" itens={[...TRAJETORIA, ...TRAJETORIA_COMPLEMENTAR]} />
-          <ListaTrajetoria titulo="Internato e atividades acadêmicas" itens={TRAJETORIA_FORMACAO} />
 
           <div className="mt-16">
             <Botao
