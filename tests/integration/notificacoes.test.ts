@@ -33,10 +33,18 @@ d('e-mails e lembretes (FASE-08)', () => {
     ({ resend } = instalarServicosFalsos());
   });
 
+  /**
+   * Horário que o paciente ainda pode cancelar pelo link (e cujo e-mail traz o
+   * link): além do prazo de cancelamento (24h) com folga. O PRIMEIRO horário
+   * livre fica a 12–24h de distância em certos momentos (domingo de manhã →
+   * segunda 9h), e o teste falhava conforme o relógio.
+   */
+  const alemDoPrazo = (s: { inicio: string }) => new Date(s.inicio) > somarMinutos(new Date(), 48 * 60);
+
   async function criar(extra: Partial<CriarAgendamento['paciente']> = {}) {
     const hoje = dataLocal(new Date());
     const r = await disponibilidade({ tipo: 'consulta-presencial', de: hoje, ate: somarDias(hoje, 13) });
-    const slot = r.dias.flatMap((x) => x.slots)[0]!;
+    const slot = r.dias.flatMap((x) => x.slots).find(alemDoPrazo)!;
     const email = `ana.${randomUUID().slice(0, 8)}@exemplo.com`;
     const c = await criarAgendamento({
       tipo: 'consulta-presencial', inicio: slot.inicio,
